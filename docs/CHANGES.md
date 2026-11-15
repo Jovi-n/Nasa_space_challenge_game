@@ -395,3 +395,65 @@
 | **06: Fengyun-1C** | 12.0s (PASS) | 5.6s (PASS) | Calm $\to$ Comp $\to$ Crisis $\to$ Climax | 100% | 100% |
 | **07: GEO Graveyard** | 12.0s (PASS) | 5.6s (PASS) | Calm $\to$ Comp $\to$ Crisis $\to$ Climax | 100% | 100% |
 | **08: Cascade Finale**| 12.0s (PASS) | 5.7s (PASS) | Calm $\to$ Comp $\to$ Crisis $\to$ Climax | 100% | 80% |
+
+---
+
+## [Phase 6 — Consistent Pixel Art Game World & Visual FX] - 2026-11-16
+### Status: Completed & Verified
+
+### 1. Phaser 3.80.1 Pixel Art Engine Configuration (`js/ui.js`)
+- Configured Phaser game instance with `pixelArt: true`, `roundPixels: true`, and `render: { pixelArt: true, antialias: false, roundPixels: true }`.
+- Ensures nearest-neighbor texel interpolation across Canvas 2D and WebGL renderers, eliminating linear filtering blur and guaranteeing crisp 16-bit retro fidelity across all screen resolutions.
+
+### 2. Procedural Pixel Art Texture Generator (`js/graphics.js`)
+- Completely rewrote texture pipeline into a zero-build, pure vanilla JS procedural pixel art engine:
+  - **32-Color Sci-Fi Pixel Palette**: Standardized color tokens (`HULL_WHITE`, `HULL_STEEL`, `SOLAR_BLUE_DARK`, `CYAN_CORE`, `AMBER_RCS`, `HAZARD_ORANGE`, etc.) with high-contrast `#070a13` pixel outlines.
+  - **4x4 Bayer Matrix Ordered Dithering**: Replaced smooth gradients with authentic 16-bit ordered dithering (`drawBayerDitherRect`), providing stepped illumination on celestial bodies, solar panels, and hulls.
+  - **Pixel-Art Earth (`earth_bg`, 640x640)**: 3x3 pixel grid rendering with Bayer day/night terminator dithering, stepped continental landmasses, swirling pixel cloud belts, glowing nocturnal city pixel clusters, and atmosphere rim.
+  - **Pixel-Art Aegis Space Station Depot (`space_station`, 280x280)**: Octagonal central command hub, 4 solar array pixel trusses, rotating navigation beacon ring (emerald and amber lights), and central smelting aperture cross.
+  - **Pixel-Art Station Perimeter Boundary (`station_perimeter`, 380x380)**: Dashed pixel boundary with corner docking bracket markers.
+  - **Pixel-Art Spacecraft**:
+    - `ship_scout` (64x64, Vanguard Light Interceptor): Sleek needle fuselage, twin canted stabilizers, cyan cockpit glint, dual RCS pods.
+    - `ship_collector` (80x80, Orion Recovery Tug): Reinforced industrial body, dual modular cargo pods, amber cockpit canopy, quad RCS blocks.
+    - `ship_lifter` (96x96, Titan Heavy Hauler): Heavy catamaran structure, reinforced ventral intake ram, twin dual-nozzle main thrusters.
+  - **Pixel-Art Debris**:
+    - `debris_fragment` (32x32): Jagged kinetic shard with fracture shading.
+    - `debris_solar` (48x48): Truncated solar array truss with dithered photovoltaic cell grid.
+    - `debris_cubesat` (48x48): 3U modular cubesat frame with solar facet and wire antenna.
+    - `debris_booster` (64x64): Spent cylindrical upper-stage rocket with interstage ring.
+    - `debris_satellite` (64x64): Box-bus satellite with parabolic dish and panel booms.
+    - `debris_core` (48x48): Heavy titanium reaction wheel and battery core hub.
+  - **Pixel-Art Hazards**:
+    - `hazard_hidden_debris` (48x48): Low-RCS stealth carbon-composite fragment.
+    - `hazard_venting_rocket` (64x64): Pressurized booster with thermal insulation banding and venting nozzle.
+    - `hazard_nuclear` (64x64): Soviet-era RORSAT reactor core with radioactive trefoil insignia.
+    - Backward-compatibility aliases maintained for `hazard_meteoroid` and `hazard_hypergolic`.
+  - **Pixel-Art Equipment**:
+    - `equip_arm_claw` (32x32): Robotic 3-prong grapple claw head with hydraulic piston housing.
+    - `equip_net` (128x128): Kevlar-weave capture net with perimeter weighted sinkers.
+  - **Pixel Particle Textures**:
+    - `particle_thruster` (16x16): Rocket flame pixel spark.
+    - `particle_spark` (12x12): High-velocity impact spark diamond.
+    - `particle_recycle` (12x12): Smelter plasma beam pixel spark.
+    - `particle_smoke` (16x16): Dithered exhaust smoke puff.
+    - `particle_shockwave` (32x32): Expanding stepped pixel shockwave ring.
+
+### 3. Space Environment & Orbital Bands (`js/game.js`)
+- **4 Distinct Retro Pixel Star Types**: 1x1 micro-dots, 2x2 standard pixel stars, 3x3 diamond stars, and 5x5 4-point cross sparkle stars.
+- **Dashed Pixel Orbital Altitude Track Bands**: Chords spaced across orbital altitudes reflecting sector-specific inclination and altitude boundaries.
+
+### 4. Cohesive In-Game Pixel FX (`js/game.js`)
+- **Explosions & Fragmentation**: Debris-debris high-speed collisions, hazard strikes, and weapon fragmentations emit `particle_smoke` and `particle_shockwave` in addition to kinetic sparks.
+- **Tractor Beam & Pickups**: Stepped scanline chords across conical beam, intake box reticle at ship nose, and square targeting brackets around tractor-pulled debris; robotic arm grapple renders with crisp stepped pixel tether and 6x6 pixel claw head.
+- **Thrusters & RCS**: Discrete pixel thruster plumes behind main engines; directional RCS puffs emitted during yaw rotation and retro braking.
+- **Deflector Shield Flash**: Octagonal deflector shield ring flashes on hull collisions, visualizing armor deflection and damage reduction.
+- **Storms & Atmospheric Drag**: Fiery ionization pixel streaks rush across screen during drag surges, ion storms, and Kessler cascade storms.
+- **Depot Activity**: Station smelter recycling beam fountains, dock refuel/recharge feedback, and repair indicators.
+- **Alerts**: Blinking pixel caution triangle warning chevrons appear above craft during proximity alarms; offscreen HUD pointers use pixel diamonds (depot) and pixel squares (hazards).
+- **Launch Sequence**: Orbital insertion burn sequence with camera shake and main engine pixel exhaust stabilization.
+
+### 5. Verification & Preservation
+- Verified 100% of referenced sprite keys match generated textures (`tests/test_phase6.js`).
+- Syntax validated across all 8 JS files with zero syntax errors.
+- Phase 1 UI style, terminal aesthetic, Silkscreen/Rajdhani typography, and local storage saves are 100% preserved.
+- Zero runtime build dependencies or external asset download requirements.

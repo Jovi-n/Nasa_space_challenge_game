@@ -232,6 +232,11 @@ class OrbitalGameScene extends Phaser.Scene {
         this.fxGraphics = this.add.graphics().setDepth(20);
         this.hudGraphics = this.add.graphics().setDepth(100).setScrollFactor(0);
 
+        // Phase 6 Visual FX Timers & States
+        this.launchBurnTimer = 2.4;
+        this.launchAnnounced = false;
+        this.shieldTimer = 0;
+
         // Initial Mission Flight Telemetry Log
         this.logFlightEvent('INSERTION', `Orbital injection complete. Sector ${this.missionConfig.name.split(':')[0]} nominal.`, 'success');
 
@@ -247,18 +252,50 @@ class OrbitalGameScene extends Phaser.Scene {
         const bgColor = palette.spaceBg || '#050814';
         this.cameras.main.setBackgroundColor(bgColor);
 
-        // Distant Parallax Stars (Generated once on graphics layer with sector colors)
+        // Distant Parallax Pixel Starfield & Orbital Altitude Grid
         const starGraphics = this.add.graphics().setDepth(-10);
         const starColors = palette.starColors || [0xffffff, 0x38bdf8, 0xa855f7, 0xfde047];
-        for (let i = 0; i < 600; i++) {
-            const x = Phaser.Math.Between(0, w);
-            const y = Phaser.Math.Between(0, h);
-            const r = Phaser.Math.FloatBetween(0.5, 2.0);
-            const alpha = Phaser.Math.FloatBetween(0.3, 0.95);
-            const color = Phaser.Utils.Array.GetRandom(starColors);
 
-            starGraphics.fillStyle(color, alpha);
-            starGraphics.fillCircle(x, y, r);
+        // 1. Pixel Orbital Altitude Track Bands
+        const gridColorNum = Phaser.Display.Color.HexStringToColor(palette.accentColor || '#38bdf8').color;
+        starGraphics.lineStyle(1, gridColorNum, 0.12);
+        for (let y = 300; y < h; y += 550) {
+            // Dashed pixel orbital inclination lines
+            for (let x = 0; x < w; x += 32) {
+                starGraphics.lineBetween(x, y, x + 16, y);
+            }
+        }
+
+        // 2. Pixel Stars: 4 distinct retro types (dots, squares, diamonds, cross sparkles)
+        for (let i = 0; i < 750; i++) {
+            const x = Math.floor(Phaser.Math.Between(0, w));
+            const y = Math.floor(Phaser.Math.Between(0, h));
+            const color = Phaser.Utils.Array.GetRandom(starColors);
+            const roll = Math.random();
+
+            if (roll < 0.60) {
+                // Type 1: Single micro-pixel (1x1)
+                starGraphics.fillStyle(color, 0.45);
+                starGraphics.fillRect(x, y, 1, 1);
+            } else if (roll < 0.85) {
+                // Type 2: Standard pixel star (2x2)
+                starGraphics.fillStyle(color, 0.75);
+                starGraphics.fillRect(x, y, 2, 2);
+            } else if (roll < 0.96) {
+                // Type 3: Diamond pixel star (3x3 plus core)
+                starGraphics.fillStyle(color, 0.90);
+                starGraphics.fillRect(x, y - 1, 1, 3);
+                starGraphics.fillRect(x - 1, y, 3, 1);
+                starGraphics.fillStyle(0xffffff, 1.0);
+                starGraphics.fillRect(x, y, 1, 1);
+            } else {
+                // Type 4: Bright 4-point cross sparkle star (5x5)
+                starGraphics.fillStyle(color, 0.95);
+                starGraphics.fillRect(x, y - 2, 1, 5);
+                starGraphics.fillRect(x - 2, y, 5, 1);
+                starGraphics.fillStyle(0xffffff, 1.0);
+                starGraphics.fillRect(x - 1, y - 1, 3, 3);
+            }
         }
 
         // Animated Rotating Earth (Parallax background, scaled by orbital altitude)
@@ -449,6 +486,26 @@ class OrbitalGameScene extends Phaser.Scene {
             blendMode: 'ADD',
             emitting: false
         }).setDepth(15);
+
+        // Pixel smoke puffs for heavy collisions & venting
+        this.smokeParticles = this.add.particles(0, 0, 'particle_smoke', {
+            speed: { min: 25, max: 85 },
+            scale: { start: 0.8, end: 1.5 },
+            alpha: { start: 0.8, end: 0 },
+            lifespan: 650,
+            blendMode: 'NORMAL',
+            emitting: false
+        }).setDepth(14);
+
+        // Pixel expanding shockwaves
+        this.shockwaveParticles = this.add.particles(0, 0, 'particle_shockwave', {
+            speed: { min: 20, max: 60 },
+            scale: { start: 0.5, end: 2.2 },
+            alpha: { start: 0.9, end: 0 },
+            lifespan: 400,
+            blendMode: 'ADD',
+            emitting: false
+        }).setDepth(16);
     }
 
     spawnInitialDebris() {
@@ -609,7 +666,7 @@ class OrbitalGameScene extends Phaser.Scene {
             this.executeLaserNudge();
         }
 
-        // Render Active Laser Nudge Beam FX
+        // Render Active Laser Nudge Beam FX (Pixel-art Stepped Beam & Target Reticle)
         if (this.laserNudgeEffect) {
             this.laserNudgeEffect.life -= dt;
             if (this.laserNudgeEffect.life <= 0) {
@@ -617,10 +674,68 @@ class OrbitalGameScene extends Phaser.Scene {
             } else {
                 const eff = this.laserNudgeEffect;
                 const alpha = Math.max(0, eff.life / 0.18);
-                this.fxGraphics.lineStyle(3.5, 0x00f3ff, alpha);
+                this.fxGraphics.lineStyle(3, 0x00f3ff, alpha);
                 this.fxGraphics.lineBetween(eff.startX, eff.startY, eff.targetX, eff.targetY);
                 this.fxGraphics.lineStyle(2, 0xffffff, alpha);
-                this.fxGraphics.strokeCircle(eff.targetX, eff.targetY, 22);
+                const rSize = 20;
+                this.fxGraphics.strokeRect(Math.floor(eff.targetX - rSize / 2), Math.floor(eff.targetY - rSize / 2), rSize, rSize);
+                this.fxGraphics.fillStyle(0x00f3ff, alpha * 0.5);
+                this.fxGraphics.fillRect(Math.floor(eff.targetX - 2), Math.floor(eff.targetY - 2), 4, 4);
+            }
+        }
+
+        // Render Deflector Shield Flash FX (Pixel Octagon Deflector Ring)
+        if (this.shieldTimer > 0) {
+            this.shieldTimer -= dt;
+            const shieldAlpha = Math.max(0, this.shieldTimer / 0.35);
+            const radius = 32;
+            const px = Math.floor(this.player.x);
+            const py = Math.floor(this.player.y);
+            const d = 14;
+
+            this.fxGraphics.lineStyle(2, 0x38bdf8, shieldAlpha * 0.9);
+            this.fxGraphics.beginPath();
+            this.fxGraphics.moveTo(px - d, py - radius);
+            this.fxGraphics.lineTo(px + d, py - radius);
+            this.fxGraphics.lineTo(px + radius, py - d);
+            this.fxGraphics.lineTo(px + radius, py + d);
+            this.fxGraphics.lineTo(px + d, py + radius);
+            this.fxGraphics.lineTo(px - d, py + radius);
+            this.fxGraphics.lineTo(px - radius, py + d);
+            this.fxGraphics.lineTo(px - radius, py - d);
+            this.fxGraphics.closePath();
+            this.fxGraphics.strokePath();
+
+            this.fxGraphics.fillStyle(0x00f3ff, shieldAlpha * 0.18);
+            this.fxGraphics.fillPath();
+        }
+
+        // Mission Launch & Orbital Insertion Sequence FX
+        if (this.launchBurnTimer > 0) {
+            this.launchBurnTimer -= dt;
+            if (this.thrusterParticles && this.player) {
+                const angle = this.player.rotation + Math.PI;
+                const ex = this.player.x + Math.cos(angle) * 22;
+                const ey = this.player.y + Math.sin(angle) * 22;
+                this.thrusterParticles.emitParticleAt(ex, ey, 3);
+            }
+            if (!this.launchAnnounced && this.launchBurnTimer < 2.0) {
+                this.launchAnnounced = true;
+                this.cameras.main.shake(350, 0.003);
+            }
+        }
+
+        // Atmospheric Drag & Solar Storm Ionization Streaks
+        if (this.activeAtmosphericDrag < 1.0 || (this.director && this.director.stage === 'Climax' && this.kesslerRisk > 70)) {
+            const cam = this.cameras.main;
+            const streakCount = 10;
+            this.fxGraphics.lineStyle(1.5, 0xf97316, 0.45);
+            for (let i = 0; i < streakCount; i++) {
+                const seed = (time * 0.7 + i * 149.3) % 1000;
+                const sx = cam.scrollX + ((seed * 13) % (cam.width + 200)) - 100;
+                const sy = cam.scrollY + ((seed * 19) % (cam.height + 200)) - 100;
+                const len = 30 + (seed % 40);
+                this.fxGraphics.lineBetween(sx, sy, sx - len, sy + len * 0.35);
             }
         }
 
@@ -701,6 +816,15 @@ class OrbitalGameScene extends Phaser.Scene {
         const curAngVel = this.player.body ? this.player.body.angularVelocity : 0;
         this.player.setAngularVelocity(Phaser.Math.Linear(curAngVel, targetTurnRate, dt * turnDamping));
 
+        // RCS thruster pixel puffs during turning
+        if (isTurning && this.thrusterParticles && Math.random() < 0.35) {
+            const rot = this.player.rotation;
+            const sideSign = (this.cursors.left.isDown || this.keyA.isDown) ? -1 : 1;
+            const rcsX = this.player.x + Math.cos(rot + Math.PI / 2 * sideSign) * 12;
+            const rcsY = this.player.y + Math.sin(rot + Math.PI / 2 * sideSign) * 12;
+            this.thrusterParticles.emitParticleAt(rcsX, rcsY, 1);
+        }
+
         // 3. Forward Propulsion (W or Up Arrow)
         if ((this.cursors.up.isDown || this.keyW.isDown) && this.fuel > 0) {
             isThrusting = true;
@@ -731,6 +855,13 @@ class OrbitalGameScene extends Phaser.Scene {
             this.fuel = Math.max(0, this.fuel - burn);
             this.totalFuelBurned += burn;
             window.soundSystem.setThruster(true, 0.4);
+
+            if (this.thrusterParticles && Math.random() < 0.35) {
+                const angle = this.player.rotation;
+                const fwdX = this.player.x + Math.cos(angle) * 14;
+                const fwdY = this.player.y + Math.sin(angle) * 14;
+                this.thrusterParticles.emitParticleAt(fwdX, fwdY, 1);
+            }
         } else {
             this.player.setAcceleration(0, 0);
             window.soundSystem.setThruster(false);
@@ -865,16 +996,17 @@ class OrbitalGameScene extends Phaser.Scene {
             }
         }
 
-        // Draw Grapple Tether Cable & Claw
-        this.fxGraphics.lineStyle(2.5, 0x00f3ff, 0.9);
-        this.fxGraphics.beginPath();
-        this.fxGraphics.moveTo(this.player.x, this.player.y);
-        this.fxGraphics.lineTo(g.currentX, g.currentY);
-        this.fxGraphics.strokePath();
+        // Draw Pixel Grapple Tether Cable & Claw Head
+        this.fxGraphics.lineStyle(2, 0x00f3ff, 0.9);
+        this.fxGraphics.lineBetween(this.player.x, this.player.y, g.currentX, g.currentY);
 
-        // Claw Head
+        // Stepped Pixel Claw Head
+        const cx = Math.floor(g.currentX);
+        const cy = Math.floor(g.currentY);
         this.fxGraphics.fillStyle(0x38bdf8, 1);
-        this.fxGraphics.fillCircle(g.currentX, g.currentY, 5);
+        this.fxGraphics.fillRect(cx - 3, cy - 3, 6, 6);
+        this.fxGraphics.fillStyle(0xffffff, 1);
+        this.fxGraphics.fillRect(cx - 1, cy - 1, 2, 2);
     }
 
     fireCaptureNet() {
@@ -976,6 +1108,12 @@ class OrbitalGameScene extends Phaser.Scene {
         if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
             this.sparkParticles.emitParticleAt(x, y, 16);
         }
+        if (this.smokeParticles && typeof this.smokeParticles.emitParticleAt === 'function') {
+            this.smokeParticles.emitParticleAt(x, y, 8);
+        }
+        if (this.shockwaveParticles && typeof this.shockwaveParticles.emitParticleAt === 'function') {
+            this.shockwaveParticles.emitParticleAt(x, y, 1);
+        }
 
         this.kesslerRisk = Math.min(100, this.kesslerRisk + spawnCount * 1.8);
         this.logFlightEvent('FRAGMENTATION', `Impact shattered target into ${spawnCount} kinetic fragments (+${Math.round(spawnCount * 1.8)}% Kessler Risk).`, 'crit');
@@ -1028,19 +1166,34 @@ class OrbitalGameScene extends Phaser.Scene {
         const range = this.equipmentConfig.range * this.radarMultiplier;
         const halfCone = Phaser.Math.DegToRad(this.equipmentConfig.coneAngle * 0.5);
 
-        // Draw animated luminous magnetic cone
-        this.fxGraphics.fillStyle(0x00f3ff, 0.12);
-        this.fxGraphics.lineStyle(1.5, 0x38bdf8, 0.45);
-        this.fxGraphics.beginPath();
-        this.fxGraphics.moveTo(this.player.x, this.player.y);
-        this.fxGraphics.arc(this.player.x, this.player.y, range, angle - halfCone, angle + halfCone);
-        this.fxGraphics.closePath();
-        this.fxGraphics.fillPath();
-        this.fxGraphics.strokePath();
+        // Pixel-art Tractor Beam: Stepped scanline chords & boundary vectors
+        const leftAngle = angle - halfCone;
+        const rightAngle = angle + halfCone;
+        const px = this.player.x;
+        const py = this.player.y;
 
-        // Visible intake/collection indicator at ship intake
-        this.fxGraphics.lineStyle(2, 0x00f3ff, 0.65);
-        this.fxGraphics.strokeCircle(this.player.x, this.player.y, 28);
+        // Beam boundary lines
+        this.fxGraphics.lineStyle(2, 0x00f3ff, 0.7);
+        this.fxGraphics.lineBetween(px, py, px + Math.cos(leftAngle) * range, py + Math.sin(leftAngle) * range);
+        this.fxGraphics.lineBetween(px, py, px + Math.cos(rightAngle) * range, py + Math.sin(rightAngle) * range);
+
+        // Stepped pixel chords across the cone at intervals
+        this.fxGraphics.lineStyle(1.5, 0x38bdf8, 0.4);
+        for (let r = 40; r <= range; r += 28) {
+            const chordLeftX = px + Math.cos(leftAngle) * r;
+            const chordLeftY = py + Math.sin(leftAngle) * r;
+            const chordRightX = px + Math.cos(rightAngle) * r;
+            const chordRightY = py + Math.sin(rightAngle) * r;
+            this.fxGraphics.lineBetween(chordLeftX, chordLeftY, chordRightX, chordRightY);
+        }
+
+        // Stepped pixel intake reticle at ship nose
+        const intakeX = px + Math.cos(angle) * 22;
+        const intakeY = py + Math.sin(angle) * 22;
+        this.fxGraphics.lineStyle(2, 0x00f3ff, 0.85);
+        this.fxGraphics.strokeRect(Math.floor(intakeX - 10), Math.floor(intakeY - 10), 20, 20);
+        this.fxGraphics.fillStyle(0x00f3ff, 0.3);
+        this.fxGraphics.fillRect(Math.floor(intakeX - 4), Math.floor(intakeY - 4), 8, 8);
 
         // Attract debris within cone
         this.debrisGroup.getChildren().forEach(d => {
@@ -1054,6 +1207,10 @@ class OrbitalGameScene extends Phaser.Scene {
                     // Mark as actively tractor-pulled with timestamp to avoid collision damage
                     d.isBeingPulledByTractor = true;
                     d.tractorPullTime = this.time.now;
+
+                    // Draw pixel targeting reticle around pulled debris
+                    this.fxGraphics.lineStyle(1.5, 0x38bdf8, 0.8);
+                    this.fxGraphics.strokeRect(Math.floor(d.x - 12), Math.floor(d.y - 12), 24, 24);
 
                     // Pull debris towards player intake
                     const pull = this.equipmentConfig.pullForce;
@@ -1351,21 +1508,37 @@ class OrbitalGameScene extends Phaser.Scene {
                     h.body.velocity.x += Math.cos(forwardAngle) * reactionForce * dt;
                     h.body.velocity.y += Math.sin(forwardAngle) * reactionForce * dt;
 
-                    // 2. Render plume jet in fxGraphics
+                    // 2. Render plume jet in fxGraphics (Stepped Pixel Plume Chords)
                     const nozzleDist = 24;
                     const ventOriginX = h.x + Math.cos(h.ventAngle) * nozzleDist;
                     const ventOriginY = h.y + Math.sin(h.ventAngle) * nozzleDist;
 
                     const plumeLen = 95 + Math.sin(this.elapsedTime * 20) * 15;
                     const plumeSpread = 0.48;
-                    this.fxGraphics.fillStyle(0xf97316, 0.40);
-                    this.fxGraphics.lineStyle(1.5, 0xfde047, 0.7);
-                    this.fxGraphics.beginPath();
-                    this.fxGraphics.moveTo(ventOriginX, ventOriginY);
-                    this.fxGraphics.arc(ventOriginX, ventOriginY, plumeLen, h.ventAngle - plumeSpread, h.ventAngle + plumeSpread);
-                    this.fxGraphics.closePath();
-                    this.fxGraphics.fillPath();
-                    this.fxGraphics.strokePath();
+                    const vAngle = h.ventAngle;
+
+                    this.fxGraphics.lineStyle(2, 0xf97316, 0.75);
+                    this.fxGraphics.lineBetween(ventOriginX, ventOriginY, ventOriginX + Math.cos(vAngle - plumeSpread) * plumeLen, ventOriginY + Math.sin(vAngle - plumeSpread) * plumeLen);
+                    this.fxGraphics.lineBetween(ventOriginX, ventOriginY, ventOriginX + Math.cos(vAngle + plumeSpread) * plumeLen, ventOriginY + Math.sin(vAngle + plumeSpread) * plumeLen);
+
+                    this.fxGraphics.lineStyle(1.5, 0xfde047, 0.6);
+                    for (let step = 20; step <= plumeLen; step += 18) {
+                        const stepSpread = plumeSpread * (step / plumeLen);
+                        const pLeftX = ventOriginX + Math.cos(vAngle - stepSpread) * step;
+                        const pLeftY = ventOriginY + Math.sin(vAngle - stepSpread) * step;
+                        const pRightX = ventOriginX + Math.cos(vAngle + stepSpread) * step;
+                        const pRightY = ventOriginY + Math.sin(vAngle + stepSpread) * step;
+                        this.fxGraphics.lineBetween(pLeftX, pLeftY, pRightX, pRightY);
+                    }
+
+                    if (this.smokeParticles && Math.random() < 0.35) {
+                        const puffDist = Phaser.Math.Between(15, plumeLen);
+                        this.smokeParticles.emitParticleAt(
+                            ventOriginX + Math.cos(vAngle) * puffDist,
+                            ventOriginY + Math.sin(vAngle) * puffDist,
+                            1
+                        );
+                    }
 
                     // 3. Check if player is caught in vent plume
                     if (this.player && this.player.active) {
@@ -1535,6 +1708,16 @@ class OrbitalGameScene extends Phaser.Scene {
             this.pendingHazardDestructions.push(hazard);
         }
 
+        if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+            this.sparkParticles.emitParticleAt(centerX, centerY, 20);
+        }
+        if (this.smokeParticles && typeof this.smokeParticles.emitParticleAt === 'function') {
+            this.smokeParticles.emitParticleAt(centerX, centerY, 10);
+        }
+        if (this.shockwaveParticles && typeof this.shockwaveParticles.emitParticleAt === 'function') {
+            this.shockwaveParticles.emitParticleAt(centerX, centerY, 1);
+        }
+
         window.soundSystem?.playExplosion?.();
     }
 
@@ -1555,8 +1738,19 @@ class OrbitalGameScene extends Phaser.Scene {
                 const detectionDist = 280 * (this.radarMultiplier || 1.0);
                 if (dist < detectionDist) {
                     h.alpha = 1.0;
-                    this.fxGraphics.lineStyle(1, 0x94a3b8, 0.4);
-                    this.fxGraphics.strokeCircle(h.x, h.y, 22);
+                    // Stepped pixel detection brackets around detected hidden debris
+                    const bx = Math.floor(h.x);
+                    const by = Math.floor(h.y);
+                    const bsize = 14;
+                    this.fxGraphics.lineStyle(1.5, 0x94a3b8, 0.65);
+                    this.fxGraphics.lineBetween(bx - bsize, by - bsize, bx - bsize + 5, by - bsize);
+                    this.fxGraphics.lineBetween(bx - bsize, by - bsize, bx - bsize, by - bsize + 5);
+                    this.fxGraphics.lineBetween(bx + bsize, by - bsize, bx + bsize - 5, by - bsize);
+                    this.fxGraphics.lineBetween(bx + bsize, by - bsize, bx + bsize, by - bsize + 5);
+                    this.fxGraphics.lineBetween(bx - bsize, by + bsize, bx - bsize + 5, by + bsize);
+                    this.fxGraphics.lineBetween(bx - bsize, by + bsize, bx - bsize, by + bsize - 5);
+                    this.fxGraphics.lineBetween(bx + bsize, by + bsize, bx + bsize - 5, by + bsize);
+                    this.fxGraphics.lineBetween(bx + bsize, by + bsize, bx + bsize, by + bsize - 5);
                 } else {
                     h.alpha = 0.35;
                 }
@@ -1570,11 +1764,25 @@ class OrbitalGameScene extends Phaser.Scene {
                 imminentDanger = true;
             }
 
-            // If hazard is a nuclear satellite, emit continuous radiation drain per second
+            // If hazard is a nuclear satellite, emit continuous radiation drain per second (Stepped pixel ring)
             if (meta?.id === 'nuclear' && dist < (meta.radiationRadius || 180)) {
                 this.battery = Math.max(0, this.battery - (meta.batteryDrain || 15) * frameDt);
-                this.fxGraphics.lineStyle(1.5, 0x84cc16, 0.4);
-                this.fxGraphics.strokeCircle(h.x, h.y, meta.radiationRadius || 180);
+                const rad = meta.radiationRadius || 180;
+                const hx = Math.floor(h.x);
+                const hy = Math.floor(h.y);
+                const step = rad * 0.707;
+                this.fxGraphics.lineStyle(1.5, 0x84cc16, 0.45);
+                this.fxGraphics.beginPath();
+                this.fxGraphics.moveTo(hx - rad, hy);
+                this.fxGraphics.lineTo(hx - step, hy - step);
+                this.fxGraphics.lineTo(hx, hy - rad);
+                this.fxGraphics.lineTo(hx + step, hy - step);
+                this.fxGraphics.lineTo(hx + rad, hy);
+                this.fxGraphics.lineTo(hx + step, hy + step);
+                this.fxGraphics.lineTo(hx, hy + rad);
+                this.fxGraphics.lineTo(hx - step, hy + step);
+                this.fxGraphics.closePath();
+                this.fxGraphics.strokePath();
             }
         });
 
@@ -1583,6 +1791,21 @@ class OrbitalGameScene extends Phaser.Scene {
             if (!this.warningActive) {
                 this.warningActive = true;
                 window.soundSystem?.playWarning?.(true);
+            }
+            // Pixel caution alert indicator above spacecraft
+            const px = Math.floor(this.player.x);
+            const py = Math.floor(this.player.y) - 40;
+            const blink = Math.floor(this.time.now / 160) % 2 === 0;
+            if (blink) {
+                this.fxGraphics.fillStyle(0xef4444, 0.9);
+                this.fxGraphics.fillRect(px - 1, py - 6, 2, 2);
+                this.fxGraphics.fillRect(px - 3, py - 4, 6, 2);
+                this.fxGraphics.fillRect(px - 5, py - 2, 10, 2);
+                this.fxGraphics.fillRect(px - 7, py, 14, 2);
+                this.fxGraphics.fillRect(px - 9, py + 2, 18, 2);
+                this.fxGraphics.fillStyle(0x070a13, 1.0);
+                this.fxGraphics.fillRect(px - 1, py - 2, 2, 3);
+                this.fxGraphics.fillRect(px - 1, py + 2, 2, 1);
             }
         } else {
             if (this.warningActive) {
@@ -1620,9 +1843,23 @@ class OrbitalGameScene extends Phaser.Scene {
             const edgeX = Phaser.Math.Clamp(cx + Math.cos(angle) * (viewW / 2 - padding), padding, viewW - padding);
             const edgeY = Phaser.Math.Clamp(cy + Math.sin(angle) * (viewH / 2 - padding), padding, viewH - padding);
 
-            this.hudGraphics.fillStyle(color, 0.85);
-            const arrowSize = isStation ? 12 : 8;
-            this.hudGraphics.fillCircle(edgeX, edgeY, arrowSize);
+            // Pixel Offscreen Indicator Pointer
+            const ex = Math.floor(edgeX);
+            const ey = Math.floor(edgeY);
+            this.hudGraphics.fillStyle(color, 0.9);
+            if (isStation) {
+                // Pixel Diamond for Aegis Station
+                this.hudGraphics.fillRect(ex - 1, ey - 4, 3, 9);
+                this.hudGraphics.fillRect(ex - 4, ey - 1, 9, 3);
+                this.hudGraphics.fillRect(ex - 2, ey - 2, 5, 5);
+                this.hudGraphics.fillStyle(0xffffff, 1.0);
+                this.hudGraphics.fillRect(ex, ey, 1, 1);
+            } else {
+                // Pixel Warning Square for Hazard
+                this.hudGraphics.fillRect(ex - 3, ey - 3, 7, 7);
+                this.hudGraphics.fillStyle(0x070a13, 1.0);
+                this.hudGraphics.fillRect(ex - 1, ey - 1, 3, 3);
+            }
         };
 
         // Pointer to Aegis Station (Green)
@@ -1693,6 +1930,10 @@ class OrbitalGameScene extends Phaser.Scene {
         if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
             this.sparkParticles.emitParticleAt(player.x, player.y, 10);
         }
+        if (this.smokeParticles && impactSpeed > 100 && typeof this.smokeParticles.emitParticleAt === 'function') {
+            this.smokeParticles.emitParticleAt(player.x, player.y, 4);
+        }
+        this.shieldTimer = 0.35;
         this.showFloatingText(player.x, player.y - 25, `-${impactDamage} HULL`, '#f59e0b');
 
         // High speed impact fragmentation (amplified when Kessler risk is elevated)
@@ -1747,6 +1988,13 @@ class OrbitalGameScene extends Phaser.Scene {
         if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
             this.sparkParticles.emitParticleAt(hazard.x, hazard.y, 25);
         }
+        if (this.smokeParticles && typeof this.smokeParticles.emitParticleAt === 'function') {
+            this.smokeParticles.emitParticleAt(hazard.x, hazard.y, 10);
+        }
+        if (this.shockwaveParticles && typeof this.shockwaveParticles.emitParticleAt === 'function') {
+            this.shockwaveParticles.emitParticleAt(hazard.x, hazard.y, 2);
+        }
+        this.shieldTimer = 0.45;
         this.showFloatingText(player.x, player.y - 30, `-${Math.round(dmg)} HULL`, '#ef4444');
 
         // Physics safety: disable body and queue destruction safely outside collision callback

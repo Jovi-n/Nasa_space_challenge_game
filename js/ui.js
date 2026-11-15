@@ -1388,6 +1388,13 @@ class UIController {
             parent: 'game-container',
             width: window.innerWidth,
             height: window.innerHeight,
+            pixelArt: true,
+            roundPixels: true,
+            render: {
+                pixelArt: true,
+                antialias: false,
+                roundPixels: true
+            },
             scale: {
                 mode: Phaser.Scale.RESIZE,
                 autoCenter: Phaser.Scale.CENTER_BOTH
