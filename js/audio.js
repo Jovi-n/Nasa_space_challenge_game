@@ -586,6 +586,98 @@ class SoundSystem {
         }
     }
 
+    playComboBonus(combo = 2) {
+        if (!this.sfxEnabled || !this.ctx) return;
+        this.resume();
+        try {
+            const now = this.ctx.currentTime;
+            const baseFreq = 440 + Math.min(6, combo) * 80;
+            [0, 0.06, 0.12].forEach((offset, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(baseFreq * (1 + idx * 0.25), now + offset);
+                gain.gain.setValueAtTime(0.001, now + offset);
+                gain.gain.linearRampToValueAtTime(0.18, now + offset + 0.02);
+                gain.gain.linearRampToValueAtTime(0.001, now + offset + 0.12);
+                osc.connect(gain);
+                gain.connect(this.sfxGain);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.13);
+            });
+        } catch (e) {
+            console.warn('Combo audio error:', e);
+        }
+    }
+
+    playNearMiss() {
+        if (!this.sfxEnabled || !this.ctx) return;
+        this.resume();
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(260, now + 0.28);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.25, now + 0.04);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.28);
+            osc.connect(gain);
+            gain.connect(this.sfxGain);
+            osc.start(now);
+            osc.stop(now + 0.30);
+        } catch (e) {
+            console.warn('Near-miss audio error:', e);
+        }
+    }
+
+    playStageTransition(stageName) {
+        if (!this.sfxEnabled || !this.ctx) return;
+        this.resume();
+        try {
+            const now = this.ctx.currentTime;
+            const freqs = stageName === 'CLIMAX' ? [220, 277, 330, 440] : [220, 261, 330];
+            freqs.forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+                gain.gain.setValueAtTime(0.001, now + idx * 0.05);
+                gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.05 + 0.04);
+                gain.gain.linearRampToValueAtTime(0.001, now + idx * 0.05 + 0.45);
+                osc.connect(gain);
+                gain.connect(this.sfxGain);
+                osc.start(now + idx * 0.05);
+                osc.stop(now + idx * 0.05 + 0.50);
+            });
+        } catch (e) {
+            console.warn('Stage transition audio error:', e);
+        }
+    }
+
+    playRepair() {
+        if (!this.sfxEnabled || !this.ctx) return;
+        this.resume();
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.linearRampToValueAtTime(640, now + 0.25);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.18, now + 0.03);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.25);
+            osc.connect(gain);
+            gain.connect(this.sfxGain);
+            osc.start(now);
+            osc.stop(now + 0.26);
+        } catch (e) {
+            console.warn('Repair audio error:', e);
+        }
+    }
+
     toggleSFX() {
         this.resume();
         this.sfxEnabled = !this.sfxEnabled;

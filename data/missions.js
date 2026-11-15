@@ -23,8 +23,8 @@ const MISSIONS_DATA = [
         targetQuota: 8,
         debrisTypes: ['fragment', 'solar', 'cubesat'],
         initialDebrisCount: 16,
-        respawnRate: 4000,
-        hazardRate: 16000,
+        respawnRate: 3800,
+        hazardRate: 12000,
         hazardTypes: ['hidden_debris'],
         maxHazards: 2,
         timeLimit: 150,
@@ -42,21 +42,47 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'RADAR PING',
+                message: '[FACT - NASA ODPO] Space Surveillance Network radar ping active. Initial crossing objects tracked.',
+                effect: 'telemetry'
+            },
+            {
                 time: 25,
                 tag: 'CONJUNCTION ADVISORY',
                 message: '[FACT - NASA ODPO] ISS Flight Dynamics reports green corridor. Drift rate nominal at 7.66 km/s.',
                 effect: 'telemetry'
             },
             {
-                time: 60,
+                time: 45,
+                tag: 'DEBRIS CLUSTER',
+                message: '[ESTIMATE] Second-stage separation bolts detected ahead. Local cluster located.',
+                effect: 'spawn_wave',
+                count: 3
+            },
+            {
+                time: 65,
                 tag: 'CREW WINDOW APPROACH',
-                message: '[ESTIMATE] Scheduled crew dragon approach in T-90s. Accelerate retrieval operations.',
+                message: '[ESTIMATE] Scheduled crew vehicle approach in T-85s. Accelerate retrieval operations.',
                 effect: 'telemetry'
             },
             {
-                time: 100,
+                time: 85,
+                tag: 'CROSSING OBJECT',
+                message: '[ESTIMATE] Low-RCS micro-fragment crossing corridor. Prepare evasive maneuver.',
+                effect: 'spawn_hazard',
+                hazardType: 'hidden_debris'
+            },
+            {
+                time: 110,
                 tag: 'FLIGHT DYNAMICS',
                 message: '[FACT - NASA ODPO] Safety box clearance confirmed along vector 2-7. Maintain station standoff.',
+                effect: 'telemetry'
+            },
+            {
+                time: 130,
+                tag: 'FINAL EXTRACTION',
+                message: '[ESTIMATE] Final approach corridor closure approaching. Complete deliveries at Aegis Depot.',
                 effect: 'telemetry'
             }
         ]
@@ -75,7 +101,7 @@ const MISSIONS_DATA = [
         debrisTypes: ['fragment', 'solar', 'booster'],
         initialDebrisCount: 20,
         respawnRate: 3600,
-        hazardRate: 10000,
+        hazardRate: 9000,
         hazardTypes: ['venting_rocket', 'hidden_debris'],
         maxHazards: 3,
         timeLimit: 160,
@@ -93,10 +119,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'BOOSTER SIGNATURE',
+                message: '[FACT - NASA ODPO] CZ-6A upper-stage debris ring detected. Multiple metal shards crossing SSO orbit.',
+                effect: 'telemetry'
+            },
+            {
                 time: 30,
                 tag: 'VENT WARNING',
-                message: '[FACT - NASA ODPO] Residual hypergolic propellants outgassing. Venting rocket upper-stage plumes detected.',
+                message: '[FACT - NASA ODPO] Residual hypergolic propellants outgassing. Venting rocket upper-stage plumes active.',
                 effect: 'telemetry'
+            },
+            {
+                time: 50,
+                tag: 'DEBRIS CLUSTER',
+                message: '[ESTIMATE] Shattered titanium tank fragments entering local recovery zone.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 70,
@@ -106,9 +145,22 @@ const MISSIONS_DATA = [
                 count: 3
             },
             {
-                time: 115,
+                time: 95,
+                tag: 'VENTING STAGE INBOUND',
+                message: '[ESTIMATE] Pressurized rocket body drifting near extraction corridor.',
+                effect: 'spawn_hazard',
+                hazardType: 'venting_rocket'
+            },
+            {
+                time: 120,
                 tag: 'ORBITAL LIFETIME',
                 message: '[FACT - NASA ODPO] At 850 km, unassisted aerodynamic drag decay requires multiple decades.',
+                effect: 'telemetry'
+            },
+            {
+                time: 145,
+                tag: 'PERIGEE WINDOW',
+                message: '[ESTIMATE] Polar pass closing in T-15s. Finalize salvage and return to station.',
                 effect: 'telemetry'
             }
         ]
@@ -126,8 +178,8 @@ const MISSIONS_DATA = [
         targetQuota: 15,
         debrisTypes: ['fragment', 'solar', 'cubesat', 'satellite'],
         initialDebrisCount: 24,
-        respawnRate: 3200,
-        hazardRate: 8500,
+        respawnRate: 3000,
+        hazardRate: 8000,
         hazardTypes: ['hidden_debris', 'venting_rocket'],
         maxHazards: 4,
         timeLimit: 180,
@@ -145,10 +197,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'INTERSECTING PLANES',
+                message: '[FACT - NASA ODPO] Entering 2009 collision fan. Relative encounter speeds reach 11.65 km/s.',
+                effect: 'telemetry'
+            },
+            {
                 time: 35,
                 tag: 'PLANE CROSSING',
-                message: '[FACT - NASA ODPO] Intersecting Cosmos 2251 retrograde plane. Relative encounter speed 11.65 km/s.',
+                message: '[FACT - NASA ODPO] Intersecting Cosmos 2251 retrograde plane. Hypervelocity debris density elevated.',
                 effect: 'telemetry'
+            },
+            {
+                time: 60,
+                tag: 'BUS SALVAGE CLUSTER',
+                message: '[ESTIMATE] Shattered satellite bus antennas located in retrograde stream.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 80,
@@ -158,9 +223,21 @@ const MISSIONS_DATA = [
                 hazardType: 'hidden_debris'
             },
             {
+                time: 105,
+                tag: 'CONJUNCTION ELEVATION',
+                message: '[ESTIMATE] Cross-plane conjunction alert. Maintain high alert for fast crossing shards.',
+                effect: 'telemetry'
+            },
+            {
                 time: 130,
                 tag: 'COLLISION CENSUS',
                 message: '[FACT - NASA ODPO] Over 2,296 trackable fragments produced; hundreds still pose conjunction risks.',
+                effect: 'telemetry'
+            },
+            {
+                time: 160,
+                tag: 'CROSSING APEX',
+                message: '[ESTIMATE] Passing the ascending node apex. Rush final payloads to Aegis Depot.',
                 effect: 'telemetry'
             }
         ]
@@ -178,8 +255,8 @@ const MISSIONS_DATA = [
         targetQuota: 14,
         debrisTypes: ['fragment', 'cubesat', 'solar'],
         initialDebrisCount: 22,
-        respawnRate: 3000,
-        hazardRate: 8000,
+        respawnRate: 2800,
+        hazardRate: 7500,
         hazardTypes: ['hidden_debris'],
         maxHazards: 4,
         timeLimit: 150,
@@ -197,10 +274,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'THERMOSPHERE ENTRY',
+                message: '[FACT - NASA ODPO] Sub-300 km orbit. Heavy neutral atmospheric density imposes continuous drag.',
+                effect: 'telemetry'
+            },
+            {
                 time: 25,
                 tag: 'GEOMAGNETIC SURGE',
                 message: '[FACT - NASA ODPO] F10.7 solar flux surge expands upper atmosphere. Drag coefficient increased by 30%.',
                 effect: 'drag_surge'
+            },
+            {
+                time: 50,
+                tag: 'DECAYING CLUSTER',
+                message: '[ESTIMATE] Rapidly decaying cluster of cubesats entering salvage zone.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 75,
@@ -209,9 +299,22 @@ const MISSIONS_DATA = [
                 effect: 'telemetry'
             },
             {
+                time: 95,
+                tag: 'FAST SHARD RUN',
+                message: '[ESTIMATE] Thermal ablation separating structural shard from carrier body.',
+                effect: 'spawn_hazard',
+                hazardType: 'hidden_debris'
+            },
+            {
                 time: 110,
                 tag: 'DECAY THRESHOLD',
                 message: '[FACT - NASA ODPO] Objects below 250 km deorbit naturally within days. Swift intervention required.',
+                effect: 'telemetry'
+            },
+            {
+                time: 135,
+                tag: 'PERIGEE SPRINT',
+                message: '[ESTIMATE] Approaching critical re-entry interface. Complete collection before deorbit.',
                 effect: 'telemetry'
             }
         ]
@@ -229,8 +332,8 @@ const MISSIONS_DATA = [
         targetQuota: 18,
         debrisTypes: ['fragment', 'cubesat', 'solar', 'satellite'],
         initialDebrisCount: 26,
-        respawnRate: 2800,
-        hazardRate: 7500,
+        respawnRate: 2600,
+        hazardRate: 7000,
         hazardTypes: ['hidden_debris', 'venting_rocket'],
         maxHazards: 5,
         timeLimit: 180,
@@ -248,10 +351,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'SHELL INSERTION',
+                message: '[FACT - NASA ODPO] Reached 550 km shell. Over 6,000 active spacecraft operating in neighboring planes.',
+                effect: 'telemetry'
+            },
+            {
                 time: 30,
                 tag: 'CONSTELLATION TRAFFIC',
                 message: '[FACT - NASA ODPO] Active broadband shell navigation active. Automated collision avoidance online.',
                 effect: 'telemetry'
+            },
+            {
+                time: 50,
+                tag: 'DEPLOYER RING CLUSTER',
+                message: '[ESTIMATE] Jettisoned dispenser ring fragments identified.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 75,
@@ -261,9 +377,22 @@ const MISSIONS_DATA = [
                 count: 4
             },
             {
+                time: 100,
+                tag: 'ROGUE UPPER STAGE',
+                message: '[ESTIMATE] Spent deployment kick stage venting hypergolic gases across constellation track.',
+                effect: 'spawn_hazard',
+                hazardType: 'venting_rocket'
+            },
+            {
                 time: 125,
                 tag: '5-YEAR RULE',
                 message: '[FACT - NASA ODPO] FCC/NASA 5-year post-mission orbital disposal rule applies to all shell operators.',
+                effect: 'telemetry'
+            },
+            {
+                time: 155,
+                tag: 'CORRIDOR CLEARANCE',
+                message: '[ESTIMATE] Clearance deadline approaching. Finalize payload sweep.',
                 effect: 'telemetry'
             }
         ]
@@ -281,8 +410,8 @@ const MISSIONS_DATA = [
         targetQuota: 20,
         debrisTypes: ['fragment', 'solar', 'satellite', 'booster'],
         initialDebrisCount: 30,
-        respawnRate: 2500,
-        hazardRate: 6500,
+        respawnRate: 2400,
+        hazardRate: 6000,
         hazardTypes: ['hidden_debris', 'nuclear', 'venting_rocket'],
         maxHazards: 6,
         timeLimit: 190,
@@ -300,10 +429,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'ASAT TRAJECTORY INTERCEPT',
+                message: '[FACT - NASA ODPO] Intersecting Fengyun-1C core cloud. Over 3,500 cataloged debris pieces in this band.',
+                effect: 'telemetry'
+            },
+            {
                 time: 30,
                 tag: 'ASAT CORE CLOUD',
                 message: '[FACT - NASA ODPO] Fengyun-1C event created over 3,500 cataloged objects spanning 200 to 3,800 km.',
                 effect: 'telemetry'
+            },
+            {
+                time: 50,
+                tag: 'TITANIUM RIBS SPOTTED',
+                message: '[ESTIMATE] Shattered weather satellite structural ribs detected ahead.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 75,
@@ -313,9 +455,22 @@ const MISSIONS_DATA = [
                 hazardType: 'hidden_debris'
             },
             {
+                time: 100,
+                tag: 'RADIATION FIELD DETECTED',
+                message: '[ESTIMATE] Broken battery/reactor power module adrift.',
+                effect: 'spawn_hazard',
+                hazardType: 'nuclear'
+            },
+            {
                 time: 125,
                 tag: 'CENTURY PERSISTENCE',
                 message: '[FACT - NASA ODPO] Because of 865 km altitude, atmospheric removal will take well over a century.',
+                effect: 'telemetry'
+            },
+            {
+                time: 160,
+                tag: 'FINAL POLAR SWEEP',
+                message: '[ESTIMATE] Orbiting into darkness. Complete final payload deliveries.',
                 effect: 'telemetry'
             }
         ]
@@ -352,10 +507,23 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
-                time: 40,
-                tag: 'SUPERSYNC INSERTION',
+                time: 10,
+                tag: 'GRAVEYARD ORBIT',
                 message: '[FACT - NASA ODPO] Reached GEO +300 km disposal ring. Natural atmospheric cleansing rate is zero.',
                 effect: 'telemetry'
+            },
+            {
+                time: 40,
+                tag: 'SUPERSYNC INSERTION',
+                message: '[FACT - NASA ODPO] Over 400 defunct spacecraft dwell permanently in the supersynchronous belt.',
+                effect: 'telemetry'
+            },
+            {
+                time: 65,
+                tag: 'COMMS PLATFORM DRIFT',
+                message: '[ESTIMATE] Massive multi-ton reflector dish and antenna cluster located.',
+                effect: 'spawn_wave',
+                count: 3
             },
             {
                 time: 90,
@@ -365,9 +533,22 @@ const MISSIONS_DATA = [
                 hazardType: 'nuclear'
             },
             {
+                time: 115,
+                tag: 'APOGEE KICK STAGE',
+                message: '[ESTIMATE] Pressurized solid kick motor outgassing in storage ring.',
+                effect: 'spawn_hazard',
+                hazardType: 'venting_rocket'
+            },
+            {
                 time: 145,
                 tag: 'GRAVEYARD CENSUS',
-                message: '[FACT - NASA ODPO] Over 400 defunct spacecraft dwell permanently in the supersynchronous belt.',
+                message: '[FACT - NASA ODPO] Objects in supersync orbits have orbital lifetimes measured in millions of years.',
+                effect: 'telemetry'
+            },
+            {
+                time: 185,
+                tag: 'DEEP SPACE DEADLINE',
+                message: '[ESTIMATE] Communications link to Earth station fading. Clear remaining quotas.',
                 effect: 'telemetry'
             }
         ]
@@ -404,11 +585,24 @@ const MISSIONS_DATA = [
         },
         scriptedEvents: [
             {
+                time: 10,
+                tag: 'CASCADE CRITICALITY',
+                message: '[FACT - NASA ODPO] Donald J. Kessler (1978): Critical density exceeded. Cascade collisions multiplying.',
+                effect: 'telemetry'
+            },
+            {
                 time: 25,
                 tag: 'CASCADE INITIATED',
-                message: '[FACT - NASA ODPO] Spatial density exceeds critical Kessler threshold (1978). Collision chain underway.',
+                message: '[FACT - NASA ODPO] Collision chain underway. Multiple simultaneous impacts detected.',
                 effect: 'spawn_wave',
                 count: 4
+            },
+            {
+                time: 45,
+                tag: 'SHRAPNEL CURTAIN',
+                message: '[ESTIMATE] Fast kinetic shard wave crossing sector!',
+                effect: 'spawn_hazard',
+                hazardType: 'hidden_debris'
             },
             {
                 time: 65,
@@ -418,23 +612,36 @@ const MISSIONS_DATA = [
                 hazardType: 'venting_rocket'
             },
             {
-                time: 110,
-                tag: 'HIDDEN SHARD CONVERGENCE',
-                message: '[ESTIMATE] Low-RCS micro-debris shower crossing sector! Active radar ping and evasive maneuvers required.',
+                time: 90,
+                tag: 'SECONDARY SHRAPNEL BURST',
+                message: '[ESTIMATE] Micro-debris shower intersecting orbit! Evasive maneuvers required.',
                 effect: 'spawn_hazard',
                 hazardType: 'hidden_debris'
             },
             {
-                time: 160,
+                time: 115,
+                tag: 'HIGH-VALUE CORES',
+                message: '[ESTIMATE] Intact reactor and fusion cores expelled from shattered satellite cluster.',
+                effect: 'spawn_wave',
+                count: 3
+            },
+            {
+                time: 140,
                 tag: 'UNSHIELDED RTG DETECTED',
                 message: '[ESTIMATE] Shattered military satellite reactor core entering salvage zone.',
                 effect: 'spawn_hazard',
                 hazardType: 'nuclear'
             },
             {
-                time: 200,
+                time: 175,
+                tag: 'EXPONENTIAL SPREAD',
+                message: '[FACT - NASA ODPO] Unchecked cascade risk will seal off low Earth orbit for human spaceflight.',
+                effect: 'telemetry'
+            },
+            {
+                time: 210,
                 tag: 'FINAL STABILIZATION WINDOW',
-                message: '[FACT - NASA ODPO] Critical mass threshold approaching. Complete quota to halt runaway cascade.',
+                message: '[FACT - NASA ODPO] Final containment window. Secure remaining targets to break the chain reaction.',
                 effect: 'telemetry'
             }
         ]

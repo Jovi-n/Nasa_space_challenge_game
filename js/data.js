@@ -4,6 +4,46 @@
  */
 
 const GAME_DATA = {
+    // Mission Flight Difficulty Profiles
+    DIFFICULTIES: {
+        cadet: {
+            id: 'cadet',
+            name: 'Cadet',
+            badge: '🟢 CADET',
+            tagline: 'Guided training flight for rookie commanders. Lower fuel burn and reduced impact damage.',
+            fuelBurnMultiplier: 0.70,
+            damageMultiplier: 0.65,
+            hazardSpeedMultiplier: 0.85,
+            timeLimitMultiplier: 1.25,
+            scoreMultiplier: 0.85,
+            kesslerGracePeriod: 12.0
+        },
+        standard: {
+            id: 'standard',
+            name: 'Standard',
+            badge: '🔵 STANDARD',
+            tagline: 'Standard NASA ODPO orbital operation parameters and authentic hazard profiles.',
+            fuelBurnMultiplier: 1.0,
+            damageMultiplier: 1.0,
+            hazardSpeedMultiplier: 1.0,
+            timeLimitMultiplier: 1.0,
+            scoreMultiplier: 1.0,
+            kesslerGracePeriod: 5.0
+        },
+        veteran: {
+            id: 'veteran',
+            name: 'Veteran',
+            badge: '🔴 VETERAN',
+            tagline: 'Hardcore deep-space salvage. Increased fuel consumption, severe hull damage, and faster hazards.',
+            fuelBurnMultiplier: 1.25,
+            damageMultiplier: 1.40,
+            hazardSpeedMultiplier: 1.20,
+            timeLimitMultiplier: 0.85,
+            scoreMultiplier: 1.50,
+            kesslerGracePeriod: 3.0
+        }
+    },
+
     // Spacecraft specifications
     SHIPS: {
         scout: {
@@ -406,6 +446,7 @@ class OrbitalStorage {
             selectedShip: 'scout',
             selectedEquipment: 'arm',
             selectedPayload: 'balanced',
+            selectedDifficulty: 'standard',
             soundSettings: {
                 sfx: true,
                 music: true
@@ -433,6 +474,7 @@ class OrbitalStorage {
                 merged.materials = Object.assign({ metal: 0, cells: 0, chips: 0 }, merged.materials);
             }
             if (!merged.commanderName) merged.commanderName = 'Commander';
+            if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';
             if (!Array.isArray(merged.leaderboard) || merged.leaderboard.length === 0) {
                 merged.leaderboard = defaultSave.leaderboard;
             }

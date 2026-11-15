@@ -73,7 +73,8 @@ class UIController {
             kesslerVal: document.getElementById('hud-kessler-val'),
             matMetal: document.getElementById('hud-mat-metal'),
             matCells: document.getElementById('hud-mat-cells'),
-            matChips: document.getElementById('hud-mat-chips')
+            matChips: document.getElementById('hud-mat-chips'),
+            missionStage: document.getElementById('hud-mission-stage')
         };
 
         // Mission Design Wizard Elements
@@ -197,6 +198,29 @@ class UIController {
                 if (this.currentScene && typeof this.currentScene.triggerStrip === 'function') {
                     this.currentScene.triggerStrip();
                 }
+                return;
+            }
+
+            const dockRepairBtn = e.target.closest('#btn-dock-repair');
+            if (dockRepairBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerRepair === 'function') {
+                    this.currentScene.triggerRepair();
+                }
+                return;
+            }
+
+            const diffCard = e.target.closest('.difficulty-card');
+            if (diffCard && diffCard.dataset.difficulty) {
+                e.preventDefault();
+                const diffKey = diffCard.dataset.difficulty;
+                const save = OrbitalStorage.load();
+                save.selectedDifficulty = diffKey;
+                OrbitalStorage.save(save);
+                document.querySelectorAll('.difficulty-card').forEach(c => {
+                    c.classList.toggle('active', c.dataset.difficulty === diffKey);
+                });
+                window.soundSystem?.playUiClick?.();
                 return;
             }
 
@@ -498,6 +522,12 @@ class UIController {
      * STEP 1: NEED & GOALS (Sector, Client, Contract Requirements Dossier)
      */
     renderStep1NeedAndGoals() {
+        // 0. Update Difficulty Selection Cards
+        const currentDiff = this.save.selectedDifficulty || 'standard';
+        document.querySelectorAll('.difficulty-card').forEach(c => {
+            c.classList.toggle('active', c.dataset.difficulty === currentDiff);
+        });
+
         // 1. Sector Level Cards (All 8 Data-Driven Sectors with Progressive Unlocks)
         const levelContainer = document.getElementById('design-level-select');
         if (levelContainer) {
@@ -1539,6 +1569,13 @@ window.addEventListener('DOMContentLoaded', () => {
             const riskLabel = kRisk > 70 ? 'CASCADE DANGER' : (kRisk >= 35 ? 'ELEVATED' : 'NOMINAL');
             hud.kesslerVal.innerText = `${kRisk}% [${riskLabel}]`;
             hud.kesslerVal.className = kRisk > 70 ? 'kessler-crit' : (kRisk >= 35 ? 'kessler-elevated' : 'kessler-low');
+        }
+
+        // Mission Stage Badge
+        if (hud.missionStage && scene.director) {
+            const stg = scene.director.currentStage || 'CALM';
+            hud.missionStage.textContent = stg;
+            hud.missionStage.className = `hud-stage-badge stage-${stg.toLowerCase()}`;
         }
 
         // Salvage Materials session counters

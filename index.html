@@ -91,19 +91,35 @@
 
             <!-- STEP 1: NEED & GOALS -->
             <div id="design-step-1" class="design-step-view active">
-                <div class="section-label">A. SELECT TARGET ORBIT &amp; MISSION SECTOR</div>
+                <div class="section-label">A. MISSION FLIGHT DIFFICULTY PROFILE</div>
+                <div id="design-difficulty-select" class="difficulty-cards-row">
+                    <div class="difficulty-card" data-difficulty="cadet">
+                        <div class="diff-header">🟢 CADET</div>
+                        <div class="diff-desc">Guided flight. -30% fuel burn, -35% impact damage, +25% time limit margin.</div>
+                    </div>
+                    <div class="difficulty-card active" data-difficulty="standard">
+                        <div class="diff-header">🔵 STANDARD</div>
+                        <div class="diff-desc">Standard NASA ODPO parameters, standard hazard velocities, and balanced margins.</div>
+                    </div>
+                    <div class="difficulty-card" data-difficulty="veteran">
+                        <div class="diff-header">🔴 VETERAN</div>
+                        <div class="diff-desc">Hardcore deep-space salvage. +25% fuel burn, +40% damage, -15% time, +50% score.</div>
+                    </div>
+                </div>
+
+                <div class="section-label">B. SELECT TARGET ORBIT &amp; MISSION SECTOR</div>
                 <div id="design-level-select" class="level-cards-grid"></div>
 
-                <div class="section-label">B. SELECT CLIENT / CONTRACT STAKEHOLDER</div>
+                <div class="section-label">C. SELECT CLIENT / CONTRACT STAKEHOLDER</div>
                 <div id="design-client-select" class="client-cards-grid"></div>
 
-                <div class="section-label">C. SELECT SPACECRAFT AIRFRAME BUS</div>
+                <div class="section-label">D. SELECT SPACECRAFT AIRFRAME BUS</div>
                 <div id="design-step1-bus-select" class="cards-row-horizontal"></div>
 
-                <div class="section-label" style="margin-top: 16px;">D. SELECT CAPTURE &amp; RETRIEVAL EQUIPMENT</div>
+                <div class="section-label" style="margin-top: 16px;">E. SELECT CAPTURE &amp; RETRIEVAL EQUIPMENT</div>
                 <div id="design-step1-equipment-select" class="cards-row-horizontal"></div>
 
-                <div class="section-label" style="margin-top: 16px;">E. CONTRACT SPECIFICATION &amp; MEASURABLE REQUIREMENTS</div>
+                <div class="section-label" style="margin-top: 16px;">F. CONTRACT SPECIFICATION &amp; MEASURABLE REQUIREMENTS</div>
                 <div id="design-requirements-dossier" class="mission-dossier-box"></div>
 
                 <div class="step-nav-bar">
@@ -481,7 +497,10 @@
 
             <!-- Mission Center Status & Kessler Meter -->
             <div class="hud-panel hud-mission-status">
-                <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
+                    <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
+                </div>
                 <div class="hud-counters">
                     <div class="hud-counter-item">
                         QUOTA: <span id="hud-quota-val" class="val-green">0 / 8</span>
@@ -526,15 +545,20 @@
             [ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED
         </div>
 
-        <!-- Docking Station Notification (Recycle vs Strip) -->
+        <!-- Docking Station Notification (Recycle vs Strip & Material Repairs) -->
         <div id="hud-docking-prompt" class="hud-docking-prompt">
-            <div class="dock-title">[AEGIS DEPOT HARBOR REACHED]</div>
+            <div class="dock-title">[AEGIS DEPOT REACHED - FUEL &amp; BATTERY REFILLED]</div>
             <div class="dock-actions">
                 <button type="button" id="btn-dock-recycle" class="dock-action-btn"><span class="kbd">E</span> RECYCLE (100% SCORE/SCRAP)</button>
                 <span class="dock-divider">|</span>
                 <button type="button" id="btn-dock-strip" class="dock-action-btn"><span class="kbd">R</span> STRIP (50% SCORE + MATERIALS)</button>
+                <span class="dock-divider">|</span>
+                <button type="button" id="btn-dock-repair" class="dock-action-btn dock-repair-btn"><span class="kbd">H</span> REPAIR HULL (-1 METAL, +35 HP)</button>
             </div>
         </div>
+
+        <!-- F3 Flight Director Telemetry Overlay -->
+        <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
         <!-- Bottom Bar: Controls & Minimap -->
         <div class="hud-bottom-bar">
@@ -544,6 +568,8 @@
                 <span class="kbd">Q</span> Nudge &nbsp;|&nbsp; 
                 <span class="kbd">E</span> Recycle &nbsp;|&nbsp; 
                 <span class="kbd">R</span> Strip &nbsp;|&nbsp; 
+                <span class="kbd">H</span> Repair &nbsp;|&nbsp; 
+                <span class="kbd">F3</span> Telemetry &nbsp;|&nbsp; 
                 <span class="kbd">P</span> Pause
             </div>
 
@@ -794,6 +820,7 @@
     <script src="data/missions.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/director.js"></script>
     <script src="js/graphics.js"></script>
     <script src="js/game.js"></script>
     <script src="js/ui.js"></script>

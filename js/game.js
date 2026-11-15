@@ -85,6 +85,23 @@ class OrbitalGameScene extends Phaser.Scene {
         this.clientPayoutMultiplier = this.clientConfig.payoutMultiplier || 1.0;
         this.clientBonusCondition = this.clientConfig.bonusCondition || 'Zero collisions and safe return';
 
+        // Phase 5 AI Flight Director & Mission Difficulty Balancing
+        this.selectedDifficulty = (this.missionConfig && this.missionConfig.difficulty) ||
+                                  (typeof OrbitalStorage !== 'undefined' ? OrbitalStorage.load().selectedDifficulty : 'standard') ||
+                                  'standard';
+        const diffConfig = (typeof GAME_DATA !== 'undefined' && GAME_DATA.DIFFICULTIES && GAME_DATA.DIFFICULTIES[this.selectedDifficulty]) || {
+            fuelBurnMultiplier: 1.0,
+            damageMultiplier: 1.0,
+            hazardSpeedMultiplier: 1.0,
+            timeLimitMultiplier: 1.0,
+            scoreMultiplier: 1.0
+        };
+        this.difficultyConfig = diffConfig;
+        this.fuelBurnRate *= diffConfig.fuelBurnMultiplier;
+        this.damageMultiplier = diffConfig.damageMultiplier;
+        this.hazardSpeedMultiplier = diffConfig.hazardSpeedMultiplier;
+        this.scoreMultiplier = diffConfig.scoreMultiplier;
+
         // Mission Run State
         this.score = 0;
         this.creditsEarned = 0;
@@ -94,7 +111,8 @@ class OrbitalGameScene extends Phaser.Scene {
         this.collisionsCount = 0;
         this.totalFuelBurned = 0;
         this.missionMassDeorbitedKg = 0;
-        this.missionTime = this.missionConfig.timeLimit;
+        this.missionTime = Math.round(this.missionConfig.timeLimit * diffConfig.timeLimitMultiplier);
+        this.timeLimitTotal = this.missionTime;
         this.elapsedTime = 0;
         this.isMissionOver = false;
         this.isDocked = false;
@@ -196,6 +214,10 @@ class OrbitalGameScene extends Phaser.Scene {
         this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
         this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
         this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+        this.keyH = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H);
+
+        // Phase 5 AI Flight Director
+        this.director = new MissionDirector(this);
 
         // 8. Collisions and Overlaps
         this.physics.add.collider(this.player, this.debrisGroup, this.handleShipDebrisBump, null, this);
@@ -326,6 +348,10 @@ class OrbitalGameScene extends Phaser.Scene {
      * Triggers a scripted narrative or tactical event from mission configuration
      */
     triggerScriptedEvent(evt) {
+        if (this.director) {
+            this.director.eventTimer = 0;
+            this.director.nextEventInterval = Phaser.Math.FloatBetween(5.5, 7.5);
+        }
         const isInfo = evt.effect === 'telemetry';
         this.logFlightEvent(evt.tag, evt.message, isInfo ? 'info' : 'warn');
         this.activeEventAlert = `[${evt.tag}] ${evt.message}`;
@@ -506,7 +532,7 @@ class OrbitalGameScene extends Phaser.Scene {
             else { targetX = 80; targetY = Phaser.Math.Between(100, h - 100); }
 
             const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
-            const speed = hazardMeta.speed || 250;
+            const speed = (hazardMeta.speed || 250) * (this.hazardSpeedMultiplier || 1.0);
             hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
             hazard.setAngularVelocity(Phaser.Math.Between(-120, 120));
             hazard.body.setCircle(14, hazard.width / 2 - 14, hazard.height / 2 - 14);
@@ -638,7 +664,12 @@ class OrbitalGameScene extends Phaser.Scene {
             }
         }
 
-        // 11. Update Game HUD DOM
+        // 11. Phase 5 AI Flight Director Update
+        if (this.director) {
+            this.director.update(dt);
+        }
+
+        // 12. Update Game HUD DOM
         if (window.updateGameHUD) {
             window.updateGameHUD(this);
         }
@@ -884,6 +915,9 @@ class OrbitalGameScene extends Phaser.Scene {
             const meta = debris.debrisType;
             if (this.cargo.length < this.cargoCapacity) {
                 this.cargo.push(meta);
+                if (this.director) {
+                    this.director.registerCapture();
+                }
                 this.missionMassDeorbitedKg = (this.missionMassDeorbitedKg || 0) + (meta.mass || 50);
                 this.firstCaptureTime = this.firstCaptureTime || Math.max(1, Math.round(this.elapsedTime));
                 this.logFlightEvent('CAPTURE', `Secured ${meta.name} (${meta.mass || 50} kg). Cargo hold: ${this.cargo.length}/${this.cargoCapacity}.`, 'info');
@@ -1062,15 +1096,31 @@ class OrbitalGameScene extends Phaser.Scene {
         const inDockRange = dist <= this.stationDockingRadius;
 
         // Player must explicitly choose [E] to Recycle or [R] to Strip for Materials
-        // Automatic dump is removed so players can always choose
         const pressRecycle = Phaser.Input.Keyboard.JustDown(this.keyE);
         const pressStrip = Phaser.Input.Keyboard.JustDown(this.keyR);
+        const pressRepair = this.keyH && Phaser.Input.Keyboard.JustDown(this.keyH);
 
-        if (inDockRange && !this.isDocked) {
-            if (pressStrip) {
-                this.processStationRecycling(true);
-            } else if (pressRecycle) {
-                this.processStationRecycling(false);
+        if (inDockRange) {
+            // Refill Fuel & Battery automatically at the depot harbor
+            if (this.fuel < this.maxFuel || this.battery < this.maxBattery) {
+                this.fuel = this.maxFuel;
+                this.battery = this.maxBattery;
+                this.loggedLowFuel = false;
+                this.loggedLowBat = false;
+                this.showFloatingText(this.station.x, this.station.y - 25, 'PROPELLANT & BATTERY REPLENISHED', '#10b981');
+                this.logFlightEvent('DEPOT SERVICE', 'Aegis Depot replenished propellant and battery to 100%.', 'success');
+            }
+
+            if (pressRepair) {
+                this.executeStationRepair();
+            }
+
+            if (!this.isDocked) {
+                if (pressStrip) {
+                    this.processStationRecycling(true);
+                } else if (pressRecycle) {
+                    this.processStationRecycling(false);
+                }
             }
         }
     }
@@ -1091,6 +1141,52 @@ class OrbitalGameScene extends Phaser.Scene {
         }
     }
 
+    triggerRepair() {
+        this.executeStationRepair();
+    }
+
+    executeStationRepair() {
+        if (!this.player || !this.station) return;
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y);
+        if (dist > (this.stationDockingRadius || 185)) {
+            this.showFloatingText(this.player.x, this.player.y - 30, 'APPROACH AEGIS DEPOT TO REPAIR', '#f59e0b');
+            return;
+        }
+
+        if (this.hull >= this.maxHull) {
+            this.showFloatingText(this.player.x, this.player.y - 30, 'HULL AT 100% INTEGRITY', '#38bdf8');
+            return;
+        }
+
+        let usedMetal = false;
+        if (this.materialsSession && this.materialsSession.metal > 0) {
+            this.materialsSession.metal--;
+            usedMetal = true;
+        } else {
+            const save = OrbitalStorage.load();
+            if (save.materials && save.materials.metal > 0) {
+                save.materials.metal--;
+                OrbitalStorage.save(save);
+                usedMetal = true;
+            }
+        }
+
+        if (usedMetal) {
+            this.hull = Math.min(this.maxHull, this.hull + 35);
+            this.showFloatingText(this.player.x, this.player.y - 35, '+35 HULL REPAIRED [-1 METAL]', '#10b981');
+            this.logFlightEvent('FIELD REPAIR', 'Consumed 1 Metal to weld armor reinforcement (+35 HP).', 'success');
+            window.soundSystem?.playRepair?.();
+        } else if (this.creditsEarned >= 50) {
+            this.creditsEarned -= 50;
+            this.hull = Math.min(this.maxHull, this.hull + 25);
+            this.showFloatingText(this.player.x, this.player.y - 35, '+25 HULL PATCHED [-50 CREDITS]', '#f59e0b');
+            this.logFlightEvent('FIELD REPAIR', 'Purchased emergency station hull patch (+25 HP).', 'info');
+            window.soundSystem?.playRepair?.();
+        } else {
+            this.showFloatingText(this.player.x, this.player.y - 35, 'REPAIR REQUIRES 1 METAL OR 50 CREDITS', '#ef4444');
+        }
+    }
+
     isNearStation() {
         return Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y) < 400;
     }
@@ -1098,6 +1194,11 @@ class OrbitalGameScene extends Phaser.Scene {
     processStationRecycling(isStripping = false) {
         if (this.isDocked) return;
         this.isDocked = true;
+
+        // Check for Perfect Docking Bonus
+        if (this.director && this.player && this.player.body) {
+            this.director.evaluateDockingBonus(this.player.body.velocity);
+        }
 
         // Lock player briefly
         this.player.setVelocity(0, 0);
@@ -1135,6 +1236,9 @@ class OrbitalGameScene extends Phaser.Scene {
             this.missionMassDeorbitedKg = (this.missionMassDeorbitedKg || 0) + (item.mass || 50);
         });
 
+        // Apply difficulty score multiplier
+        roundScore = Math.floor(roundScore * (this.scoreMultiplier || 1.0));
+
         this.score += roundScore;
         this.creditsEarned += roundCredits;
 
@@ -1165,12 +1269,33 @@ class OrbitalGameScene extends Phaser.Scene {
             window.soundSystem?.playDockingRecycle?.();
         }
 
-        // Refuel, Recharge battery, Repair hull at the station depot!
+        // Refuel and recharge battery at station depot!
         this.fuel = this.maxFuel;
         this.battery = this.maxBattery;
-        this.hull = this.maxHull;
         this.loggedLowFuel = false;
         this.loggedLowBat = false;
+
+        // Limited material-based repair if hull damaged
+        if (this.hull < this.maxHull) {
+            let usedMetal = false;
+            if (this.materialsSession.metal > 0) {
+                this.materialsSession.metal--;
+                usedMetal = true;
+            } else {
+                const save = OrbitalStorage.load();
+                if (save.materials && save.materials.metal > 0) {
+                    save.materials.metal--;
+                    OrbitalStorage.save(save);
+                    usedMetal = true;
+                }
+            }
+            if (usedMetal) {
+                this.hull = Math.min(this.maxHull, this.hull + 35);
+                this.showFloatingText(this.player.x, this.player.y - 30, '+35 HULL REPAIRED [-1 METAL]', '#10b981');
+                this.logFlightEvent('FIELD REPAIR', 'Applied 1 harvested Metal to patch hull integrity (+35 HP).', 'success');
+                window.soundSystem?.playRepair?.();
+            }
+        }
 
         // Emit recycling particle fountain
         this.recycleParticles.emitParticleAt(this.station.x, this.station.y, 30);
@@ -1182,7 +1307,7 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.showFloatingText(this.station.x, this.station.y - 40, `+${roundScore} PTS | +${roundCredits} SCRAP`, '#10b981');
             }
         } else {
-            this.showFloatingText(this.station.x, this.station.y - 40, 'SYSTEMS FULLY REPAIRED & REFUELED', '#38bdf8');
+            this.showFloatingText(this.station.x, this.station.y - 40, 'SYSTEMS REFUELED // DEPOT DOCKED', '#38bdf8');
         }
 
         this.cargo = []; // Empty cargo hold
@@ -1560,7 +1685,7 @@ class OrbitalGameScene extends Phaser.Scene {
         const severity = (impactSpeed - 60) / 160;
         const debrisMass = debris.debrisType?.mass || 50;
         const massMultiplier = Math.max(0.6, debrisMass / 60);
-        const impactDamage = Math.max(3, Math.min(42, Math.round(10 * severity * massMultiplier * (this.damageReduction || 1.0))));
+        const impactDamage = Math.max(3, Math.min(42, Math.round(10 * severity * massMultiplier * (this.damageReduction || 1.0) * (this.damageMultiplier || 1.0))));
         this.hull = Math.max(0, this.hull - impactDamage);
 
         this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
@@ -1570,12 +1695,13 @@ class OrbitalGameScene extends Phaser.Scene {
         }
         this.showFloatingText(player.x, player.y - 25, `-${impactDamage} HULL`, '#f59e0b');
 
-        // High speed impact fragmentation
+        // High speed impact fragmentation (amplified when Kessler risk is elevated)
         if (impactSpeed > 130 && debrisMass >= 30) {
+            const count = this.kesslerRisk > 75 ? Phaser.Math.Between(4, 8) : Phaser.Math.Between(3, 6);
             this.pendingFragmentations.push({
                 x: debris.x,
                 y: debris.y,
-                count: Phaser.Math.Between(3, 6),
+                count: count,
                 vx: debris.body.velocity.x,
                 vy: debris.body.velocity.y,
                 parentMass: debrisMass
@@ -1596,7 +1722,7 @@ class OrbitalGameScene extends Phaser.Scene {
         this.collisionsCount++;
 
         const meta = hazard.hazardMeta || (hazard.hazardKey ? GAME_DATA.HAZARD_TYPES[hazard.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.hidden_debris;
-        const dmg = (meta.damage || 35) * (this.damageReduction || 1.0);
+        const dmg = (meta.damage || 35) * (this.damageReduction || 1.0) * (this.damageMultiplier || 1.0);
         this.hull = Math.max(0, this.hull - dmg);
 
         // Apply violent collision knockback impulse
@@ -1604,11 +1730,12 @@ class OrbitalGameScene extends Phaser.Scene {
         player.body.velocity.x += Math.cos(hazardAngle) * 320;
         player.body.velocity.y += Math.sin(hazardAngle) * 320;
 
-        // Fragmentation on violent hazard collision
+        // Fragmentation on violent hazard collision (amplified when Kessler risk is elevated)
+        const fragCount = this.kesslerRisk > 75 ? Phaser.Math.Between(4, 8) : Phaser.Math.Between(3, 6);
         this.pendingFragmentations.push({
             x: hazard.x,
             y: hazard.y,
-            count: Phaser.Math.Between(3, 6),
+            count: fragCount,
             vx: Math.cos(hazardAngle) * 120,
             vy: Math.sin(hazardAngle) * 120,
             parentMass: 40
