@@ -342,8 +342,16 @@
                         <strong>Activate Equipment:</strong> Fires Grapple Arm, deploys Capture Net, or holds Magnetic Beam.
                     </div>
                     <div class="key-card">
+                        <div><span class="kbd">Q</span></div>
+                        <strong>Laser Nudge:</strong> Emits a focused kinetic laser pulse to deflect incoming conjunction debris/hazards. Consumes 12 battery.
+                    </div>
+                    <div class="key-card">
                         <div><span class="kbd">E</span> or Hold Position</div>
-                        <strong>Dock & Recycle:</strong> When inside Aegis Depot harbor perimeter, docks to offload waste.
+                        <strong>Dock & Recycle:</strong> Docks at Aegis Depot to offload debris for 100% Score & Scrap Credits.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">R</span> (Docked)</div>
+                        <strong>Strip Materials:</strong> At Aegis Depot, strip cargo for raw materials (Metal, Cells, Chips) at 50% credit yield.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">P</span> or <span class="kbd">ESC</span></div>
@@ -471,7 +479,7 @@
                 </div>
             </div>
 
-            <!-- Mission Center Status -->
+            <!-- Mission Center Status & Kessler Meter -->
             <div class="hud-panel hud-mission-status">
                 <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
                 <div class="hud-counters">
@@ -485,15 +493,37 @@
                         TIMER: <span id="hud-timer-val">02:30</span>
                     </div>
                 </div>
+                <div class="hud-kessler-container">
+                    <div class="hud-kessler-label">
+                        <span>KESSLER RISK</span>
+                        <span id="hud-kessler-val" class="kessler-low">0% [NOMINAL]</span>
+                    </div>
+                    <div class="gauge-bar-bg kessler-bar-bg">
+                        <div id="hud-kessler-fill" class="gauge-fill fill-kessler fill-low" style="width: 0%;"></div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Cargo Hold Status (Right) -->
+            <!-- Cargo Hold Status & Salvage Materials (Right) -->
             <div class="hud-panel hud-cargo-panel">
-                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">
-                    CARGO (<span id="hud-cargo-count">0/3</span>):
+                <div class="hud-cargo-header">
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">
+                        CARGO (<span id="hud-cargo-count">0/3</span>):
+                    </div>
+                    <div id="hud-cargo-slots" class="cargo-slots-container"></div>
                 </div>
-                <div id="hud-cargo-slots" class="cargo-slots-container"></div>
+                <div class="hud-materials-container">
+                    <span class="mat-label">SALVAGE:</span>
+                    <span class="mat-pill"><span class="mat-icon">🔩</span> <strong id="hud-mat-metal">0</strong></span>
+                    <span class="mat-pill"><span class="mat-icon">🔋</span> <strong id="hud-mat-cells">0</strong></span>
+                    <span class="mat-pill"><span class="mat-icon">💾</span> <strong id="hud-mat-chips">0</strong></span>
+                </div>
             </div>
+        </div>
+
+        <!-- Conjunction Trajectory Warning Banner -->
+        <div id="hud-conjunction-banner" class="hud-conjunction-banner">
+            [CONJUNCTION ALERT] INTERCEPT PREDICTED - PRESS [Q] TO LASER NUDGE
         </div>
 
         <!-- Dynamic Collision Warning Banner -->
@@ -501,9 +531,14 @@
             [ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED
         </div>
 
-        <!-- Docking Station Notification -->
+        <!-- Docking Station Notification (Recycle vs Strip) -->
         <div id="hud-docking-prompt" class="hud-docking-prompt">
-            [DEPOT HARBOR DETECTED] PRESS [E] OR HOLD POSITION TO DOCK & RECYCLE
+            <div class="dock-title">[AEGIS DEPOT HARBOR REACHED]</div>
+            <div class="dock-actions">
+                <span class="dock-action-btn"><span class="kbd">E</span> RECYCLE (100% SCORE/SCRAP)</span>
+                <span class="dock-divider">|</span>
+                <span class="dock-action-btn"><span class="kbd">R</span> STRIP (50% SCORE + MATERIALS)</span>
+            </div>
         </div>
 
         <!-- Bottom Bar: Controls & Minimap -->
@@ -511,7 +546,9 @@
             <div class="hud-controls-hint">
                 <span class="kbd">W/A/S/D</span> Thrust & Yaw &nbsp;|&nbsp; 
                 <span class="kbd">SPACE</span> Collect &nbsp;|&nbsp; 
-                <span class="kbd">E</span> Dock & Recycle &nbsp;|&nbsp; 
+                <span class="kbd">Q</span> Nudge &nbsp;|&nbsp; 
+                <span class="kbd">E</span> Recycle &nbsp;|&nbsp; 
+                <span class="kbd">R</span> Strip &nbsp;|&nbsp; 
                 <span class="kbd">P</span> Pause
             </div>
 
@@ -564,6 +601,41 @@
             <div class="debrief-panel" style="margin-top: 14px;">
                 <div class="panel-sub-title">3. FLIGHT TELEMETRY LOG (CHRONOLOGICAL)</div>
                 <div id="debrief-flight-log" class="flight-log-stream"></div>
+            </div>
+
+            <!-- Salvage Materials & Kessler Audit -->
+            <div id="debrief-materials-panel" class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">4. ORBITAL SALVAGE & KESSLER MITIGATION AUDIT</div>
+                <div class="debrief-materials-grid">
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🔩</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">METAL HARVESTED</span>
+                            <span id="debrief-mat-metal" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🔋</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">CELLS HARVESTED</span>
+                            <span id="debrief-mat-cells" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">💾</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">CHIPS HARVESTED</span>
+                            <span id="debrief-mat-chips" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🌐</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">KESSLER RISK</span>
+                            <span id="debrief-kessler-risk" class="mat-card-val">12% [NOMINAL]</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Redesign Recommendations & Architecture Rating -->

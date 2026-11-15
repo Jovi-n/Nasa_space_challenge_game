@@ -67,8 +67,14 @@ class UIController {
             quotaText: document.getElementById('hud-quota-val'),
             missionName: document.getElementById('hud-mission-name'),
             warningBanner: document.getElementById('hud-warning-banner'),
+            conjunctionBanner: document.getElementById('hud-conjunction-banner'),
             dockingPrompt: document.getElementById('hud-docking-prompt'),
-            minimapCanvas: document.getElementById('hud-minimap-canvas')
+            minimapCanvas: document.getElementById('hud-minimap-canvas'),
+            kesslerFill: document.getElementById('hud-kessler-fill'),
+            kesslerVal: document.getElementById('hud-kessler-val'),
+            matMetal: document.getElementById('hud-mat-metal'),
+            matCells: document.getElementById('hud-mat-cells'),
+            matChips: document.getElementById('hud-mat-chips')
         };
 
         // Mission Design Wizard Elements
@@ -1505,6 +1511,35 @@ window.addEventListener('DOMContentLoaded', () => {
         const secs = Math.floor(mTime % 60);
         if (hud.timerText) hud.timerText.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
+        // Kessler Risk Meter
+        if (hud.kesslerFill && hud.kesslerVal) {
+            const kRisk = Math.min(100, Math.max(0, Math.round(scene.kesslerRisk || 0)));
+            hud.kesslerFill.style.width = `${kRisk}%`;
+            hud.kesslerFill.classList.toggle('fill-critical', kRisk > 70);
+            hud.kesslerFill.classList.toggle('fill-elevated', kRisk >= 35 && kRisk <= 70);
+            hud.kesslerFill.classList.toggle('fill-low', kRisk < 35);
+            const riskLabel = kRisk > 70 ? 'CASCADE DANGER' : (kRisk >= 35 ? 'ELEVATED' : 'NOMINAL');
+            hud.kesslerVal.innerText = `${kRisk}% [${riskLabel}]`;
+            hud.kesslerVal.className = kRisk > 70 ? 'kessler-crit' : (kRisk >= 35 ? 'kessler-elevated' : 'kessler-low');
+        }
+
+        // Salvage Materials session counters
+        const mats = scene.materialsSession || { metal: 0, cells: 0, chips: 0 };
+        if (hud.matMetal) hud.matMetal.innerText = mats.metal || 0;
+        if (hud.matCells) hud.matCells.innerText = mats.cells || 0;
+        if (hud.matChips) hud.matChips.innerText = mats.chips || 0;
+
+        // Conjunction Trajectory Warning Banner
+        if (hud.conjunctionBanner) {
+            if (scene.conjunctionAlert && scene.conjunctionAlert.active) {
+                const ca = scene.conjunctionAlert;
+                hud.conjunctionBanner.textContent = `[CONJUNCTION ALERT] ${ca.targetName ? ca.targetName.toUpperCase() : 'OBJECT'} INTERCEPT (T-${ca.tca.toFixed(1)}s, ${Math.round(ca.missDist)}m) - PRESS [Q] TO LASER NUDGE`;
+                hud.conjunctionBanner.classList.add('active');
+            } else {
+                hud.conjunctionBanner.classList.remove('active');
+            }
+        }
+
         // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
         if (hud.warningBanner) {
             if (scene.activeEventAlert) {
@@ -1541,6 +1576,22 @@ window.addEventListener('DOMContentLoaded', () => {
         const logStream = document.getElementById('debrief-flight-log');
         const recPanel = document.getElementById('debrief-recommendations-panel');
         const shareCodeText = document.getElementById('debrief-share-code');
+        const debriefMetal = document.getElementById('debrief-mat-metal');
+        const debriefCells = document.getElementById('debrief-mat-cells');
+        const debriefChips = document.getElementById('debrief-mat-chips');
+        const debriefKessler = document.getElementById('debrief-kessler-risk');
+
+        // Populate Materials Harvested & Kessler Status
+        const mats = results.materialsSession || { metal: 0, cells: 0, chips: 0 };
+        if (debriefMetal) debriefMetal.innerText = `+${mats.metal || 0} units`;
+        if (debriefCells) debriefCells.innerText = `+${mats.cells || 0} units`;
+        if (debriefChips) debriefChips.innerText = `+${mats.chips || 0} units`;
+        if (debriefKessler) {
+            const risk = Math.round(results.finalKesslerRisk || 0);
+            const status = risk > 70 ? 'CASCADE DANGER' : (risk >= 35 ? 'ELEVATED' : 'NOMINAL');
+            debriefKessler.innerText = `${risk}% [${status}]`;
+            debriefKessler.style.color = risk > 70 ? 'var(--danger)' : (risk >= 35 ? 'var(--salvage)' : 'var(--clean)');
+        }
 
         // Headline & Stars
         headline.innerText = results.isVictory ? 'MISSION ACCOMPLISHED // FLIGHT DEBRIEF' : 'MISSION FAILED // INCIDENT REPORT';

@@ -25,7 +25,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 16,
         respawnRate: 4000,
         hazardRate: 16000,
-        hazardTypes: ['meteoroid'],
+        hazardTypes: ['hidden_debris'],
         maxHazards: 2,
         timeLimit: 150,
         worldSize: { width: 3200, height: 3200 },
@@ -68,15 +68,15 @@ const MISSIONS_DATA = [
         altitudeKm: 850,
         inclination: '98.8° SSO',
         orbitalPeriodMin: 102.0,
-        objective: 'CONTAINMENT: Sweep 12 rocket booster shards and contain toxic hypergolic venting.',
-        historicalReference: '[FACT - NASA ODPO] On November 12, 2022, the upper stage of a Chinese Long March 6A (CZ-6A / 2022-151C) broke up into over 530 trackable fragments and thousands of untracked pieces at ~850 km SSO. In August 2024, a second CZ-6A stage broke up at ~810 km, generating 700+ cataloged fragments. [ESTIMATE] Collect volatile rocket tank sections and titanium hull shards while evading drifting hypergolic plumes.',
+        objective: 'CONTAINMENT: Sweep 12 rocket booster shards and evade venting rocket upper-stage plumes.',
+        historicalReference: '[FACT - NASA ODPO] On November 12, 2022, the upper stage of a Chinese Long March 6A (CZ-6A / 2022-151C) broke up into over 530 trackable fragments and thousands of untracked pieces at ~850 km SSO. In August 2024, a second CZ-6A stage broke up at ~810 km, generating 700+ cataloged fragments. [ESTIMATE] Collect volatile rocket tank sections and titanium hull shards while evading venting rocket-body gas jets.',
         briefing: 'Catastrophic upper-stage tank rupture has strewn propellant canisters and structural shards across polar sun-synchronous orbit. Secure rocket debris before orbital dispersion spreads the cloud across global altitudes.',
         targetQuota: 12,
         debrisTypes: ['fragment', 'solar', 'booster'],
         initialDebrisCount: 20,
         respawnRate: 3600,
         hazardRate: 10000,
-        hazardTypes: ['hypergolic', 'meteoroid'],
+        hazardTypes: ['venting_rocket', 'hidden_debris'],
         maxHazards: 3,
         timeLimit: 160,
         worldSize: { width: 3400, height: 3400 },
@@ -95,7 +95,7 @@ const MISSIONS_DATA = [
             {
                 time: 30,
                 tag: 'VENT WARNING',
-                message: '[FACT - NASA ODPO] Residual hypergolic propellants outgassing. Toxic hydrazine clouds detected.',
+                message: '[FACT - NASA ODPO] Residual hypergolic propellants outgassing. Venting rocket upper-stage plumes detected.',
                 effect: 'telemetry'
             },
             {
@@ -128,7 +128,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 24,
         respawnRate: 3200,
         hazardRate: 8500,
-        hazardTypes: ['meteoroid', 'hypergolic'],
+        hazardTypes: ['hidden_debris', 'venting_rocket'],
         maxHazards: 4,
         timeLimit: 180,
         worldSize: { width: 3800, height: 3800 },
@@ -153,9 +153,9 @@ const MISSIONS_DATA = [
             {
                 time: 80,
                 tag: 'SHRAPNEL SPIKE',
-                message: '[ESTIMATE] Secondary fragment cluster detected on radar! High-speed kinetic hazard incoming.',
+                message: '[ESTIMATE] Secondary fragment cluster detected on radar! Hidden micro-debris incoming.',
                 effect: 'spawn_hazard',
-                hazardType: 'meteoroid'
+                hazardType: 'hidden_debris'
             },
             {
                 time: 130,
@@ -180,7 +180,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 22,
         respawnRate: 3000,
         hazardRate: 8000,
-        hazardTypes: ['meteoroid'],
+        hazardTypes: ['hidden_debris'],
         maxHazards: 4,
         timeLimit: 150,
         worldSize: { width: 3400, height: 3400 },
@@ -231,7 +231,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 26,
         respawnRate: 2800,
         hazardRate: 7500,
-        hazardTypes: ['meteoroid', 'hypergolic'],
+        hazardTypes: ['hidden_debris', 'venting_rocket'],
         maxHazards: 5,
         timeLimit: 180,
         worldSize: { width: 4000, height: 4000 },
@@ -283,7 +283,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 30,
         respawnRate: 2500,
         hazardRate: 6500,
-        hazardTypes: ['meteoroid', 'nuclear', 'hypergolic'],
+        hazardTypes: ['hidden_debris', 'nuclear', 'venting_rocket'],
         maxHazards: 6,
         timeLimit: 190,
         worldSize: { width: 4200, height: 4200 },
@@ -308,9 +308,9 @@ const MISSIONS_DATA = [
             {
                 time: 75,
                 tag: 'HIGH-DENSITY SHARDS',
-                message: '[ESTIMATE] Kinetic projectile fragment burst detected on collision trajectory.',
+                message: '[ESTIMATE] Low-observability composite shard burst detected on collision trajectory.',
                 effect: 'spawn_hazard',
-                hazardType: 'meteoroid'
+                hazardType: 'hidden_debris'
             },
             {
                 time: 125,
@@ -335,7 +335,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 32,
         respawnRate: 2400,
         hazardRate: 5500,
-        hazardTypes: ['nuclear', 'hypergolic', 'meteoroid'],
+        hazardTypes: ['nuclear', 'venting_rocket', 'hidden_debris'],
         maxHazards: 7,
         timeLimit: 220,
         worldSize: { width: 4600, height: 4600 },
@@ -387,7 +387,7 @@ const MISSIONS_DATA = [
         initialDebrisCount: 36,
         respawnRate: 2000,
         hazardRate: 4200,
-        hazardTypes: ['meteoroid', 'hypergolic', 'nuclear'],
+        hazardTypes: ['hidden_debris', 'venting_rocket', 'nuclear'],
         maxHazards: 8,
         timeLimit: 240,
         worldSize: { width: 5000, height: 5000 },
@@ -412,17 +412,17 @@ const MISSIONS_DATA = [
             },
             {
                 time: 65,
-                tag: 'HYPERGOLIC ERUPTION',
-                message: '[ESTIMATE] Pressurized fuel cell detonated! High-temperature gas plume expanding.',
+                tag: 'VENTING ROCKET ERUPTION',
+                message: '[ESTIMATE] Derelict booster pressure surge! Directional hypergolic gas jet plume expanding.',
                 effect: 'spawn_hazard',
-                hazardType: 'hypergolic'
+                hazardType: 'venting_rocket'
             },
             {
                 time: 110,
-                tag: 'KINETIC CONVERGENCE',
-                message: '[ESTIMATE] Secondary projectile shower crossing sector! Evasive maneuvers required.',
+                tag: 'HIDDEN SHARD CONVERGENCE',
+                message: '[ESTIMATE] Low-RCS micro-debris shower crossing sector! Active radar ping and evasive maneuvers required.',
                 effect: 'spawn_hazard',
-                hazardType: 'meteoroid'
+                hazardType: 'hidden_debris'
             },
             {
                 time: 160,

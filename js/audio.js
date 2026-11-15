@@ -334,6 +334,83 @@ class SoundSystem {
         });
     }
 
+    playLaserNudge() {
+        this.resume();
+        if (!this.sfxEnabled || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1300, now);
+            osc.frequency.exponentialRampToValueAtTime(260, now + 0.14);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.setValueAtTime(0.32 * this.sfxVolume, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(now);
+            osc.stop(now + 0.18);
+        } catch (e) {
+            console.warn('Laser nudge audio error:', e);
+        }
+    }
+
+    playStripDebris() {
+        this.resume();
+        if (!this.sfxEnabled || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // Laser cutter deconstruction chord
+            const pitches = [587, 784, 987, 1174];
+            pitches.forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+                gain.gain.setValueAtTime(0.001, now + idx * 0.05);
+                gain.gain.setValueAtTime(0.2 * this.sfxVolume, now + idx * 0.05 + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.05 + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now + idx * 0.05);
+                osc.stop(now + idx * 0.05 + 0.28);
+            });
+        } catch (e) {
+            console.warn('Strip debris audio error:', e);
+        }
+    }
+
+    playConjunctionAlarm() {
+        this.resume();
+        if (!this.sfxEnabled || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            [1046, 1318].forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+                gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+                gain.gain.setValueAtTime(0.18 * this.sfxVolume, now + idx * 0.09 + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now + idx * 0.09);
+                osc.stop(now + idx * 0.09 + 0.1);
+            });
+        } catch (e) {
+            console.warn('Conjunction alarm audio error:', e);
+        }
+    }
+
     playWarning(trigger = true) {
         try {
             if (!this.initialized) this.resume();

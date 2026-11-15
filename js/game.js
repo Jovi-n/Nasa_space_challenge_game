@@ -114,6 +114,15 @@ class OrbitalGameScene extends Phaser.Scene {
         // Queues for physics-safe creation / destruction
         this.pendingCollections = [];
         this.pendingHazardDestructions = [];
+        this.pendingFragmentations = [];
+
+        // Phase 4 Orbital Mechanics, Salvage Depth & Conjunction Tracking
+        this.kesslerRisk = 12;
+        this.materialsSession = { metal: 0, cells: 0, chips: 0 };
+        this.nudgesCount = 0;
+        this.conjunctionAlert = null;
+        this.conjunctionSoundCooldown = 0;
+        this.laserNudgeEffect = null;
 
         // Phase 3 Data-Driven Scripted Events & Sector Atmospheric Drag
         this.triggeredScriptedEvents = new Set();
@@ -187,11 +196,14 @@ class OrbitalGameScene extends Phaser.Scene {
         this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
         this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+        this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+        this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
         // 8. Collisions and Overlaps
         this.physics.add.collider(this.player, this.debrisGroup, this.handleShipDebrisBump, null, this);
-        this.physics.add.collider(this.debrisGroup, this.debrisGroup);
+        this.physics.add.collider(this.debrisGroup, this.debrisGroup, this.handleDebrisDebrisCollision, null, this);
         this.physics.add.overlap(this.player, this.hazardGroup, this.handleShipHazardCollision, null, this);
+        this.physics.add.collider(this.debrisGroup, this.hazardGroup, this.handleHazardDebrisCollision, null, this);
 
         // 9. Particle Managers
         this.createParticleSystems();
@@ -466,7 +478,7 @@ class OrbitalGameScene extends Phaser.Scene {
 
         const allowedHazards = this.missionConfig.hazardTypes;
         const hazardKey = Phaser.Utils.Array.GetRandom(allowedHazards);
-        const hazardMeta = GAME_DATA.HAZARD_TYPES[hazardKey];
+        const hazardMeta = GAME_DATA.HAZARD_TYPES[hazardKey] || GAME_DATA.HAZARD_TYPES.hidden_debris;
 
         // Spawn on the outer perimeter traveling towards inner orbit
         const w = this.missionConfig.worldSize.width;
@@ -485,19 +497,49 @@ class OrbitalGameScene extends Phaser.Scene {
         hazard.hazardMeta = hazardMeta;
         hazard.hazardKey = hazardKey;
 
-        // Trajectory aimed towards player's general sector with jitter
-        const targetX = this.player.x + Phaser.Math.Between(-300, 300);
-        const targetY = this.player.y + Phaser.Math.Between(-300, 300);
-        const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
-        const speed = hazardMeta.speed || 180;
+        if (hazardMeta.id === 'hidden_debris') {
+            // Natural orbital drift across sector, NOT aimed at player
+            // Choose an opposing target edge to simulate orbital plane crossing
+            const targetEdge = (edge + Phaser.Math.Between(1, 3)) % 4;
+            let targetX, targetY;
+            if (targetEdge === 0) { targetX = Phaser.Math.Between(100, w - 100); targetY = 80; }
+            else if (targetEdge === 1) { targetX = w - 80; targetY = Phaser.Math.Between(100, h - 100); }
+            else if (targetEdge === 2) { targetX = Phaser.Math.Between(100, w - 100); targetY = h - 80; }
+            else { targetX = 80; targetY = Phaser.Math.Between(100, h - 100); }
 
-        hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
-        hazard.setAngularVelocity(Phaser.Math.Between(-80, 80));
-        hazard.body.setCircle(20, hazard.width / 2 - 20, hazard.height / 2 - 20);
+            const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
+            const speed = hazardMeta.speed || 250;
+            hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
+            hazard.setAngularVelocity(Phaser.Math.Between(-120, 120));
+            hazard.body.setCircle(14, hazard.width / 2 - 14, hazard.height / 2 - 14);
+            hazard.alpha = 0.45; // Low-observability stealth mode until within sensor range
+        } else if (hazardMeta.id === 'venting_rocket') {
+            // Derelict spent upper stage: slow drift with periodic high-pressure hypergolic venting
+            const targetX = w * 0.5 + Phaser.Math.Between(-600, 600);
+            const targetY = h * 0.5 + Phaser.Math.Between(-600, 600);
+            const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
+            const speed = hazardMeta.speed || 65;
+            hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
+            hazard.setAngularVelocity(Phaser.Math.Between(-25, 25));
+            hazard.body.setCircle(22, hazard.width / 2 - 22, hazard.height / 2 - 22);
+
+            hazard.ventTimer = Phaser.Math.Between(2500, 4500);
+            hazard.isVenting = false;
+            hazard.ventDuration = 0;
+        } else {
+            // Default hazard (e.g. nuclear RTG)
+            const targetX = w * 0.5 + Phaser.Math.Between(-400, 400);
+            const targetY = h * 0.5 + Phaser.Math.Between(-400, 400);
+            const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
+            const speed = hazardMeta.speed || 120;
+            hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
+            hazard.setAngularVelocity(Phaser.Math.Between(-50, 50));
+            hazard.body.setCircle(22, hazard.width / 2 - 22, hazard.height / 2 - 22);
+        }
 
         // Auto destroy after lifespan to avoid clutter
-        this.time.delayedCall(22000, () => {
-            if (hazard && typeof hazard.destroy === 'function') {
+        this.time.delayedCall(26000, () => {
+            if (hazard && typeof hazard.destroy === 'function' && hazard.active) {
                 hazard.destroy();
             }
         });
@@ -535,7 +577,37 @@ class OrbitalGameScene extends Phaser.Scene {
         // 5. Environmental Hazards & Collision Warning Radar
         this.handleProximityRadar(dt);
 
-        // 6. Passive Solar Battery Recharge
+        // 6. Update Venting Rocket Upper-Stage Plumes & Dynamics
+        this.updateVentingRockets(dt);
+
+        // 7. Check Q-Key Laser Nudge Deflection Input
+        if (Phaser.Input.Keyboard.JustDown(this.keyQ)) {
+            this.executeLaserNudge();
+        }
+
+        // Render Active Laser Nudge Beam FX
+        if (this.laserNudgeEffect) {
+            this.laserNudgeEffect.life -= dt;
+            if (this.laserNudgeEffect.life <= 0) {
+                this.laserNudgeEffect = null;
+            } else {
+                const eff = this.laserNudgeEffect;
+                const alpha = Math.max(0, eff.life / 0.18);
+                this.fxGraphics.lineStyle(3.5, 0x00f3ff, alpha);
+                this.fxGraphics.lineBetween(eff.startX, eff.startY, eff.targetX, eff.targetY);
+                this.fxGraphics.lineStyle(2, 0xffffff, alpha);
+                this.fxGraphics.strokeCircle(eff.targetX, eff.targetY, 22);
+            }
+        }
+
+        // 8. Dynamic Kessler Risk Meter Computation
+        const activeDebris = this.debrisGroup ? this.debrisGroup.countActive(true) : 0;
+        const activeFrags = this.debrisGroup ? this.debrisGroup.getChildren().filter(d => d.active && d.debrisType?.id === 'fragment').length : 0;
+        this.kesslerRisk = Phaser.Math.Clamp(Math.round(
+            (activeDebris * 1.4) + (activeFrags * 2.0) + (this.collisionsCount * 4) - (this.debrisDeliveredCount * 3) - (this.nudgesCount * 2)
+        ), 0, 100);
+
+        // 9. Passive Solar Battery Recharge
         if (this.battery < this.maxBattery) {
             this.battery = Math.min(this.maxBattery, this.battery + this.batteryRechargeRate * dt);
         }
@@ -550,7 +622,7 @@ class OrbitalGameScene extends Phaser.Scene {
             this.logFlightEvent('WARNING', 'Battery capacity below 22% reserve margin.', 'warn');
         }
 
-        // 7. Data-Driven Scripted Events Handling
+        // 10. Data-Driven Scripted Events Handling
         if (this.missionConfig && this.missionConfig.scriptedEvents) {
             this.missionConfig.scriptedEvents.forEach((evt, idx) => {
                 if (this.elapsedTime >= evt.time && !this.triggeredScriptedEvents.has(idx)) {
@@ -568,7 +640,7 @@ class OrbitalGameScene extends Phaser.Scene {
             }
         }
 
-        // 8. Update Game HUD DOM
+        // 11. Update Game HUD DOM
         if (window.updateGameHUD) {
             window.updateGameHUD(this);
         }
@@ -578,29 +650,40 @@ class OrbitalGameScene extends Phaser.Scene {
         let isThrusting = false;
         let isTurning = false;
 
-        // Angular Rotation (A/D or Left/Right)
+        // 1. Cargo Mass Penalty (Heavier cargo hold reduces linear agility and increases propellant consumption)
+        const cargoMass = (this.cargo || []).reduce((sum, item) => sum + (item.mass || 30), 0);
+        const cargoMassFactor = 1 + (cargoMass / 550);
+        const effectiveAcceleration = this.acceleration / cargoMassFactor;
+        const effectiveBurnRate = this.fuelBurnRate * (1 + (cargoMass / 700));
+        this.player.setMaxVelocity(this.maxSpeed / (1 + (cargoMass / 1200)));
+
+        // 2. Angular Inertia with Reaction Control Thruster (RCS) Dynamics
+        let targetTurnRate = 0;
         if (this.cursors.left.isDown || this.keyA.isDown) {
-            this.player.setAngularVelocity(-this.turnRate);
+            targetTurnRate = -this.turnRate;
             isTurning = true;
         } else if (this.cursors.right.isDown || this.keyD.isDown) {
-            this.player.setAngularVelocity(this.turnRate);
+            targetTurnRate = this.turnRate;
             isTurning = true;
-        } else {
-            this.player.setAngularVelocity(0);
         }
 
-        // Forward Propulsion (W or Up Arrow)
+        // Realistic angular damping: gradual spin decay rather than abrupt halt
+        const turnDamping = targetTurnRate === 0 ? 3.5 : 8.5;
+        const curAngVel = this.player.body ? this.player.body.angularVelocity : 0;
+        this.player.setAngularVelocity(Phaser.Math.Linear(curAngVel, targetTurnRate, dt * turnDamping));
+
+        // 3. Forward Propulsion (W or Up Arrow)
         if ((this.cursors.up.isDown || this.keyW.isDown) && this.fuel > 0) {
             isThrusting = true;
             const angle = this.player.rotation;
             const dragMod = this.activeAtmosphericDrag || 1.0;
-            const ax = Math.cos(angle) * this.acceleration * dragMod;
-            const ay = Math.sin(angle) * this.acceleration * dragMod;
+            const ax = Math.cos(angle) * effectiveAcceleration * dragMod;
+            const ay = Math.sin(angle) * effectiveAcceleration * dragMod;
 
             this.player.setAcceleration(ax, ay);
 
-            // Fuel Burn
-            const burn = this.fuelBurnRate * dt * 4.0;
+            // Fuel Burn adjusted for cargo weight
+            const burn = effectiveBurnRate * dt * 4.0;
             this.fuel = Math.max(0, this.fuel - burn);
             this.totalFuelBurned += burn;
 
@@ -615,7 +698,7 @@ class OrbitalGameScene extends Phaser.Scene {
             // Retro-Thrusters / Inertial Braking
             this.player.setAcceleration(0, 0);
             this.player.body.velocity.scale(0.96); // Active braking
-            const burn = this.fuelBurnRate * dt * 2.0;
+            const burn = effectiveBurnRate * dt * 2.0;
             this.fuel = Math.max(0, this.fuel - burn);
             this.totalFuelBurned += burn;
             window.soundSystem.setThruster(true, 0.4);
@@ -735,6 +818,12 @@ class OrbitalGameScene extends Phaser.Scene {
 
             if (g.hookedDebris) {
                 g.hookedDebris.setPosition(g.currentX, g.currentY);
+                // Tow Drag: Newton's 3rd law pulls player craft toward heavy tethered debris
+                const towMass = g.hookedDebris.debrisType?.mass || 50;
+                const towForce = (towMass / 100) * 110 * dt;
+                const towAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, g.currentX, g.currentY);
+                this.player.body.velocity.x += Math.cos(towAngle) * towForce;
+                this.player.body.velocity.y += Math.sin(towAngle) * towForce;
             }
 
             if (g.distance <= 15) {
@@ -816,6 +905,48 @@ class OrbitalGameScene extends Phaser.Scene {
                 hazard.destroy();
             }
         }
+
+        // 3. Process queued collision fragmentations safely outside collision callbacks
+        while (this.pendingFragmentations && this.pendingFragmentations.length > 0) {
+            const frag = this.pendingFragmentations.pop();
+            if (!frag) continue;
+            this.createCollisionFragments(frag.x, frag.y, frag.count, frag.vx, frag.vy, frag.parentMass);
+        }
+    }
+
+    createCollisionFragments(x, y, count, baseVx = 0, baseVy = 0, parentMass = 40) {
+        if (!this.debrisGroup) return;
+        const currentActive = this.debrisGroup.countActive(true);
+        const MAX_DEBRIS = 46;
+        const spawnCount = Math.min(count, Math.max(0, MAX_DEBRIS - currentActive));
+        if (spawnCount <= 0) return;
+
+        const fragMeta = GAME_DATA.DEBRIS_TYPES.fragment;
+        const fragmentMass = Math.max(6, Math.round(parentMass / (spawnCount * 1.5)));
+
+        for (let i = 0; i < spawnCount; i++) {
+            const spreadAngle = (i / spawnCount) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.35, 0.35);
+            const speed = Phaser.Math.Between(75, 210);
+            const fragX = x + Math.cos(spreadAngle) * 16;
+            const fragY = y + Math.sin(spreadAngle) * 16;
+
+            const frag = this.debrisGroup.create(fragX, fragY, 'debris_fragment');
+            frag.setDepth(5);
+            frag.debrisType = Object.assign({}, fragMeta, { mass: fragmentMass });
+            frag.setScale(Phaser.Math.FloatBetween(0.65, 0.95));
+            frag.setVelocity(baseVx * 0.25 + Math.cos(spreadAngle) * speed, baseVy * 0.25 + Math.sin(spreadAngle) * speed);
+            frag.setAngularVelocity(Phaser.Math.Between(-140, 140));
+            frag.setDrag(10);
+            frag.setAngularDrag(10);
+            frag.body.setCircle(10, frag.width / 2 - 10, frag.height / 2 - 10);
+        }
+
+        if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+            this.sparkParticles.emitParticleAt(x, y, 16);
+        }
+
+        this.kesslerRisk = Math.min(100, this.kesslerRisk + spawnCount * 1.8);
+        this.logFlightEvent('FRAGMENTATION', `Impact shattered target into ${spawnCount} kinetic fragments (+${Math.round(spawnCount * 1.8)}% Kessler Risk).`, 'crit');
     }
 
     updateCaptureNets(dt) {
@@ -898,6 +1029,12 @@ class OrbitalGameScene extends Phaser.Scene {
                     d.body.velocity.x += Math.cos(pullAngle) * pull * dt;
                     d.body.velocity.y += Math.sin(pullAngle) * pull * dt;
 
+                    // Tow Drag: Newton's 3rd law reaction force pulls player craft toward heavy debris
+                    const dMass = d.debrisType?.mass || 40;
+                    const reactionForce = (dMass / 120) * (pull * 0.18) * dt;
+                    this.player.body.velocity.x -= Math.cos(pullAngle) * reactionForce;
+                    this.player.body.velocity.y -= Math.sin(pullAngle) * reactionForce;
+
                     // Cap maximum pull speed so debris does not teleport or behave erratically
                     const maxPullSpeed = 340;
                     const curSpeed = d.body.velocity.length();
@@ -926,12 +1063,17 @@ class OrbitalGameScene extends Phaser.Scene {
         const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y);
         const inDockRange = dist <= this.stationDockingRadius;
 
-        // Show docking prompt or auto dock when stationary inside zone
-        const pressDock = Phaser.Input.Keyboard.JustDown(this.keyE);
+        // Player can press [E] to Recycle (100% Score/Credits) or [R] to Strip for Materials (50% Score)
+        const pressRecycle = Phaser.Input.Keyboard.JustDown(this.keyE);
+        const pressStrip = Phaser.Input.Keyboard.JustDown(this.keyR);
         const isStationary = this.player.body.velocity.length() < 35;
 
-        if (inDockRange && (pressDock || (isStationary && this.cargo.length > 0))) {
-            this.processStationRecycling();
+        if (inDockRange && !this.isDocked) {
+            if (pressStrip) {
+                this.processStationRecycling(true);
+            } else if (pressRecycle || (isStationary && this.cargo.length > 0)) {
+                this.processStationRecycling(false);
+            }
         }
     }
 
@@ -939,12 +1081,9 @@ class OrbitalGameScene extends Phaser.Scene {
         return Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y) < 400;
     }
 
-    processStationRecycling() {
+    processStationRecycling(isStripping = false) {
         if (this.isDocked) return;
         this.isDocked = true;
-
-        // Play docking and recycling sequence
-        window.soundSystem.playDockingRecycle();
 
         // Lock player briefly
         this.player.setVelocity(0, 0);
@@ -956,19 +1095,60 @@ class OrbitalGameScene extends Phaser.Scene {
         // Apply equipment scrap multiplier
         const bonus = this.equipmentConfig.scrapBonus || 1.0;
 
+        let harvestMetal = 0;
+        let harvestCells = 0;
+        let harvestChips = 0;
+
         this.cargo.forEach(item => {
-            roundScore += Math.floor(item.points * bonus);
-            roundCredits += Math.floor(item.scrap * bonus);
+            const itemBaseScore = Math.floor(item.points * bonus);
+            const itemBaseCredits = Math.floor(item.scrap * bonus);
+
+            if (isStripping) {
+                // Strip: 50% score and credits, harvest raw materials (Metal, Cells, Chips)
+                roundScore += Math.floor(itemBaseScore * 0.5);
+                roundCredits += Math.floor(itemBaseCredits * 0.5);
+                const mats = item.materials || { metal: 1, cells: 0, chips: 0 };
+                harvestMetal += mats.metal || 0;
+                harvestCells += mats.cells || 0;
+                harvestChips += mats.chips || 0;
+            } else {
+                // Recycle: 100% score and credits
+                roundScore += itemBaseScore;
+                roundCredits += itemBaseCredits;
+            }
+
             this.debrisDeliveredCount++;
             this.missionMassDeorbitedKg = (this.missionMassDeorbitedKg || 0) + (item.mass || 50);
         });
 
         this.score += roundScore;
         this.creditsEarned += roundCredits;
+
         if (itemsCount > 0) {
             this.deliveriesCompleted++;
             this.firstDockTime = this.firstDockTime || Math.max(2, Math.round(this.elapsedTime));
-            this.logFlightEvent('DEPOT_DOCK', `Soft docked with Aegis Depot. Offloaded ${itemsCount} items (${this.debrisDeliveredCount}/${this.debrisTargetQuota} quota).`, 'success');
+
+            if (isStripping) {
+                this.materialsSession.metal += harvestMetal;
+                this.materialsSession.cells += harvestCells;
+                this.materialsSession.chips += harvestChips;
+
+                // Persist materials immediately to storage
+                const save = OrbitalStorage.load();
+                save.materials = save.materials || { metal: 0, cells: 0, chips: 0 };
+                save.materials.metal = (save.materials.metal || 0) + harvestMetal;
+                save.materials.cells = (save.materials.cells || 0) + harvestCells;
+                save.materials.chips = (save.materials.chips || 0) + harvestChips;
+                OrbitalStorage.save(save);
+
+                window.soundSystem?.playStripDebris?.();
+                this.logFlightEvent('STRIP', `Stripped ${itemsCount} items: +${harvestMetal} Metal, +${harvestCells} Cells, +${harvestChips} Chips (50% Credits).`, 'success');
+            } else {
+                window.soundSystem?.playDockingRecycle?.();
+                this.logFlightEvent('DEPOT_DOCK', `Recycled ${itemsCount} items in Aegis Smelter (100% Value: +${roundScore} pts, +${roundCredits} scrap).`, 'success');
+            }
+        } else {
+            window.soundSystem?.playDockingRecycle?.();
         }
 
         // Refuel, Recharge battery, Repair hull at the station depot!
@@ -982,7 +1162,11 @@ class OrbitalGameScene extends Phaser.Scene {
         this.recycleParticles.emitParticleAt(this.station.x, this.station.y, 30);
 
         if (itemsCount > 0) {
-            this.showFloatingText(this.station.x, this.station.y - 40, `+${roundScore} PTS | +${roundCredits} SCRAP`, '#10b981');
+            if (isStripping) {
+                this.showFloatingText(this.station.x, this.station.y - 40, `+${harvestMetal}M +${harvestCells}C +${harvestChips}CP (+${roundScore} PTS)`, '#f59e0b');
+            } else {
+                this.showFloatingText(this.station.x, this.station.y - 40, `+${roundScore} PTS | +${roundCredits} SCRAP`, '#10b981');
+            }
         } else {
             this.showFloatingText(this.station.x, this.station.y - 40, 'SYSTEMS FULLY REPAIRED & REFUELED', '#38bdf8');
         }
@@ -1001,19 +1185,245 @@ class OrbitalGameScene extends Phaser.Scene {
         }
     }
 
+    updateVentingRockets(dt) {
+        if (!this.hazardGroup) return;
+        this.hazardGroup.getChildren().forEach(h => {
+            if (!h || !h.active) return;
+            const meta = h.hazardMeta || GAME_DATA.HAZARD_TYPES[h.hazardKey];
+            if (meta?.id !== 'venting_rocket') return;
+
+            h.ventTimer = (h.ventTimer || 3000) - (dt * 1000);
+            if (!h.isVenting && h.ventTimer <= 0) {
+                // Trigger venting cycle
+                h.isVenting = true;
+                h.ventDuration = 2200; // 2.2 seconds of venting
+                h.ventAngle = h.rotation + Math.PI / 2; // direction opposite to rocket nozzle
+            }
+
+            if (h.isVenting) {
+                h.ventDuration -= dt * 1000;
+                if (h.ventDuration <= 0) {
+                    h.isVenting = false;
+                    h.ventTimer = Phaser.Math.Between(4000, 6000);
+                } else {
+                    // 1. Reactive thrust pushing rocket body forward
+                    const reactionForce = 80;
+                    const forwardAngle = h.rotation - Math.PI / 2;
+                    h.body.velocity.x += Math.cos(forwardAngle) * reactionForce * dt;
+                    h.body.velocity.y += Math.sin(forwardAngle) * reactionForce * dt;
+
+                    // 2. Render plume jet in fxGraphics
+                    const nozzleDist = 24;
+                    const ventOriginX = h.x + Math.cos(h.ventAngle) * nozzleDist;
+                    const ventOriginY = h.y + Math.sin(h.ventAngle) * nozzleDist;
+
+                    const plumeLen = 95 + Math.sin(this.elapsedTime * 20) * 15;
+                    const plumeSpread = 0.48;
+                    this.fxGraphics.fillStyle(0xf97316, 0.40);
+                    this.fxGraphics.lineStyle(1.5, 0xfde047, 0.7);
+                    this.fxGraphics.beginPath();
+                    this.fxGraphics.moveTo(ventOriginX, ventOriginY);
+                    this.fxGraphics.arc(ventOriginX, ventOriginY, plumeLen, h.ventAngle - plumeSpread, h.ventAngle + plumeSpread);
+                    this.fxGraphics.closePath();
+                    this.fxGraphics.fillPath();
+                    this.fxGraphics.strokePath();
+
+                    // 3. Check if player is caught in vent plume
+                    if (this.player && this.player.active) {
+                        const distToVent = Phaser.Math.Distance.Between(ventOriginX, ventOriginY, this.player.x, this.player.y);
+                        if (distToVent < plumeLen) {
+                            const angleToPlayer = Phaser.Math.Angle.Between(ventOriginX, ventOriginY, this.player.x, this.player.y);
+                            const diff = Math.abs(Phaser.Math.Angle.Wrap(angleToPlayer - h.ventAngle));
+                            if (diff <= plumeSpread) {
+                                // In plume: heat damage & violent gas jet knockback
+                                const ventDmg = 18 * dt * (this.damageReduction || 1.0);
+                                this.hull = Math.max(0, this.hull - ventDmg);
+                                this.player.body.velocity.x += Math.cos(h.ventAngle) * 360 * dt;
+                                this.player.body.velocity.y += Math.sin(h.ventAngle) * 360 * dt;
+                                if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+                                    this.sparkParticles.emitParticleAt(this.player.x, this.player.y, 2);
+                                }
+                                if (this.hull <= 0) {
+                                    this.handleMissionEnd(false, 'HULL INCINERATED BY HYPERGOLIC VENT PLUME');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    executeLaserNudge() {
+        if (this.battery < 12) {
+            this.showFloatingText(this.player.x, this.player.y - 30, 'BATTERY LOW (12 REQUIRED)', '#ef4444');
+            return;
+        }
+
+        const maxRange = 360 * (this.radarMultiplier || 1.0);
+        let bestTarget = null;
+        let bestScore = -1;
+
+        // Prioritize conjunction targets or closest hazards/debris
+        if (this.hazardGroup) {
+            this.hazardGroup.getChildren().forEach(h => {
+                if (!h || !h.active) return;
+                const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, h.x, h.y);
+                if (d < maxRange) {
+                    const score = 1000 - d;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTarget = h;
+                    }
+                }
+            });
+        }
+
+        if (this.debrisGroup) {
+            this.debrisGroup.getChildren().forEach(d => {
+                if (!d || !d.active || d.isPendingCollection) return;
+                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, d.x, d.y);
+                if (dist < maxRange) {
+                    const score = 500 - dist;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTarget = d;
+                    }
+                }
+            });
+        }
+
+        if (!bestTarget) {
+            this.showFloatingText(this.player.x, this.player.y - 30, 'NO TARGET IN NUDGE RANGE', '#f59e0b');
+            return;
+        }
+
+        // Consume battery
+        this.battery = Math.max(0, this.battery - 12);
+        this.nudgesCount++;
+
+        // Apply radial deflection impulse away from player
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, bestTarget.x, bestTarget.y);
+        const impulse = 240;
+        if (bestTarget.body) {
+            bestTarget.body.velocity.x += Math.cos(angle) * impulse;
+            bestTarget.body.velocity.y += Math.sin(angle) * impulse;
+            bestTarget.body.angularVelocity += Phaser.Math.Between(-120, 120);
+        }
+
+        // Visual laser nudge effect
+        this.laserNudgeEffect = {
+            startX: this.player.x,
+            startY: this.player.y,
+            targetX: bestTarget.x,
+            targetY: bestTarget.y,
+            life: 0.18
+        };
+
+        if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+            this.sparkParticles.emitParticleAt(bestTarget.x, bestTarget.y, 14);
+        }
+
+        window.soundSystem?.playLaserNudge?.();
+        this.score += 60;
+        this.kesslerRisk = Math.max(0, this.kesslerRisk - 3);
+
+        const targetName = bestTarget.hazardMeta?.name || bestTarget.debrisType?.name || 'Debris';
+        this.logFlightEvent('NUDGE', `Laser impulse deflected ${targetName}. Trajectory altered (-3% Kessler Risk).`, 'info');
+        this.showFloatingText(bestTarget.x, bestTarget.y - 25, '+60 NUDGE DEFLECTED', '#00f3ff');
+    }
+
+    handleDebrisDebrisCollision(d1, d2) {
+        if (!d1 || !d2 || !d1.active || !d2.active) return;
+        if (!d1.body || !d2.body) return;
+
+        const relVx = d1.body.velocity.x - d2.body.velocity.x;
+        const relVy = d1.body.velocity.y - d2.body.velocity.y;
+        const relSpeed = Math.hypot(relVx, relVy);
+
+        const now = this.time.now;
+        if ((d1._lastCollide && (now - d1._lastCollide < 800)) || (d2._lastCollide && (now - d2._lastCollide < 800))) {
+            return;
+        }
+        d1._lastCollide = now;
+        d2._lastCollide = now;
+
+        if (relSpeed > 100) {
+            // High speed collision triggers fragmentation
+            const centerX = (d1.x + d2.x) / 2;
+            const centerY = (d1.y + d2.y) / 2;
+            const fragCount = Phaser.Math.Between(3, 5);
+            this.pendingFragmentations.push({
+                x: centerX,
+                y: centerY,
+                count: fragCount,
+                vx: (d1.body.velocity.x + d2.body.velocity.x) / 2,
+                vy: (d1.body.velocity.y + d2.body.velocity.y) / 2,
+                parentMass: (d1.debrisType?.mass || 30) + (d2.debrisType?.mass || 30)
+            });
+            window.soundSystem?.playCollision?.();
+        }
+    }
+
+    handleHazardDebrisCollision(debris, hazard) {
+        if (!debris || !hazard || !debris.active || !hazard.active) return;
+        if (hazard._collidedWithDebris) return;
+        hazard._collidedWithDebris = true;
+
+        const centerX = (debris.x + hazard.x) / 2;
+        const centerY = (debris.y + hazard.y) / 2;
+        const fragCount = Phaser.Math.Between(3, 8);
+
+        this.pendingFragmentations.push({
+            x: centerX,
+            y: centerY,
+            count: fragCount,
+            vx: debris.body ? debris.body.velocity.x : 0,
+            vy: debris.body ? debris.body.velocity.y : 0,
+            parentMass: debris.debrisType?.mass || 50
+        });
+
+        // Safely queue destruction outside collision callbacks
+        debris.setActive(false);
+        debris.setVisible(false);
+        if (debris.body) debris.body.enable = false;
+        this.pendingHazardDestructions.push(debris);
+
+        if (hazard.hazardMeta?.id === 'hidden_debris') {
+            hazard.setActive(false);
+            hazard.setVisible(false);
+            if (hazard.body) hazard.body.enable = false;
+            this.pendingHazardDestructions.push(hazard);
+        }
+
+        window.soundSystem?.playExplosion?.();
+    }
+
     handleProximityRadar(dt) {
         let imminentDanger = false;
         const frameDt = (typeof dt === 'number' && dt > 0) ? dt : (1 / 60);
 
         if (!this.hazardGroup || !this.player) return;
 
-        // Check all hazards for proximity
+        // Check all hazards for proximity & reveal hidden small debris
         this.hazardGroup.getChildren().forEach(h => {
             if (!h || !h.active) return;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, h.x, h.y);
+            const meta = h.hazardMeta || (h.hazardKey ? GAME_DATA.HAZARD_TYPES[h.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.hidden_debris;
 
-            // Dynamic warning radius based on hazard metadata and sensor upgrade (with robust fallbacks)
-            const meta = h.hazardMeta || (h.hazardKey ? GAME_DATA.HAZARD_TYPES[h.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.meteoroid;
+            // Hidden debris radar cross section mechanic: dimmed until within radar detection range
+            if (meta?.id === 'hidden_debris') {
+                const detectionDist = 280 * (this.radarMultiplier || 1.0);
+                if (dist < detectionDist) {
+                    h.alpha = 1.0;
+                    this.fxGraphics.lineStyle(1, 0x94a3b8, 0.4);
+                    this.fxGraphics.strokeCircle(h.x, h.y, 22);
+                } else {
+                    h.alpha = 0.35;
+                }
+            }
+
+            // Dynamic warning radius based on hazard metadata and sensor upgrade
             const hazardWarningDist = (meta?.warningRadius || 320) * (this.radarMultiplier || 1.0);
 
             // Proximity warning trigger
@@ -1028,6 +1438,87 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.fxGraphics.strokeCircle(h.x, h.y, meta.radiationRadius || 180);
             }
         });
+
+        // 2. Conjunction Predictor: Predict closest approach between player and moving objects
+        let mostCriticalConjunction = null;
+        let minTca = 999;
+
+        const checkConjunction = (target, targetName) => {
+            if (!target || !target.active || !target.body || !this.player.body) return;
+            const rx = target.x - this.player.x;
+            const ry = target.y - this.player.y;
+            const vx = target.body.velocity.x - this.player.body.velocity.x;
+            const vy = target.body.velocity.y - this.player.body.velocity.y;
+            const vSq = vx * vx + vy * vy;
+            if (vSq < 400) return; // Relative speed < 20 px/s is not a rapid collision
+
+            const tca = -(rx * vx + ry * vy) / vSq;
+            if (tca > 0.3 && tca <= 5.5) {
+                const missX = rx + vx * tca;
+                const missY = ry + vy * tca;
+                const missDist = Math.hypot(missX, missY);
+                if (missDist <= 110) {
+                    if (tca < minTca) {
+                        minTca = tca;
+                        const interceptX = this.player.x + this.player.body.velocity.x * tca;
+                        const interceptY = this.player.y + this.player.body.velocity.y * tca;
+                        mostCriticalConjunction = {
+                            active: true,
+                            target: target,
+                            targetName: targetName,
+                            tca: tca,
+                            missDist: missDist,
+                            interceptX: interceptX,
+                            interceptY: interceptY
+                        };
+                    }
+                }
+            }
+        };
+
+        // Check hazards for conjunction
+        if (this.hazardGroup) {
+            this.hazardGroup.getChildren().forEach(h => {
+                if (!h || !h.active) return;
+                const name = h.hazardMeta?.name || 'Hazard';
+                checkConjunction(h, name);
+            });
+        }
+
+        // Check nearby debris for conjunction
+        if (this.debrisGroup) {
+            this.debrisGroup.getChildren().forEach(d => {
+                if (!d || !d.active || d.isPendingCollection) return;
+                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, d.x, d.y);
+                if (dist < 420) {
+                    checkConjunction(d, d.debrisType?.name || 'Debris');
+                }
+            });
+        }
+
+        this.conjunctionAlert = mostCriticalConjunction;
+
+        // Render Conjunction Trajectory Lines and Intercept Reticle in fxGraphics
+        if (this.conjunctionAlert) {
+            const ca = this.conjunctionAlert;
+            this.fxGraphics.lineStyle(2, 0xf59e0b, 0.85);
+            this.fxGraphics.lineBetween(this.player.x, this.player.y, ca.interceptX, ca.interceptY);
+            this.fxGraphics.lineStyle(2, 0xef4444, 0.85);
+            this.fxGraphics.lineBetween(ca.target.x, ca.target.y, ca.interceptX, ca.interceptY);
+
+            // Warning reticle at predicted intercept point
+            this.fxGraphics.lineStyle(2, 0xef4444, 0.95);
+            this.fxGraphics.strokeCircle(ca.interceptX, ca.interceptY, 18 + Math.sin(this.elapsedTime * 15) * 4);
+
+            // Play warning sound with cooldown
+            if (this.conjunctionSoundCooldown <= 0 && ca.tca < 4.0) {
+                this.conjunctionSoundCooldown = 2.5;
+                window.soundSystem?.playConjunctionAlarm?.();
+            }
+        }
+        if (this.conjunctionSoundCooldown > 0) {
+            this.conjunctionSoundCooldown -= frameDt;
+        }
 
         // Trigger Audio & Visual Warning Alert safely
         if (imminentDanger) {
@@ -1115,6 +1606,14 @@ class OrbitalGameScene extends Phaser.Scene {
             return;
         }
 
+        // Apply momentum transfer knockback
+        const bumpAngle = Phaser.Math.Angle.Between(debris.x, debris.y, player.x, player.y);
+        const knockbackImpulse = Math.min(260, impactSpeed * 0.9);
+        player.body.velocity.x += Math.cos(bumpAngle) * knockbackImpulse;
+        player.body.velocity.y += Math.sin(bumpAngle) * knockbackImpulse;
+        debris.body.velocity.x -= Math.cos(bumpAngle) * knockbackImpulse * 0.7;
+        debris.body.velocity.y -= Math.sin(bumpAngle) * knockbackImpulse * 0.7;
+
         // Low-speed contact (< 60 px/s) -> negligible damage; continuous contact does NOT drain health
         if (impactSpeed < 60) {
             return;
@@ -1126,15 +1625,29 @@ class OrbitalGameScene extends Phaser.Scene {
 
         // Meaningful high-speed impact damage scaling
         const severity = (impactSpeed - 60) / 160;
-        const impactDamage = Math.max(3, Math.min(32, Math.round(10 * severity * (this.damageReduction || 1.0))));
+        const debrisMass = debris.debrisType?.mass || 50;
+        const massMultiplier = Math.max(0.6, debrisMass / 60);
+        const impactDamage = Math.max(3, Math.min(42, Math.round(10 * severity * massMultiplier * (this.damageReduction || 1.0))));
         this.hull = Math.max(0, this.hull - impactDamage);
 
         this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
         this.cameras.main.shake(120, Math.min(0.015, 0.003 * severity));
         if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
-            this.sparkParticles.emitParticleAt(player.x, player.y, 8);
+            this.sparkParticles.emitParticleAt(player.x, player.y, 10);
         }
         this.showFloatingText(player.x, player.y - 25, `-${impactDamage} HULL`, '#f59e0b');
+
+        // High speed impact fragmentation
+        if (impactSpeed > 130 && debrisMass >= 30) {
+            this.pendingFragmentations.push({
+                x: debris.x,
+                y: debris.y,
+                count: Phaser.Math.Between(3, 6),
+                vx: debris.body.velocity.x,
+                vy: debris.body.velocity.y,
+                parentMass: debrisMass
+            });
+        }
 
         if (this.hull <= 0) {
             this.handleMissionEnd(false, 'HULL BREACH - SPACECRAFT DESTROYED');
@@ -1149,9 +1662,24 @@ class OrbitalGameScene extends Phaser.Scene {
         window.soundSystem?.playExplosion?.();
         this.collisionsCount++;
 
-        const meta = hazard.hazardMeta || (hazard.hazardKey ? GAME_DATA.HAZARD_TYPES[hazard.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.meteoroid;
+        const meta = hazard.hazardMeta || (hazard.hazardKey ? GAME_DATA.HAZARD_TYPES[hazard.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.hidden_debris;
         const dmg = (meta.damage || 35) * (this.damageReduction || 1.0);
         this.hull = Math.max(0, this.hull - dmg);
+
+        // Apply violent collision knockback impulse
+        const hazardAngle = Phaser.Math.Angle.Between(hazard.x, hazard.y, player.x, player.y);
+        player.body.velocity.x += Math.cos(hazardAngle) * 320;
+        player.body.velocity.y += Math.sin(hazardAngle) * 320;
+
+        // Fragmentation on violent hazard collision
+        this.pendingFragmentations.push({
+            x: hazard.x,
+            y: hazard.y,
+            count: Phaser.Math.Between(3, 6),
+            vx: Math.cos(hazardAngle) * 120,
+            vy: Math.sin(hazardAngle) * 120,
+            parentMass: 40
+        });
 
         this.logFlightEvent('HAZARD', `Orbital anomaly collision! (-${Math.round(dmg)} Hull).`, 'crit');
 
@@ -1406,6 +1934,8 @@ class OrbitalGameScene extends Phaser.Scene {
                 flightEvents: this.flightEvents || [],
                 redesignRecommendation: redesignRecommendation,
                 clientVerdict: clientVerdict,
+                materialsSession: this.materialsSession || { metal: 0, cells: 0, chips: 0 },
+                finalKesslerRisk: this.kesslerRisk || 0,
                 designCode: this.designCode || (window.uiController ? window.uiController.generateDesignCode() : '')
             });
         }

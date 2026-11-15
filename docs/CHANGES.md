@@ -253,3 +253,76 @@
 4. **HUD & Minimap Safe Guarding**:
    - Added defensive checks in `drawHUDOffscreenPointers()`, `updateGameHUD()`, and `updateMinimap()` to ensure non-finite coordinates or missing canvas contexts never crash frame rendering.
    - Assigned both `debris.debrisType` and `debris.debrisMeta` in `spawnDebrisCluster()` to maintain 100% compatibility with all three capture equipment types (robotic arm, capture net, magnetic beam).
+
+---
+
+## [Phase 4 — Gameplay Depth and Orbital Mechanics] - 2026-11-16
+### Status: Completed & Verified
+
+### Key Deliverables & Enhancements:
+1. **Conjunction Trajectory Alerts & Early Warning System**:
+   - Implemented real-time orbital conjunction prediction in `handleProximityRadar()`.
+   - Computes time-to-closest-approach:
+     $$t_{\text{ca}} = -\frac{\vec{r} \cdot \vec{v}}{|\vec{v}|^2}$$
+     and miss distance $d_{\text{min}} = |\vec{r} + \vec{v} t_{\text{ca}}|$ for all relative velocities exceeding 20 px/s.
+   - Detects incoming hazardous close approaches ($0.3\text{s} < t_{\text{ca}} \le 5.5\text{s}$, $d_{\text{min}} \le 110\text{px}$) between player craft, debris swarms, and active orbital hazards.
+   - Renders predictive amber/red trajectory extrapolation lines and intercept warning reticles directly on the graphics overlay.
+   - Added audio alert chimes with cooldown (`window.soundSystem.playConjunctionAlarm()`) and tactical HUD warning banner.
+
+2. **Kinetic Laser Nudge Deflection (`Q` Key)**:
+   - Added `Q` key input to fire a focused kinetic laser deflection pulse.
+   - Consumes 12 battery per shot.
+   - Targets the closest incoming conjunction object or hazardous projectile within radar range ($360\text{px} \times \text{radarMultiplier}$).
+   - Imparts a radial impulse velocity (+240 px/s) away from the player, deflecting the object off its collision course.
+   - Renders a vibrant cyan/white laser beam and impact ring, plays synthesized audio (`window.soundSystem.playLaserNudge()`), awards +60 tactical points, and decreases sector Kessler risk by 3%.
+
+3. **Collision Fragmentation Engine**:
+   - High-energy impacts (> 100 px/s for debris-debris, > 130 px/s for ship-debris, and hazard-debris collisions) shatter objects into 3–8 smaller kinetic fragments.
+   - Strict architectural physics safety: fragmentation requests are queued into `this.pendingFragmentations` and spawned during the frame start update (`processPendingPhysicsActions`). Physics bodies are never created or destroyed inside collision callbacks.
+   - Active debris cap enforces a maximum of 46 concurrent objects in orbit, preventing runaway exponential cascades and ensuring steady frame rates.
+
+4. **Kessler Risk Meter**:
+   - Integrated dynamic Kessler Risk meter into the HUD (`#hud-kessler-fill`, `#hud-kessler-val`).
+   - Formula accounts for active debris spatial density, uncontrolled kinetic fragments, collision count, successful depot de-orbits, and laser nudges:
+     $$\text{Risk} = \text{clamp}\left((N_{\text{debris}} \times 1.4) + (N_{\text{frags}} \times 2.0) + (N_{\text{collisions}} \times 4) - (N_{\text{delivered}} \times 3) - (N_{\text{nudges}} \times 2), 0, 100\right)$$
+   - Color-coded telemetry status: `NOMINAL` (< 35%, Green), `ELEVATED` (35–70%, Amber), `CASCADE DANGER` (> 70%, Flashing Red).
+
+5. **Salvage Materials System (Metal, Cells, Chips)**:
+   - Added raw salvage materials yields to all debris types in `GAME_DATA.DEBRIS_TYPES`:
+     - Structural Fragments: 2 Metal
+     - Solar Arrays: 1 Metal, 3 Power Cells
+     - Defunct Cubesats: 1 Metal, 1 Cell, 2 Microchips
+     - Spent Rocket Stages: 5 Metal, 1 Microchip
+     - Derelict Satellites: 4 Metal, 2 Cells, 3 Microchips
+     - Fusion Modules: 3 Metal, 4 Cells, 5 Microchips
+   - Extended `OrbitalStorage` to persist cumulative salvage inventory (`materials: { metal, cells, chips }`).
+   - Added live material counters to HUD telemetry bar (`#hud-mat-metal`, `#hud-mat-cells`, `#hud-mat-chips`).
+
+6. **Depot Operations: Recycle vs. Strip**:
+   - Dual-operation Aegis Depot docking interface:
+     - **`[E]` RECYCLE**: 100% Score and 100% Scrap Credits.
+     - **`[R]` STRIP FOR MATERIALS**: 50% Score and Credits, converting 100% of cargo hold contents into persistent Metal, Cells, and Chips.
+   - Plays distinct salvage deconstruction audio (`window.soundSystem.playStripDebris()`), logs telemetry events, and presents harvested materials in Debrief v2.
+
+7. **Replaced Aimed Micrometeoroids with Hidden Small Debris**:
+   - Removed artificial player-homing trajectories.
+   - Introduced `hidden_debris` hazard: low-observability composite shards with small radar cross section (`radarCrossSection: 0.25`).
+   - Travels along natural orbital inclination chords across the sector.
+   - Renders dim/stealthy (alpha = 0.35) until detected within radar sensor illumination range.
+
+8. **Replaced Hydrazine Mines with Venting Rocket Upper-Stages**:
+   - Introduced `venting_rocket` hazard: derelict cylindrical booster stages drifting slowly in orbit.
+   - Dynamic hypergolic venting cycle: alternates between pressure buildup and active 2.2-second toxic venting.
+   - Venting plumes exert forward reaction thrust on the booster and generate an expanding directional exhaust jet that inflicts heat damage and forceful knockback on any craft caught inside.
+
+9. **Orbital Mechanics & Physics Depth**:
+   - **Angular Inertia**: Replaced instant angular stop with realistic RCS reaction thruster damping (`turnDamping` curve), providing authentic orbital rotational momentum.
+   - **Cargo Mass Penalty**: Cargo hold mass directly scales spacecraft physics: reduces linear acceleration ($a_{\text{eff}} = a / (1 + M_{\text{cargo}}/550)$), trims maximum cruise velocity, and proportionally increases propellant burn rate.
+   - **Tow Drag**: Implemented Newton's third law reaction forces during retrieval operations: grappling or tractor-pulling heavy debris pulls the player spacecraft back toward the target.
+   - **Impact Momentum & Knockback**: Elastic impulse transfers proportional velocity deltas between colliding bodies based on relative speed and mass.
+   - **Impact Damage Scaling**: Non-linear damage based on impact velocity and colliding mass, modified by hull armor weave tiers.
+
+10. **Preservation & Architecture**:
+    - Vanilla JS and Phaser 3.80.1 architecture strictly preserved without bundlers.
+    - Zero breaking changes to existing saves or previous phase systems.
+    - Full backward-compatibility aliases maintained for `meteoroid` and `hypergolic`.

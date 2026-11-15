@@ -625,71 +625,115 @@ class TextureGenerator {
      * 5. Hazardous Obstacles Sprites
      */
     static generateHazards(scene) {
-        // Kinetic Meteorite
+        // 1. Hidden Micro-Debris (Low-observability stealth composite shard)
         {
-            const size = 64;
+            const size = 56;
             const { canvas, ctx } = this.createCanvas(size, size);
             const c = size / 2;
 
-            // Outer fiery kinetic aura
-            const aura = ctx.createRadialGradient(c, c, 12, c, c, 28);
-            aura.addColorStop(0, 'rgba(239, 68, 68, 0.6)');
-            aura.addColorStop(1, 'rgba(239, 68, 68, 0)');
+            // Faint radar-absorbent shimmer aura
+            const aura = ctx.createRadialGradient(c, c, 6, c, c, 22);
+            aura.addColorStop(0, 'rgba(148, 163, 184, 0.35)');
+            aura.addColorStop(0.7, 'rgba(71, 85, 105, 0.15)');
+            aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = aura;
             ctx.beginPath();
-            ctx.arc(c, c, 28, 0, Math.PI * 2);
+            ctx.arc(c, c, 22, 0, Math.PI * 2);
             ctx.fill();
 
-            // Jagged rock body
-            ctx.fillStyle = '#292524';
+            // Faceted stealth composite body
+            ctx.fillStyle = '#0f172a';
             ctx.beginPath();
-            ctx.moveTo(c - 16, c - 12);
-            ctx.lineTo(c - 4, c - 18);
-            ctx.lineTo(c + 14, c - 10);
-            ctx.lineTo(c + 18, c + 8);
-            ctx.lineTo(c + 6, c + 18);
-            ctx.lineTo(c - 12, c + 16);
+            ctx.moveTo(c - 12, c - 8);
+            ctx.lineTo(c - 2, c - 14);
+            ctx.lineTo(c + 12, c - 6);
+            ctx.lineTo(c + 14, c + 8);
+            ctx.lineTo(c + 4, c + 14);
+            ctx.lineTo(c - 10, c + 10);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2.5;
+
+            // Internal facet highlights (stealth geometry)
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
 
-            this.registerTexture(scene, 'hazard_meteoroid', canvas);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(c - 2, c - 14);
+            ctx.lineTo(c + 2, c + 2);
+            ctx.lineTo(c + 14, c + 8);
+            ctx.moveTo(c + 2, c + 2);
+            ctx.lineTo(c - 10, c + 10);
+            ctx.stroke();
+
+            this.registerTexture(scene, 'hazard_hidden_debris', canvas);
+            this.registerTexture(scene, 'hazard_meteoroid', canvas); // backward compatibility
         }
 
-        // Hypergolic Volatile Mine
+        // 2. Venting Rocket Upper-Stage Hazard (Derelict booster tank with toxic gas vents)
         {
-            const size = 72;
+            const size = 76;
             const { canvas, ctx } = this.createCanvas(size, size);
             const c = size / 2;
 
-            // Toxic gas aura
-            const aura = ctx.createRadialGradient(c, c, 14, c, c, 32);
-            aura.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
-            aura.addColorStop(1, 'rgba(249, 115, 22, 0)');
+            // Faint hypergolic vapor aura
+            const aura = ctx.createRadialGradient(c, c, 12, c, c, 34);
+            aura.addColorStop(0, 'rgba(249, 115, 22, 0.35)');
+            aura.addColorStop(0.8, 'rgba(234, 88, 12, 0.1)');
+            aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = aura;
             ctx.beginPath();
-            ctx.arc(c, c, 32, 0, Math.PI * 2);
+            ctx.arc(c, c, 34, 0, Math.PI * 2);
             ctx.fill();
 
-            // Spherical pressurized tank
-            ctx.fillStyle = '#7c2d12';
-            ctx.beginPath();
-            ctx.arc(c, c, 18, 0, Math.PI * 2);
-            ctx.fill();
+            // Cylindrical rocket upper-stage body
+            ctx.save();
+            ctx.translate(c, c);
+
+            // Main cylindrical pressure hull
+            ctx.fillStyle = '#334155';
             ctx.strokeStyle = '#f97316';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2.5;
+            ctx.fillRect(-12, -20, 24, 34);
+            ctx.strokeRect(-12, -20, 24, 34);
+
+            // Dome cap (forward bulkhead)
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.arc(0, -20, 12, Math.PI, 0);
+            ctx.fill();
             ctx.stroke();
 
-            // Hazard exclamation mark
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('!', c, c);
+            // Rocket engine nozzle bell (vent origin at bottom)
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-6, 14);
+            ctx.lineTo(6, 14);
+            ctx.lineTo(10, 24);
+            ctx.lineTo(-10, 24);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
 
-            this.registerTexture(scene, 'hazard_hypergolic', canvas);
+            // Hazard warning chevrons / stripes across tank
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-10, -8, 20, 4);
+            ctx.fillRect(-10, 2, 20, 4);
+
+            // Pressure valve indicator
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(0, -6, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            this.registerTexture(scene, 'hazard_venting_rocket', canvas);
+            this.registerTexture(scene, 'hazard_hypergolic', canvas); // backward compatibility
         }
 
         // Nuclear RTG Satellite

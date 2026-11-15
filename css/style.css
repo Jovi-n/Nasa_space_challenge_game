@@ -819,34 +819,147 @@ body, html {
     font-weight: bold;
 }
 
-/* Cargo Hold Indicator */
+.hud-mission-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Kessler Risk Gauge */
+.hud-kessler-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+}
+
+.hud-kessler-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: var(--ink-muted);
+}
+
+.kessler-low {
+    color: var(--clean);
+    font-weight: bold;
+}
+
+.kessler-elevated {
+    color: var(--salvage);
+    font-weight: bold;
+}
+
+.kessler-crit {
+    color: var(--danger);
+    font-weight: bold;
+    animation: blink-danger 0.8s infinite alternate;
+}
+
+@keyframes blink-danger {
+    from { opacity: 1; }
+    to { opacity: 0.4; }
+}
+
+.kessler-bar-bg {
+    height: 8px !important;
+    background: #0f172a;
+    border: 1px solid var(--border);
+}
+
+.fill-kessler {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.fill-kessler.fill-low {
+    background: var(--clean);
+}
+
+.fill-kessler.fill-elevated {
+    background: var(--salvage);
+}
+
+.fill-kessler.fill-critical {
+    background: var(--danger);
+}
+
+/* Cargo Hold Indicator & Salvage Materials */
 .hud-cargo-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.hud-cargo-header {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.cargo-slots-container {
+.hud-materials-container {
     display: flex;
-    gap: 5px;
-}
-
-.cargo-slot {
-    width: 14px;
-    height: 20px;
-    border: 2px solid var(--border-bright);
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
     background: var(--panel-inset);
+    padding: 3px 8px;
+    border: 1px solid var(--border);
 }
 
-.cargo-slot.filled {
-    background: var(--salvage);
-    border-color: #fff;
+.mat-label {
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+}
+
+.mat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--ink);
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mat-pill strong {
+    color: var(--salvage);
+}
+
+/* Conjunction Alert Banner */
+.hud-conjunction-banner {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #381504;
+    border: 2px solid var(--salvage);
+    color: #fff;
+    font-family: var(--font-pixel);
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+    box-shadow: 4px 4px 0px #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s linear;
+    z-index: 50;
+    white-space: nowrap;
+}
+
+.hud-conjunction-banner.active {
+    opacity: 1;
 }
 
 /* Flat High-Contrast Warning Banner (No Emojis!) */
 .hud-warning-banner {
     position: absolute;
-    top: 86px;
+    top: 92px;
     left: 50%;
     transform: translateX(-50%);
     background: #2b0b10;
@@ -860,6 +973,8 @@ body, html {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.1s linear;
+    z-index: 50;
+    white-space: nowrap;
 }
 
 .hud-warning-banner.active {
@@ -869,7 +984,7 @@ body, html {
 /* Station Docking Prompt */
 .hud-docking-prompt {
     position: absolute;
-    bottom: 100px;
+    bottom: 95px;
     left: 50%;
     transform: translateX(-50%);
     background: #08241b;
@@ -878,15 +993,86 @@ body, html {
     font-family: var(--font-pixel);
     font-size: 0.85rem;
     letter-spacing: 1px;
-    padding: 12px 24px;
+    padding: 10px 20px;
     box-shadow: 4px 4px 0px #000;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s linear;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 50;
+}
+
+.dock-title {
+    color: var(--clean);
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+}
+
+.dock-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+}
+
+.dock-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dock-divider {
+    color: var(--border-bright);
+    opacity: 0.6;
 }
 
 .hud-docking-prompt.active {
     opacity: 1;
+}
+
+/* Debrief Materials Audit Grid */
+.debrief-materials-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.mat-card {
+    background: var(--panel-inset);
+    border: 1px solid var(--border);
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mat-card-icon {
+    font-size: 1.4rem;
+}
+
+.mat-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mat-card-title {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--ink-muted);
+    letter-spacing: 0.5px;
+}
+
+.mat-card-val {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--salvage);
 }
 
 /* Bottom Bar: Minimap & Keybinds */

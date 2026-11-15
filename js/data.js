@@ -169,7 +169,7 @@ const GAME_DATA = {
         }
     },
 
-    // Debris classifications
+    // Debris classifications with salvage materials yields (Metal, Cells, Chips)
     DEBRIS_TYPES: {
         fragment: {
             id: 'fragment',
@@ -180,7 +180,8 @@ const GAME_DATA = {
             size: 16,
             spriteKey: 'debris_fragment',
             glowColor: 0x94a3b8,
-            description: 'Small metal fragments from shattered booster hulls.'
+            materials: { metal: 2, cells: 0, chips: 0 },
+            description: 'Small metal fragments from shattered booster hulls. High scrap metal density.'
         },
         solar: {
             id: 'solar',
@@ -191,7 +192,8 @@ const GAME_DATA = {
             size: 26,
             spriteKey: 'debris_solar',
             glowColor: 0x38bdf8,
-            description: 'Photovoltaic cells rich in rare earth metals and copper wiring.'
+            materials: { metal: 1, cells: 3, chips: 0 },
+            description: 'Photovoltaic cells rich in rare earth metals, silicon wafers, and power cells.'
         },
         cubesat: {
             id: 'cubesat',
@@ -202,7 +204,8 @@ const GAME_DATA = {
             size: 28,
             spriteKey: 'debris_cubesat',
             glowColor: 0xa855f7,
-            description: 'Miniaturized satellite chassis containing sensitive avionics.'
+            materials: { metal: 1, cells: 1, chips: 2 },
+            description: 'Miniaturized satellite chassis containing sensitive avionics and microchips.'
         },
         booster: {
             id: 'booster',
@@ -213,7 +216,8 @@ const GAME_DATA = {
             size: 42,
             spriteKey: 'debris_booster',
             glowColor: 0xf97316,
-            description: 'Massive titanium propulsion tank left in drifting orbit.'
+            materials: { metal: 5, cells: 0, chips: 1 },
+            description: 'Massive titanium propulsion tank left in drifting orbit. Rich in structural metal alloy.'
         },
         satellite: {
             id: 'satellite',
@@ -224,7 +228,8 @@ const GAME_DATA = {
             size: 46,
             spriteKey: 'debris_satellite',
             glowColor: 0x22c55e,
-            description: 'Decommissioned telecommunications orbiter with high-gain antennas.'
+            materials: { metal: 4, cells: 2, chips: 3 },
+            description: 'Decommissioned telecommunications orbiter with high-gain antennas and guidance chips.'
         },
         core: {
             id: 'core',
@@ -235,31 +240,33 @@ const GAME_DATA = {
             size: 32,
             spriteKey: 'debris_core',
             glowColor: 0xe11d48,
-            description: 'Experimental classified core with intact cryogenic capacitors.'
+            materials: { metal: 3, cells: 4, chips: 5 },
+            description: 'Experimental classified core with intact cryogenic capacitors and quantum chips.'
         }
     },
 
-    // Hazard types
+    // Hazard types (Phase 4: hidden small debris and venting rocket upper-stage bodies)
     HAZARD_TYPES: {
-        meteoroid: {
-            id: 'meteoroid',
-            name: 'Kinetic Micrometeorite',
-            damage: 35,
-            speed: 280,
-            spriteKey: 'hazard_meteoroid',
-            glowColor: 0xef4444,
-            warningRadius: 360,
-            desc: 'Hypersonic orbital projectile traveling on intersecting trajectory.'
+        hidden_debris: {
+            id: 'hidden_debris',
+            name: 'Hidden Micro-Debris',
+            damage: 32,
+            speed: 250,
+            spriteKey: 'hazard_hidden_debris',
+            glowColor: 0x94a3b8,
+            warningRadius: 220,
+            radarCrossSection: 0.25,
+            desc: 'Low-observability composite shard traveling along orbital inclination crossing vectors.'
         },
-        hypergolic: {
-            id: 'hypergolic',
-            name: 'Volatile Hydrazine Mine',
-            damage: 55,
-            cloudDuration: 3000,
-            spriteKey: 'hazard_hypergolic',
+        venting_rocket: {
+            id: 'venting_rocket',
+            name: 'Venting Rocket Upper-Stage',
+            damage: 50,
+            speed: 65,
+            spriteKey: 'hazard_venting_rocket',
             glowColor: 0xf97316,
-            warningRadius: 280,
-            desc: 'Pressurized toxic fuel tank that vents explosive gas upon disturbance.'
+            warningRadius: 320,
+            desc: 'Derelict pressurized booster stage periodically releasing high-velocity toxic plumes.'
         },
         nuclear: {
             id: 'nuclear',
@@ -271,6 +278,28 @@ const GAME_DATA = {
             glowColor: 0x84cc16,
             warningRadius: 320,
             desc: 'Derelict Cold War probe emitting an active electromagnetic radiation sphere.'
+        },
+        // Backward-compatibility aliases for legacy levels or saves
+        meteoroid: {
+            id: 'hidden_debris',
+            name: 'Hidden Micro-Debris',
+            damage: 32,
+            speed: 250,
+            spriteKey: 'hazard_hidden_debris',
+            glowColor: 0x94a3b8,
+            warningRadius: 220,
+            radarCrossSection: 0.25,
+            desc: 'Low-observability composite shard traveling along orbital inclination crossing vectors.'
+        },
+        hypergolic: {
+            id: 'venting_rocket',
+            name: 'Venting Rocket Upper-Stage',
+            damage: 50,
+            speed: 65,
+            spriteKey: 'hazard_venting_rocket',
+            glowColor: 0xf97316,
+            warningRadius: 320,
+            desc: 'Derelict pressurized booster stage periodically releasing high-velocity toxic plumes.'
         }
     },
 
@@ -293,7 +322,7 @@ const GAME_DATA = {
             initialDebrisCount: 16,
             respawnRate: 4000,
             hazardRate: 16000,
-            hazardTypes: ['meteoroid'],
+            hazardTypes: ['hidden_debris'],
             maxHazards: 2,
             timeLimit: 150,
             worldSize: { width: 3200, height: 3200 },
@@ -356,6 +385,11 @@ class OrbitalStorage {
     static getDefaultSave() {
         return {
             credits: 200,
+            materials: {
+                metal: 0,
+                cells: 0,
+                chips: 0
+            },
             totalDebrisRecycled: 0,
             totalMassDeorbitedKg: 0,
             missionsCompleted: 0,
@@ -393,6 +427,11 @@ class OrbitalStorage {
             if (!raw) return defaultSave;
             const data = JSON.parse(raw);
             const merged = Object.assign({}, defaultSave, data);
+            if (!merged.materials || typeof merged.materials !== 'object') {
+                merged.materials = { metal: 0, cells: 0, chips: 0 };
+            } else {
+                merged.materials = Object.assign({ metal: 0, cells: 0, chips: 0 }, merged.materials);
+            }
             if (!merged.commanderName) merged.commanderName = 'Commander';
             if (!Array.isArray(merged.leaderboard) || merged.leaderboard.length === 0) {
                 merged.leaderboard = defaultSave.leaderboard;
