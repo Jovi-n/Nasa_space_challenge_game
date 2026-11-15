@@ -29,7 +29,31 @@
    - *Issue:* Calling `.destroy()` directly inside Arcade Physics collision and overlap callbacks risked tree corruption.
    - *Fix:* Introduced safe queues (`pendingCollections`, `pendingHazardDestructions`) that disable physics bodies immediately and process removals during the safe update phase (`processPendingPhysicsActions`).
 
-### Testing Performed
-- **Node Test Harness:** Validated save loading, migration defaults, payload modifiers, and leaderboard updates.
-- **Save Compatibility:** Verified old saves and fresh saves load safely without data loss.
-- **Physics & Gameplay Verification:** Confirmed tractor beam collection, non-lethal low-speed nudges, high-speed impact damage, and error-free console execution.
+---
+
+## [Phase 1 — Visual Identity Redesign] - 2026-11-15
+### Status: Completed & Verified
+
+### Design System & Semantic Color Tokens
+- Implemented required semantic tokens:
+  - `--night`: `#080b11` (Deep space mission control surface)
+  - `--ink`: `#f1f5f9` (High-contrast primary foreground text and white borders)
+  - `--ink-muted`: `#8492a6` (Secondary muted telemetry labels)
+  - `--salvage`: `#f59e0b` (Industrial debris, scrap currency, and selection amber)
+  - `--clean`: `#10b981` (Depot docking, cleared quotas, health green)
+  - `--danger`: `#ef4444` (Collision alarm, hull breach, hazard red)
+- Typography:
+  - Heading font: Licensed pixel font `Silkscreen` (Google Fonts / SIL Open Font License)
+  - Data / Telemetry font: `Share Tech Mono`
+  - Body font: `Rajdhani`
+
+### UI/UX overhaul
+- **Removed:** Generic neon glows, blurry glassmorphism (`backdrop-filter: blur`), ambient drop-shadow halos, gradient text shadows, emojis (e.g. `⚠️`, `🔒`), and bubbly rounded corners.
+- **Implemented:**
+  - Flat, opaque mission control terminal styling with hard 2px/3px borders (`var(--border)`) and solid offset drop-shadows (`box-shadow: 4px 4px 0px #000;`).
+  - Terminal corner brackets (`┌ ─ ─ ┐`, `└ ─ ─ ┘`) on command frames.
+  - Tactical flight avionics HUD with segmented rectangular meters and bracketed alarm headers (`[ALERT] COLLISION WARNING`, `[DEPOT HARBOR DETECTED]`).
+  - CRT-style minimap radar with crosshair reticle and pixel blips.
+  - Consistent redesign across Main Menu, Mission Design Studio, Flight Operations Manual, Local Top Runs, Hangar Workshop, HUD, and Modals.
+- **Tools status:** `Impeccable` and `taste-skill` are not installed in the environment (reported honestly as requested).
+- **Preservation:** Phaser 3.80.1, vanilla JS architecture, physics, gameplay, LocalStorage saves, and mission logic remain 100% intact.

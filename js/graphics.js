@@ -41,15 +41,18 @@ class TextureGenerator {
         const center = size / 2;
         const radius = size * 0.42;
 
-        // Outer atmospheric glow
-        const glowGrad = ctx.createRadialGradient(center, center, radius * 0.95, center, center, radius * 1.18);
-        glowGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-        glowGrad.addColorStop(0.5, 'rgba(14, 165, 233, 0.18)');
-        glowGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
-        ctx.fillStyle = glowGrad;
+        // Crisp hard-edged atmosphere rim
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(center, center, radius * 1.18, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(center, center, radius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(center, center, radius + 8, 0, Math.PI * 2);
+        ctx.stroke();
 
         // Base Ocean Sphere
         ctx.save();
@@ -127,15 +130,14 @@ class TextureGenerator {
         const { canvas, ctx } = this.createCanvas(size, size);
         const center = size / 2;
 
-        // Outer docking shield / beacon aura
-        const shieldGrad = ctx.createRadialGradient(center, center, 70, center, center, 140);
-        shieldGrad.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-        shieldGrad.addColorStop(0.7, 'rgba(6, 182, 212, 0.12)');
-        shieldGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = shieldGrad;
+        // Outer docking perimeter guide ring
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+        ctx.setLineDash([8, 6]);
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(center, center, 140, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
 
         // Four Solar Array wings
         ctx.fillStyle = '#0284c7';

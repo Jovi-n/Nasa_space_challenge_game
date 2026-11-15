@@ -238,7 +238,7 @@ class UIController {
                         <span>Target Quota: ${lvl.targetQuota} Debris</span>
                         <span class="stars">${starStr}</span>
                     </div>
-                    ${isLocked ? '<div class="lock-overlay">🔒 LOCKED (Complete previous mission)</div>' : ''}
+                    ${isLocked ? '<div class="lock-overlay">[LOCKED - CLEAR PREVIOUS SECTOR]</div>' : ''}
                 `;
 
                 if (!isLocked) {
@@ -504,25 +504,34 @@ class UIController {
 
         ctx.clearRect(0, 0, w, h);
 
+        // Radar Reticle Crosshair
+        ctx.strokeStyle = '#1f293d';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+        ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+        ctx.arc(w / 2, h / 2, w * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+
         const worldW = scene.missionConfig.worldSize.width;
         const worldH = scene.missionConfig.worldSize.height;
 
         const toMapX = (x) => (x / worldW) * w;
         const toMapY = (y) => (y / worldH) * h;
 
-        // Station (Green square)
+        // Station (Clean green square)
         ctx.fillStyle = '#10b981';
         ctx.fillRect(toMapX(scene.station.x) - 4, toMapY(scene.station.y) - 4, 8, 8);
 
-        // Debris (Cyan/Yellow dots)
+        // Debris (Salvage amber / cyan dots)
         ctx.fillStyle = '#38bdf8';
         scene.debrisGroup.getChildren().forEach(d => {
-            if (d.active) {
+            if (d.active && !d.isPendingCollection) {
                 ctx.fillRect(toMapX(d.x) - 1.5, toMapY(d.y) - 1.5, 3, 3);
             }
         });
 
-        // Hazards (Pulsing Red dots)
+        // Hazards (Crisp danger red dots)
         ctx.fillStyle = '#ef4444';
         scene.hazardGroup.getChildren().forEach(haz => {
             if (haz.active) {
@@ -530,7 +539,7 @@ class UIController {
             }
         });
 
-        // Player (Bright Cyan triangle)
+        // Player (High-contrast white arrow)
         ctx.save();
         ctx.translate(toMapX(scene.player.x), toMapY(scene.player.y));
         ctx.rotate(scene.player.rotation);
