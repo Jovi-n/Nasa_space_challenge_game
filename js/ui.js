@@ -181,6 +181,25 @@ class UIController {
                 return;
             }
 
+            // 6b. Docking Harbor Actions (Recycle vs Strip)
+            const dockRecycleBtn = e.target.closest('#btn-dock-recycle');
+            if (dockRecycleBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerRecycle === 'function') {
+                    this.currentScene.triggerRecycle();
+                }
+                return;
+            }
+
+            const dockStripBtn = e.target.closest('#btn-dock-strip');
+            if (dockStripBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerStrip === 'function') {
+                    this.currentScene.triggerStrip();
+                }
+                return;
+            }
+
             // 7. Design Tutorial Button
             const tutorialBtn = e.target.closest('#btn-design-tutorial');
             if (tutorialBtn) {

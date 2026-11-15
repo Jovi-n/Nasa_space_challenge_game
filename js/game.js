@@ -1063,17 +1063,33 @@ class OrbitalGameScene extends Phaser.Scene {
         const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y);
         const inDockRange = dist <= this.stationDockingRadius;
 
-        // Player can press [E] to Recycle (100% Score/Credits) or [R] to Strip for Materials (50% Score)
+        // Player must explicitly choose [E] to Recycle or [R] to Strip for Materials
+        // Automatic dump is removed so players can always choose
         const pressRecycle = Phaser.Input.Keyboard.JustDown(this.keyE);
         const pressStrip = Phaser.Input.Keyboard.JustDown(this.keyR);
-        const isStationary = this.player.body.velocity.length() < 35;
 
         if (inDockRange && !this.isDocked) {
             if (pressStrip) {
                 this.processStationRecycling(true);
-            } else if (pressRecycle || (isStationary && this.cargo.length > 0)) {
+            } else if (pressRecycle) {
                 this.processStationRecycling(false);
             }
+        }
+    }
+
+    triggerRecycle() {
+        if (!this.player || !this.station) return;
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y);
+        if (dist <= this.stationDockingRadius && !this.isDocked) {
+            this.processStationRecycling(false);
+        }
+    }
+
+    triggerStrip() {
+        if (!this.player || !this.station) return;
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y);
+        if (dist <= this.stationDockingRadius && !this.isDocked) {
+            this.processStationRecycling(true);
         }
     }
 
