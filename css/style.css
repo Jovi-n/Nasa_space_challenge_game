@@ -1735,6 +1735,13 @@ body, html {
 /* ==========================================================================
    INTERACTIVE BUTTON & LAYOUT FIXES FOR MISSION DESIGN v2
    ========================================================================== */
+.cards-row-horizontal {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
 button,
 .step-tab-btn,
 .btn-primary,

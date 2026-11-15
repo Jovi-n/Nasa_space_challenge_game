@@ -289,39 +289,6 @@ class UIController {
             });
         }
 
-        // Mission Design Wizard Step Navigation
-        this.stepButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const step = parseInt(btn.getAttribute('data-step'), 10);
-                this.switchDesignStep(step);
-            });
-        });
-
-        document.querySelectorAll('.btn-next-step').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const target = parseInt(btn.getAttribute('data-target'), 10);
-                this.switchDesignStep(target);
-            });
-        });
-
-        document.querySelectorAll('.btn-prev-step').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const target = parseInt(btn.getAttribute('data-target'), 10);
-                this.switchDesignStep(target);
-            });
-        });
-
-        // Mission Design Launch Button
-        this.launchMissionBtn?.addEventListener('click', () => {
-            const budgets = this.calculateBudgets();
-            if (budgets.reviewStatus === 'FAIL') {
-                window.soundSystem?.playExplosion();
-                alert('LAUNCH GATEWAY FAILED: ' + budgets.failureReason);
-                return;
-            }
-            this.launchConfiguredMission();
-        });
-
         // How-To-Play Tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -571,7 +538,68 @@ class UIController {
             });
         }
 
-        // 3. Contract Specification & Measurable Requirements Dossier
+        // 3. Spacecraft Airframe Bus Selection (Directly on Step 1)
+        const busContainer = document.getElementById('design-step1-bus-select');
+        if (busContainer) {
+            busContainer.innerHTML = '';
+            Object.values(PARTS_DATA.buses).forEach(bus => {
+                const isSelected = bus.id === this.selectedBusId;
+                const div = document.createElement('div');
+                div.className = `subsystem-option-card ${isSelected ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="subsystem-opt-title">${bus.name}</span>
+                        ${isSelected ? '<span class="trade-badge" style="background: var(--salvage); color: #000; font-weight: bold;">ACTIVE CRAFT</span>' : ''}
+                    </div>
+                    <div class="subsystem-opt-meta">
+                        Speed: ${bus.baseSpeed} m/s | Hull: ${bus.maxHull} HP | Cargo: ${bus.cargoCapacity} Units | Dry Mass: ${bus.dryMassKg} kg
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--ink-muted); margin-top: 4px;">${bus.description}</div>
+                `;
+                div.addEventListener('click', () => {
+                    this.selectedBusId = bus.id;
+                    this.selectedShipId = bus.id;
+                    this.save.selectedShip = bus.id;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playUiClick();
+                    this.renderStep1NeedAndGoals();
+                    this.renderStep4PointDesign();
+                });
+                busContainer.appendChild(div);
+            });
+        }
+
+        // 4. Capture & Retrieval Equipment Selection (Directly on Step 1)
+        const equipContainer = document.getElementById('design-step1-equipment-select');
+        if (equipContainer) {
+            equipContainer.innerHTML = '';
+            Object.values(PARTS_DATA.equipment).forEach(eq => {
+                const isSelected = eq.id === this.selectedEquipmentId;
+                const div = document.createElement('div');
+                div.className = `subsystem-option-card ${isSelected ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="subsystem-opt-title">${eq.name}</span>
+                        ${isSelected ? '<span class="trade-badge" style="background: var(--salvage); color: #000; font-weight: bold;">EQUIPPED</span>' : ''}
+                    </div>
+                    <div class="subsystem-opt-meta">
+                        Range: ${eq.range}m | Scrap: +${Math.round((eq.scrapBonus - 1) * 100)}% | Type: ${eq.type.toUpperCase()} | Mass: ${eq.massKg} kg
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--ink-muted); margin-top: 4px;">${eq.description}</div>
+                `;
+                div.addEventListener('click', () => {
+                    this.selectedEquipmentId = eq.id;
+                    this.save.selectedEquipment = eq.id;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playUiClick();
+                    this.renderStep1NeedAndGoals();
+                    this.renderStep4PointDesign();
+                });
+                equipContainer.appendChild(div);
+            });
+        }
+
+        // 5. Contract Specification & Measurable Requirements Dossier
         const dossierBox = document.getElementById('design-requirements-dossier');
         const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
         const activeClient = PARTS_DATA.clients[this.selectedClientId] || PARTS_DATA.clients.esa;
@@ -814,6 +842,7 @@ class UIController {
             this.save.selectedShip = id;
             OrbitalStorage.save(this.save);
             this.renderStep4PointDesign();
+            this.renderStep1NeedAndGoals();
         });
 
         this.renderSubsystemSelector('select-propulsion', PARTS_DATA.propulsionTanks, this.selectedPropulsionId, (id) => {
@@ -835,6 +864,7 @@ class UIController {
             this.save.selectedEquipment = id;
             OrbitalStorage.save(this.save);
             this.renderStep4PointDesign();
+            this.renderStep1NeedAndGoals();
         });
 
         this.renderSubsystemSelector('select-ground-comms', PARTS_DATA.groundComms, this.selectedGroundCommsId, (id) => {
@@ -1148,10 +1178,11 @@ class UIController {
     }
 
     loadQuickDemoPreset() {
-        // Quick Demo loads verified balanced preset for Sector 1
+        // Quick Demo loads verified balanced preset for Sector 1 and immediately launches live mission!
         this.selectedLevelId = 1;
         this.adoptArchitecture('balanced');
         window.soundSystem?.playCollect(3);
+        this.launchConfiguredMission();
     }
 
     openShareCodeModal() {

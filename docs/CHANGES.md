@@ -150,3 +150,26 @@
    - Added automatic scroll reset (`container.scrollTop = 0`) on every step change.
    - Added direct "🚀 QUICK LAUNCH" buttons in the studio header and in Steps 1, 2, and 3 so commanders can launch immediately without traversing all 4 steps.
    - Pre-rendered all 4 steps on initial view load so all subsystem selectors and trade study cards are immediately populated.
+
+---
+
+## Phase 2.2 — Direct Craft Customization on Step 1, Quick Demo Instant Launch & Navigation Flow Fix
+
+### Key Enhancements & Bug Fixes:
+1. **Instant Demo Launch ("⚡ QUICK DEMO")**:
+   - Updated `loadQuickDemoPreset()` so clicking "⚡ QUICK DEMO" loads the verified balanced preset and immediately launches the live flight into `OrbitalGameScene`.
+   - Players can now jump straight into an active mission with one click from the header.
+
+2. **Direct Spacecraft & Equipment Selection on Step 1 ("MISSION & CRAFT")**:
+   - Added Spacecraft Airframe Bus cards (`Scout`, `Collector`, `Lifter`) and Capture Equipment cards (`Robotic Arm`, `Wide Net`, `Magnetic Beam`) directly onto Step 1.
+   - Commanders can now choose their target orbit, client, spacecraft airframe, and capture equipment all in one cohesive view on Step 1 without needing to traverse multiple intermediate steps.
+   - Selections are visually highlighted (`.selected`), play audio feedback, save to `OrbitalStorage`, and bidirectionally synchronize with Step 4.
+
+3. **Step Navigation & Proceed Button Fix**:
+   - Removed duplicate direct element event listeners that were triggering double invocations on `.btn-next-step` and `.btn-prev-step`.
+   - Clearly labeled step navigation buttons on all 4 steps:
+     - Step 1: `📋 CONOPS & TIMELINE (STEP 2) →`, `⚙️ FULL POINT DESIGN (STEP 4) →`, and `🚀 LAUNCH MISSION`.
+     - Step 2: `← BACK TO MISSION & CRAFT (STEP 1)`, `POINT DESIGN (STEP 4) →`, and `PROCEED TO TRADE STUDY (STEP 3) →`.
+     - Step 3: `← BACK TO CONOPS (STEP 2)`, `STEP 1`, and `PROCEED TO POINT DESIGN (STEP 4) →`.
+     - Step 4: `← BACK TO MISSION & CRAFT (STEP 1)` and `🚀 LAUNCH ORBITAL INSERTION`.
+   - Updated Step Tab 1 label to `01 MISSION & CRAFT`.
