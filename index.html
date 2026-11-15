@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORBITAL CLEANUP: MISSION ZERO</title>
+    <!-- Phaser 3.80 Game Engine with multi-CDN fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script>
+        if (typeof Phaser === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (typeof Phaser === 'undefined') {
+            document.write('<script src="https://unpkg.com/phaser@3.80.1/dist/phaser.min.js"><\/script>');
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Phaser 3 Game Container -->
+    <div id="game-container"></div>
+
+    <!-- ====================================================================
+         1. MAIN MENU SCREEN
+         ==================================================================== -->
+    <div id="screen-main-menu" class="screen-layer">
+        <div class="menu-container">
+            <h1 class="game-title">ORBITAL CLEANUP</h1>
+            <div class="game-subtitle">MISSION ZERO // KESSLER DEFENSE INITIATIVE</div>
+            <p class="mission-lore">
+                Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
+            </p>
+            <div class="menu-buttons">
+                <button id="btn-menu-start" class="btn-primary">START MISSION</button>
+                <button id="btn-menu-hangar" class="btn-secondary">HANGAR & UPGRADES</button>
+                <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL & HOW TO PLAY</button>
+                <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS & LEADERBOARD</button>
+            </div>
+            <div class="audio-controls">
+                <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
+                <button id="btn-toggle-music" class="btn-audio active">MUSIC: ON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         2. MISSION DESIGN MODE SCREEN (Core Differentiator)
+         ==================================================================== -->
+    <div id="screen-mission-design" class="screen-layer hidden">
+        <div class="design-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">MISSION DESIGN STUDIO</h2>
+                    <div style="font-family: var(--font-mono); color: var(--neon-cyan); font-size: 0.9rem;">
+                        ORBITAL FLIGHT RECON & PAYLOAD SPECIFICATION
+                    </div>
+                </div>
+                <button class="btn-secondary btn-back-to-menu">MAIN MENU</button>
+            </div>
+
+            <!-- Target Orbit & Level Select -->
+            <div class="section-label">1. SELECT TARGET ORBIT & MISSION SECTOR</div>
+            <div id="design-level-select" class="level-cards-grid"></div>
+
+            <!-- Active Mission Briefing Dossier -->
+            <div id="design-mission-briefing" class="mission-dossier-box"></div>
+
+            <!-- Spacecraft & Equipment Grids -->
+            <div class="design-grid">
+                <!-- Spacecraft Selection -->
+                <div>
+                    <div class="section-label">2. SELECT SPACECRAFT AIRFRAME</div>
+                    <div id="design-ship-select" class="cards-row"></div>
+                </div>
+
+                <!-- Equipment Selection -->
+                <div>
+                    <div class="section-label">3. SELECT RETRIEVAL EQUIPMENT</div>
+                    <div id="design-equipment-select" class="cards-row"></div>
+                </div>
+            </div>
+
+            <!-- Payload Tuning Presets -->
+            <div style="margin-bottom: 25px;">
+                <div class="section-label">4. MISSION PAYLOAD & SUBSYSTEM TUNING</div>
+                <div id="design-payload-select" class="cards-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));"></div>
+            </div>
+
+            <!-- Launch Button -->
+            <div style="text-align: center;">
+                <button id="btn-launch-mission" class="btn-primary" style="font-size: 1.3rem; padding: 18px 45px;">
+                    LAUNCH ORBITAL INSERTION
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         3. HANGAR & UPGRADES SCREEN
+         ==================================================================== -->
+    <div id="screen-hangar" class="screen-layer hidden">
+        <div class="hangar-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">ORBITAL HANGAR & WORKSHOP</h2>
+                    <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.9rem;">
+                        ENGINEERING UPGRADES & SPACECRAFT RETROFITS
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="scrap-badge">SCRAP: <span id="hangar-credits-val">0</span></span>
+                    <button class="btn-secondary btn-back-to-menu">RETURN</button>
+                </div>
+            </div>
+
+            <!-- Upgrades List -->
+            <div id="hangar-upgrades-list"></div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         4. HOW TO PLAY & FLIGHT MANUAL
+         ==================================================================== -->
+    <div id="screen-how-to-play" class="screen-layer hidden">
+        <div class="guide-container">
+            <div class="panel-header">
+                <h2 class="panel-title">AEGIS FLIGHT & OPERATIONS MANUAL</h2>
+                <button class="btn-secondary btn-back-to-menu">RETURN</button>
+            </div>
+
+            <div class="guide-tabs">
+                <button class="tab-btn active" data-tab="controls">FLIGHT CONTROLS</button>
+                <button class="tab-btn" data-tab="equipment">EQUIPMENT OPERATION</button>
+                <button class="tab-btn" data-tab="debris">DEBRIS & RECYCLING</button>
+                <button class="tab-btn" data-tab="hazards">ORBITAL HAZARDS</button>
+            </div>
+
+            <!-- Controls Tab -->
+            <div id="tab-content-controls" class="tab-content active">
+                <p>Mastering orbital dynamics requires balancing forward acceleration, inertial drift, and retro-braking.</p>
+                <div class="guide-keybinds">
+                    <div class="key-card">
+                        <div><span class="kbd">W</span> or <span class="kbd">▲</span></div>
+                        <strong>Main Propulsion Thruster:</strong> Fires rear ion engines to accelerate forward. Burns fuel.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">A</span> / <span class="kbd">D</span> or <span class="kbd">◄</span> / <span class="kbd">►</span></div>
+                        <strong>RCS Yaw Steering:</strong> Rotates spacecraft left or right with reaction control thrusters.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">S</span> or <span class="kbd">▼</span></div>
+                        <strong>Retro-Braking:</strong> Fires forward counter-thrusters to shed orbital velocity.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">SPACEBAR</span></div>
+                        <strong>Activate Equipment:</strong> Fires Grapple Arm, deploys Capture Net, or holds Magnetic Beam.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">E</span> or Hold Position</div>
+                        <strong>Dock & Recycle:</strong> When inside Aegis Depot harbor perimeter, docks to offload waste.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">P</span> or <span class="kbd">ESC</span></div>
+                        <strong>Pause Mission:</strong> Pauses mission and opens command options.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Tab -->
+            <div id="tab-content-equipment" class="tab-content">
+                <p>Your chosen retrieval tool drastically changes your flight approach:</p>
+                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
+                    <li><strong>Robotic Grapple Arm:</strong> Fires a high-velocity mechanical cable directly forward. Clamps onto a single debris item and reels it into your hold. Lowest battery consumption and yields a <strong>+35% Scrap Bonus</strong>.</li>
+                    <li><strong>Wide-Angle Capture Net:</strong> Launches an expanding electromagnetic energy mesh that encloses all small/medium debris pieces within its blast radius simultaneously. Great for clearing dense fragment clouds.</li>
+                    <li><strong>Magnetic Tractor Beam:</strong> Hold SPACEBAR to emit a continuous graviton cone. Continuously pulls all metallic debris in front of you into your intake. High battery drain.</li>
+                </ul>
+            </div>
+
+            <!-- Debris Tab -->
+            <div id="tab-content-debris" class="tab-content">
+                <p>Earth's orbit contains multiple classes of hazardous debris:</p>
+                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
+                    <li><strong>Structural Bolt & Shards (15kg):</strong> Small, fast-moving metal fragments from shattered rocket skins.</li>
+                    <li><strong>Broken Solar Array (45kg):</strong> Fragile photovoltaic panels rich in rare earth materials.</li>
+                    <li><strong>Research Cubesat (75kg):</strong> Miniaturized satellites carrying high-value avionics.</li>
+                    <li><strong>Spent Rocket Upper Stage (220kg):</strong> Massive propulsion tank left drifting. High scrap yield.</li>
+                    <li><strong>Derelict Comms Satellite (380kg):</strong> Heavy telecommunication platforms with intact dishes.</li>
+                    <li><strong>Prototype Fusion Core (160kg):</strong> Rare experimental modules with enormous credit bounty.</li>
+                </ul>
+                <p><strong>Aegis Depot Recycling:</strong> When your cargo hold fills up, fly back to the central orbital station. Docking safely unloads all items, converts them to Score & Scrap Credits, refuels your tanks, and restores full hull integrity!</p>
+            </div>
+
+            <!-- Hazards Tab -->
+            <div id="tab-content-hazards" class="tab-content">
+                <p>Watch out for dangerous orbital threats and heed the Collision Warning Radar:</p>
+                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
+                    <li><strong>Kinetic Micrometeoroids:</strong> Hypersonic projectiles crossing orbit. Severe collision damage.</li>
+                    <li><strong>Volatile Hydrazine Mines:</strong> Explosive pressurized fuel tanks. Heavy explosive damage on ram.</li>
+                    <li><strong>Defunct RTG Nuclear Satellites:</strong> Cold War satellites emitting continuous radiation fields that rapidly drain battery systems.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         5. LEADERBOARD & CAREER STATS SCREEN
+         ==================================================================== -->
+    <div id="screen-leaderboard" class="screen-layer hidden">
+        <div class="hangar-container">
+            <div class="panel-header">
+                <h2 class="panel-title">CAREER STATISTICS & TOP RUNS</h2>
+                <button class="btn-secondary btn-back-to-menu">RETURN</button>
+            </div>
+
+            <div class="career-stats-grid">
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">DEBRIS RECYCLED</div>
+                    <div id="stat-total-debris" class="val">0</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">MASS DE-ORBITED</div>
+                    <div id="stat-total-mass" class="val">0.0 t</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">MISSIONS CLEARED</div>
+                    <div id="stat-total-missions" class="val">0</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">TOTAL SCRAP</div>
+                    <div id="stat-total-credits" class="val">0</div>
+                </div>
+            </div>
+
+            <div class="section-label">LOCAL TOP RUNS</div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>RANK</th>
+                        <th>COMMANDER</th>
+                        <th>SECTOR</th>
+                        <th>DEBRIS</th>
+                        <th>SCORE</th>
+                        <th>DATE</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         6. IN-GAME HUD OVERLAY
+         ==================================================================== -->
+    <div id="hud-overlay" class="hud-layer hidden">
+        <!-- Top Telemetry Bar -->
+        <div class="hud-top-bar">
+            <!-- Resource Gauges (Left) -->
+            <div class="hud-panel hud-gauges">
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>FUEL</span>
+                        <span id="hud-fuel-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-fuel-fill" class="gauge-fill fill-fuel"></div>
+                    </div>
+                </div>
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>BATTERY</span>
+                        <span id="hud-battery-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-battery-fill" class="gauge-fill fill-battery"></div>
+                    </div>
+                </div>
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>HULL INTEGRITY</span>
+                        <span id="hud-hull-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-hull-fill" class="gauge-fill fill-hull"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Center Status -->
+            <div class="hud-panel hud-mission-status">
+                <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
+                <div class="hud-counters">
+                    <div class="hud-counter-item">
+                        QUOTA: <span id="hud-quota-val" class="val-green">0 / 8</span>
+                    </div>
+                    <div class="hud-counter-item">
+                        SCORE: <span id="hud-score-val" class="val-amber">0</span>
+                    </div>
+                    <div class="hud-counter-item">
+                        TIMER: <span id="hud-timer-val">02:30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cargo Hold Status (Right) -->
+            <div class="hud-panel hud-cargo-panel">
+                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">
+                    CARGO (<span id="hud-cargo-count">0/3</span>):
+                </div>
+                <div id="hud-cargo-slots" class="cargo-slots-container"></div>
+            </div>
+        </div>
+
+        <!-- Dynamic Collision Warning Banner -->
+        <div id="hud-warning-banner" class="hud-warning-banner">
+            ⚠️ COLLISION WARNING - EVASIVE ACTION REQUIRED ⚠️
+        </div>
+
+        <!-- Docking Station Notification -->
+        <div id="hud-docking-prompt" class="hud-docking-prompt">
+            DEPOT HARBOR IN RANGE - PRESS [E] OR HOLD POSITION TO DOCK & RECYCLE
+        </div>
+
+        <!-- Bottom Bar: Controls & Minimap -->
+        <div class="hud-bottom-bar">
+            <div class="hud-controls-hint">
+                <span class="kbd">W/A/S/D</span> Thrust & Yaw &nbsp;|&nbsp; 
+                <span class="kbd">SPACE</span> Collect &nbsp;|&nbsp; 
+                <span class="kbd">E</span> Dock & Recycle &nbsp;|&nbsp; 
+                <span class="kbd">P</span> Pause
+            </div>
+
+            <!-- Minimap Radar -->
+            <div class="hud-minimap-container">
+                <canvas id="hud-minimap-canvas" width="140" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         7. MISSION RESULTS / DEBRIEF MODAL
+         ==================================================================== -->
+    <div id="modal-results" class="modal-layer hidden">
+        <div class="results-box">
+            <div id="results-headline" class="results-title victory">MISSION ACCOMPLISHED</div>
+            <div id="results-reason" class="results-reason">ORBITAL ZONE SUCCESSFULLY CLEANSED</div>
+            <div id="res-stars" class="results-stars">★★★</div>
+
+            <div class="results-stats">
+                <div class="res-row">
+                    <span>Debris Recycled:</span>
+                    <strong id="res-debris">8 / 8</strong>
+                </div>
+                <div class="res-row">
+                    <span>Depot Deliveries:</span>
+                    <strong id="res-deliveries">2</strong>
+                </div>
+                <div class="res-row">
+                    <span>Fuel Consumed:</span>
+                    <strong id="res-fuel">42 L</strong>
+                </div>
+                <div class="res-row">
+                    <span>Hull Collisions:</span>
+                    <strong id="res-collisions">0</strong>
+                </div>
+                <div class="res-row highlight">
+                    <span>Mission Score:</span>
+                    <strong id="res-score">4,850 PTS</strong>
+                </div>
+                <div class="res-row highlight">
+                    <span>Scrap Credits Earned:</span>
+                    <strong id="res-credits">+650 Scrap</strong>
+                </div>
+            </div>
+
+            <div class="results-actions">
+                <button id="btn-results-next" class="btn-primary">NEXT MISSION</button>
+                <button id="btn-results-retry" class="btn-secondary">REPLAY MISSION</button>
+                <button id="btn-results-hangar" class="btn-secondary">UPGRADE HANGAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         8. PAUSE MODAL
+         ==================================================================== -->
+    <div id="modal-pause" class="modal-layer hidden">
+        <div class="results-box" style="max-width: 440px;">
+            <div class="results-title victory" style="font-size: 1.8rem; margin-bottom: 20px;">MISSION PAUSED</div>
+            <div class="menu-buttons">
+                <button id="btn-pause-resume" class="btn-primary">RESUME MISSION</button>
+                <button id="btn-pause-restart" class="btn-secondary">RESTART MISSION</button>
+                <button id="btn-pause-abort" class="btn-secondary">ABORT TO MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Game Scripts -->
+    <script src="js/audio.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/graphics.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
