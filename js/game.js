@@ -991,12 +991,13 @@ class OrbitalGameScene extends Phaser.Scene {
         debris.lastDamageTime = now;
         window.soundSystem.playCollision();
         this.collisionsCount++;
-        this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
 
         // Meaningful high-speed impact damage scaling
         const severity = (impactSpeed - 60) / 160;
         const impactDamage = Math.max(3, Math.min(32, Math.round(10 * severity * this.damageReduction)));
         this.hull = Math.max(0, this.hull - impactDamage);
+
+        this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
         this.cameras.main.shake(120, Math.min(0.015, 0.003 * severity));
         this.sparkParticles.emitParticleAt(player.x, player.y, 8);
         this.showFloatingText(player.x, player.y - 25, `-${impactDamage} HULL`, '#f59e0b');
@@ -1011,10 +1012,11 @@ class OrbitalGameScene extends Phaser.Scene {
 
         window.soundSystem.playExplosion();
         this.collisionsCount++;
-        this.logFlightEvent('HAZARD', `Orbital anomaly collision! (-${Math.round(dmg)} Hull).`, 'crit');
 
         const dmg = (hazard.hazardMeta.damage || 35) * this.damageReduction;
         this.hull = Math.max(0, this.hull - dmg);
+
+        this.logFlightEvent('HAZARD', `Orbital anomaly collision! (-${Math.round(dmg)} Hull).`, 'crit');
 
         this.cameras.main.shake(300, 0.02);
         this.sparkParticles.emitParticleAt(hazard.x, hazard.y, 25);

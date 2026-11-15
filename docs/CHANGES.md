@@ -173,3 +173,14 @@
      - Step 3: `← BACK TO CONOPS (STEP 2)`, `STEP 1`, and `PROCEED TO POINT DESIGN (STEP 4) →`.
      - Step 4: `← BACK TO MISSION & CRAFT (STEP 1)` and `🚀 LAUNCH ORBITAL INSERTION`.
    - Updated Step Tab 1 label to `01 MISSION & CRAFT`.
+
+---
+
+## Phase 2.3 — Fix Game Freeze on Meteor & Debris Impact (Temporal Dead Zone ReferenceError)
+
+### Bug Resolved:
+- **Game Freezing on Meteor / Hazard Impact**:
+  - In `handleShipHazardCollision()` in `js/game.js`, `this.logFlightEvent` accessed `dmg` prior to its `const dmg = ...` declaration. In JavaScript, accessing a block-scoped variable in its Temporal Dead Zone (TDZ) throws an uncaught `ReferenceError: Cannot access 'dmg' before initialization`.
+  - When this error was thrown inside Phaser's physics collision handler, it immediately crashed Phaser's main animation/update loop, leaving the game permanently stuck/frozen on collision.
+  - A similar TDZ access existed in `handleShipDebrisBump()` where `impactDamage` was referenced before declaration.
+- **Fix**: Reordered variable calculations in both `handleShipHazardCollision()` and `handleShipDebrisBump()` in [js/game.js](file:///c:/Users/jovin/OneDrive/Documents/Nasa/js/game.js#L990-L1025) so damages are computed before logging telemetry. Collision impacts now apply hull damage, camera shake, floating indicators, and telemetry logging cleanly without interruption.
