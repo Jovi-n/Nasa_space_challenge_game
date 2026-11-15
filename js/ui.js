@@ -107,7 +107,116 @@ class UIController {
     }
 
     attachEventListeners() {
-        // Main Menu Buttons
+        // Universal Document-Level Event Delegation for 100% Reliable Button & Interactive Handling
+        document.addEventListener('click', (e) => {
+            // 1. Step Tab Buttons (01 NEED, 02 CONOPS, 03 TRADE, 04 POINT DESIGN)
+            const stepTab = e.target.closest('.step-tab-btn');
+            if (stepTab) {
+                e.preventDefault();
+                const step = parseInt(stepTab.getAttribute('data-step'), 10);
+                if (step) {
+                    this.switchDesignStep(step);
+                }
+                return;
+            }
+
+            // 2. Next Step Buttons
+            const nextBtn = e.target.closest('.btn-next-step');
+            if (nextBtn) {
+                e.preventDefault();
+                const target = parseInt(nextBtn.getAttribute('data-target'), 10);
+                if (target) {
+                    this.switchDesignStep(target);
+                }
+                return;
+            }
+
+            // 3. Previous Step Buttons
+            const prevBtn = e.target.closest('.btn-prev-step');
+            if (prevBtn) {
+                e.preventDefault();
+                const target = parseInt(prevBtn.getAttribute('data-target'), 10);
+                if (target) {
+                    this.switchDesignStep(target);
+                }
+                return;
+            }
+
+            // 4. Adopt Architecture Buttons (Step 3 Trade Study)
+            const adoptBtn = e.target.closest('.btn-adopt-arch');
+            if (adoptBtn) {
+                e.preventDefault();
+                const archId = adoptBtn.getAttribute('data-arch');
+                if (archId) {
+                    this.adoptArchitecture(archId);
+                }
+                return;
+            }
+
+            // 5. Quick Launch / Direct Launch Buttons (Anywhere in Design Studio)
+            const launchBtn = e.target.closest('#btn-launch-mission, .btn-quick-launch-direct');
+            if (launchBtn) {
+                e.preventDefault();
+                const budgets = this.calculateBudgets();
+                if (budgets.reviewStatus === 'FAIL') {
+                    window.soundSystem?.playExplosion();
+                    alert(`[FORMAL DESIGN REVIEW FAILED]\n\n${budgets.failureReason}\n\nPlease adjust your subsystems in Step 4 (e.g. increase launcher capacity, reduce dry mass, or add solar arrays) to achieve PASS status before launch.`);
+                    this.switchDesignStep(4);
+                    return;
+                }
+                this.launchConfiguredMission();
+                return;
+            }
+
+            // 6. Quick Demo Button
+            const quickDemoBtn = e.target.closest('#btn-quick-demo');
+            if (quickDemoBtn) {
+                e.preventDefault();
+                this.loadQuickDemoPreset();
+                return;
+            }
+
+            // 7. Design Tutorial Button
+            const tutorialBtn = e.target.closest('#btn-design-tutorial');
+            if (tutorialBtn) {
+                e.preventDefault();
+                this.screens.tutorialModal?.classList.remove('hidden');
+                window.soundSystem?.playUiClick();
+                return;
+            }
+
+            // 8. Design Share Button
+            const shareBtn = e.target.closest('#btn-design-share');
+            if (shareBtn) {
+                e.preventDefault();
+                this.openShareCodeModal();
+                return;
+            }
+
+            // 9. Modal Close Buttons
+            const closeBtn = e.target.closest('.btn-close-modal');
+            if (closeBtn) {
+                e.preventDefault();
+                const modalId = closeBtn.getAttribute('data-modal');
+                if (modalId && document.getElementById(modalId)) {
+                    document.getElementById(modalId).classList.add('hidden');
+                } else {
+                    closeBtn.closest('.modal-layer')?.classList.add('hidden');
+                }
+                window.soundSystem?.playUiClick();
+                return;
+            }
+
+            // 10. Main Menu / Back to Menu Buttons
+            const backBtn = e.target.closest('.btn-back-to-menu');
+            if (backBtn) {
+                e.preventDefault();
+                this.switchScreen('mainMenu');
+                return;
+            }
+        });
+
+        // Main Menu Direct Buttons
         document.getElementById('btn-menu-start')?.addEventListener('click', () => {
             this.switchScreen('missionDesign');
         });
@@ -352,17 +461,24 @@ class UIController {
         this.currentDesignStep = stepNumber;
         window.soundSystem?.playUiClick();
 
-        this.stepButtons.forEach(btn => {
+        // Refresh buttons and views dynamically
+        document.querySelectorAll('.step-tab-btn').forEach(btn => {
             const s = parseInt(btn.getAttribute('data-step'), 10);
             btn.classList.toggle('active', s === stepNumber);
         });
 
-        this.stepViews.forEach(view => {
+        document.querySelectorAll('.design-step-view').forEach(view => {
             view.classList.remove('active');
         });
 
         const activeView = document.getElementById(`design-step-${stepNumber}`);
         if (activeView) activeView.classList.add('active');
+
+        // Reset scroll position to top so headers and controls are always immediately accessible
+        const container = document.querySelector('.design-container');
+        if (container) {
+            container.scrollTop = 0;
+        }
 
         // Step-specific updates
         if (stepNumber === 1) {
@@ -379,7 +495,11 @@ class UIController {
 
     renderMissionDesignView() {
         this.save = OrbitalStorage.load();
-        this.switchDesignStep(this.currentDesignStep);
+        this.renderStep1NeedAndGoals();
+        this.renderStep2CONOPS();
+        this.renderStep3TradeStudy();
+        this.renderStep4PointDesign();
+        this.switchDesignStep(this.currentDesignStep || 1);
     }
 
     /**
@@ -954,13 +1074,15 @@ class UIController {
             `;
         }
 
-        // Enable or disable Launch Button based on formal gateway check
+        // Update Launch Button appearance and state based on formal review gateway
         if (this.launchMissionBtn) {
             const isBlocked = budgets.reviewStatus === 'FAIL';
-            this.launchMissionBtn.disabled = isBlocked;
-            this.launchMissionBtn.style.opacity = isBlocked ? '0.4' : '1.0';
-            this.launchMissionBtn.style.cursor = isBlocked ? 'not-allowed' : 'pointer';
-            this.launchMissionBtn.innerText = isBlocked ? '[LAUNCH BLOCKED - RESOLVE DEFICIT]' : '🚀 LAUNCH ORBITAL INSERTION';
+            this.launchMissionBtn.disabled = false; // Always keep clickable so user receives helpful alert explaining deficits!
+            this.launchMissionBtn.style.opacity = isBlocked ? '0.75' : '1.0';
+            this.launchMissionBtn.style.cursor = 'pointer';
+            this.launchMissionBtn.style.background = isBlocked ? '#451a1a' : '';
+            this.launchMissionBtn.style.borderColor = isBlocked ? 'var(--danger)' : '';
+            this.launchMissionBtn.innerText = isBlocked ? '⚠️ [DEFICIT DETECTED - CLICK TO REVIEW]' : '🚀 LAUNCH ORBITAL INSERTION';
         }
     }
 

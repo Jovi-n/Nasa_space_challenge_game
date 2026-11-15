@@ -118,3 +118,35 @@
 ### 6. Architecture & Save Preservation
 - Vanilla JS, Phaser 3.80.1, and LocalStorage saves remain 100% backward-compatible.
 - All Phase 1 mission control pixel-art semantic tokens and styling preserved.
+
+---
+
+## Phase 2.1 — Button Responsiveness, Event Delegation, & CSS Restructuring Fix
+
+### Issues Resolved:
+1. **CSS Cascade & @import Placement**:
+   - Reordered `css/style.css` so `@import url(...)` and `:root` tokens appear at the very beginning of the stylesheet as required by W3C CSS specifications, resolving cascade and parsing failures.
+   - Appended Phase 2 styles cleanly at the bottom of the stylesheet.
+   - Set explicit `pointer-events: auto !important` and `cursor: pointer !important` on all interactive buttons, cards, and tabs.
+   - Ensured `#screen-mission-design` uses `justify-content: flex-start` so content does not overflow into unreachable negative coordinates.
+
+2. **Universal Document-Level Event Delegation**:
+   - Implemented centralized `document.addEventListener('click', (e) => { ... })` delegation using `e.target.closest(...)` in `js/ui.js` covering:
+     - 4-step wizard tabs (`.step-tab-btn`)
+     - Step progression buttons (`.btn-next-step`, `.btn-prev-step`)
+     - Trade study architecture adoption (`.btn-adopt-arch`)
+     - Quick Demo preset (`#btn-quick-demo`)
+     - Design tutorial and share code modals (`#btn-design-tutorial`, `#btn-design-share`)
+     - Modal dismiss buttons (`.btn-close-modal`)
+     - Main menu back buttons (`.btn-back-to-menu`)
+     - Launch and Quick Launch triggers (`#btn-launch-mission`, `.btn-quick-launch-direct`)
+
+3. **Active Launch Gateway Feedback**:
+   - Removed `this.launchMissionBtn.disabled = true;` which completely suppressed click events when review margins failed.
+   - Launch button now remains fully interactive with warning styling (`⚠️ [DEFICIT DETECTED - CLICK TO REVIEW]`).
+   - Clicking while in `FAIL` status provides immediate audio-visual alert dialogs detailing the specific deficit and guidance on how to resolve it.
+
+4. **Scroll & Navigation Optimization**:
+   - Added automatic scroll reset (`container.scrollTop = 0`) on every step change.
+   - Added direct "🚀 QUICK LAUNCH" buttons in the studio header and in Steps 1, 2, and 3 so commanders can launch immediately without traversing all 4 steps.
+   - Pre-rendered all 4 steps on initial view load so all subsystem selectors and trade study cards are immediately populated.
