@@ -260,21 +260,10 @@
 ### Status: Completed & Verified
 
 ### Key Deliverables & Enhancements:
-1. **Conjunction Trajectory Alerts & Early Warning System**:
-   - Implemented real-time orbital conjunction prediction in `handleProximityRadar()`.
-   - Computes time-to-closest-approach:
-     $$t_{\text{ca}} = -\frac{\vec{r} \cdot \vec{v}}{|\vec{v}|^2}$$
-     and miss distance $d_{\text{min}} = |\vec{r} + \vec{v} t_{\text{ca}}|$ for all relative velocities exceeding 20 px/s.
-   - Detects incoming hazardous close approaches ($0.3\text{s} < t_{\text{ca}} \le 5.5\text{s}$, $d_{\text{min}} \le 110\text{px}$) between player craft, debris swarms, and active orbital hazards.
-   - Renders predictive amber/red trajectory extrapolation lines and intercept warning reticles directly on the graphics overlay.
-   - Added audio alert chimes with cooldown (`window.soundSystem.playConjunctionAlarm()`) and tactical HUD warning banner.
-
-2. **Kinetic Laser Nudge Deflection (`Q` Key)**:
-   - Added `Q` key input to fire a focused kinetic laser deflection pulse.
-   - Consumes 12 battery per shot.
-   - Targets the closest incoming conjunction object or hazardous projectile within radar range ($360\text{px} \times \text{radarMultiplier}$).
-   - Imparts a radial impulse velocity (+240 px/s) away from the player, deflecting the object off its collision course.
-   - Renders a vibrant cyan/white laser beam and impact ring, plays synthesized audio (`window.soundSystem.playLaserNudge()`), awards +60 tactical points, and decreases sector Kessler risk by 3%.
+1. **Collision Warnings & Kinetic Laser Nudge Deflection (`Q` Key)**:
+   - Simplified trajectory tracking to eliminate inaccurate linear 2D conjunction path projections ($t_{\text{ca}}$ / miss distance extrapolation) that caused premature false alerts in dynamic maneuvering orbits.
+   - Retained responsive proximity radar collision warnings (`[ALERT] COLLISION WARNING - EVASIVE MANEUVER OR [Q] NUDGE`) when hazards close into critical proximity.
+   - Preserved kinetic laser nudge deflection (`Q` key) fully intact: scans within radar range ($360\text{px} \times \text{radarMultiplier}$), consumes 12 battery, prioritizes incoming meteors and hazards, imparts radial deflection impulse (+240 px/s), renders cyan/white kinetic beam FX, awards +60 tactical score, and reduces Kessler risk by 3%.
 
 3. **Collision Fragmentation Engine**:
    - High-energy impacts (> 100 px/s for debris-debris, > 130 px/s for ship-debris, and hazard-debris collisions) shatter objects into 3–8 smaller kinetic fragments.

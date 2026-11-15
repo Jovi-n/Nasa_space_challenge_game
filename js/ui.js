@@ -1547,16 +1547,13 @@ window.addEventListener('DOMContentLoaded', () => {
         if (hud.matCells) hud.matCells.innerText = mats.cells || 0;
         if (hud.matChips) hud.matChips.innerText = mats.chips || 0;
 
-        // Warnings & Prompts (Collision Warnings, Conjunction Alerts & Scripted Tactical Advisories)
+        // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
         if (hud.warningBanner) {
             if (scene.activeEventAlert) {
                 hud.warningBanner.textContent = scene.activeEventAlert;
                 hud.warningBanner.classList.add('active');
-            } else if (scene.conjunctionAlert && scene.conjunctionAlert.tca < 3.2) {
-                hud.warningBanner.textContent = `[ALERT] CONJUNCTION IMMINENT (T-${scene.conjunctionAlert.tca.toFixed(1)}s) - EVASIVE MANEUVER OR [Q] NUDGE`;
-                hud.warningBanner.classList.add('active');
             } else {
-                hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED';
+                hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER OR [Q] NUDGE';
                 hud.warningBanner.classList.toggle('active', !!scene.warningActive);
             }
         }

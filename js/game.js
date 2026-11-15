@@ -116,12 +116,10 @@ class OrbitalGameScene extends Phaser.Scene {
         this.pendingHazardDestructions = [];
         this.pendingFragmentations = [];
 
-        // Phase 4 Orbital Mechanics, Salvage Depth & Conjunction Tracking
+        // Phase 4 Orbital Mechanics & Salvage Depth
         this.kesslerRisk = 12;
         this.materialsSession = { metal: 0, cells: 0, chips: 0 };
         this.nudgesCount = 0;
-        this.conjunctionAlert = null;
-        this.conjunctionSoundCooldown = 0;
         this.laserNudgeEffect = null;
 
         // Phase 3 Data-Driven Scripted Events & Sector Atmospheric Drag
@@ -1454,82 +1452,6 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.fxGraphics.strokeCircle(h.x, h.y, meta.radiationRadius || 180);
             }
         });
-
-        // 2. Conjunction Predictor: Predict closest approach between player and moving objects
-        let mostCriticalConjunction = null;
-        let minTca = 999;
-
-        const checkConjunction = (target, targetName) => {
-            if (!target || !target.active || !target.body || !this.player.body) return;
-            const rx = target.x - this.player.x;
-            const ry = target.y - this.player.y;
-            const vx = target.body.velocity.x - this.player.body.velocity.x;
-            const vy = target.body.velocity.y - this.player.body.velocity.y;
-            const vSq = vx * vx + vy * vy;
-            if (vSq < 400) return; // Relative speed < 20 px/s is not a rapid collision
-
-            const tca = -(rx * vx + ry * vy) / vSq;
-            if (tca > 0.3 && tca <= 5.5) {
-                const missX = rx + vx * tca;
-                const missY = ry + vy * tca;
-                const missDist = Math.hypot(missX, missY);
-                if (missDist <= 110) {
-                    if (tca < minTca) {
-                        minTca = tca;
-                        const interceptX = this.player.x + this.player.body.velocity.x * tca;
-                        const interceptY = this.player.y + this.player.body.velocity.y * tca;
-                        mostCriticalConjunction = {
-                            active: true,
-                            target: target,
-                            targetName: targetName,
-                            tca: tca,
-                            missDist: missDist,
-                            interceptX: interceptX,
-                            interceptY: interceptY
-                        };
-                    }
-                }
-            }
-        };
-
-        // Check hazards for conjunction
-        if (this.hazardGroup) {
-            this.hazardGroup.getChildren().forEach(h => {
-                if (!h || !h.active) return;
-                const name = h.hazardMeta?.name || 'Hazard';
-                checkConjunction(h, name);
-            });
-        }
-
-        // Check nearby debris for conjunction
-        if (this.debrisGroup) {
-            this.debrisGroup.getChildren().forEach(d => {
-                if (!d || !d.active || d.isPendingCollection) return;
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, d.x, d.y);
-                if (dist < 420) {
-                    checkConjunction(d, d.debrisType?.name || 'Debris');
-                }
-            });
-        }
-
-        this.conjunctionAlert = mostCriticalConjunction;
-
-        // Imminent conjunction danger triggers proximity warning & alarm sound
-        if (this.conjunctionAlert) {
-            const ca = this.conjunctionAlert;
-            if (ca.tca < 3.2) {
-                imminentDanger = true;
-            }
-
-            // Play warning sound with cooldown
-            if (this.conjunctionSoundCooldown <= 0 && ca.tca < 3.2) {
-                this.conjunctionSoundCooldown = 3.0;
-                window.soundSystem?.playConjunctionAlarm?.();
-            }
-        }
-        if (this.conjunctionSoundCooldown > 0) {
-            this.conjunctionSoundCooldown -= frameDt;
-        }
 
         // Trigger Audio & Visual Warning Alert safely
         if (imminentDanger) {
