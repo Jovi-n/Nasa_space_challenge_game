@@ -67,7 +67,6 @@ class UIController {
             quotaText: document.getElementById('hud-quota-val'),
             missionName: document.getElementById('hud-mission-name'),
             warningBanner: document.getElementById('hud-warning-banner'),
-            conjunctionBanner: document.getElementById('hud-conjunction-banner'),
             dockingPrompt: document.getElementById('hud-docking-prompt'),
             minimapCanvas: document.getElementById('hud-minimap-canvas'),
             kesslerFill: document.getElementById('hud-kessler-fill'),
@@ -1529,21 +1528,13 @@ window.addEventListener('DOMContentLoaded', () => {
         if (hud.matCells) hud.matCells.innerText = mats.cells || 0;
         if (hud.matChips) hud.matChips.innerText = mats.chips || 0;
 
-        // Conjunction Trajectory Warning Banner
-        if (hud.conjunctionBanner) {
-            if (scene.conjunctionAlert && scene.conjunctionAlert.active) {
-                const ca = scene.conjunctionAlert;
-                hud.conjunctionBanner.textContent = `[CONJUNCTION ALERT] ${ca.targetName ? ca.targetName.toUpperCase() : 'OBJECT'} INTERCEPT (T-${ca.tca.toFixed(1)}s, ${Math.round(ca.missDist)}m) - PRESS [Q] TO LASER NUDGE`;
-                hud.conjunctionBanner.classList.add('active');
-            } else {
-                hud.conjunctionBanner.classList.remove('active');
-            }
-        }
-
-        // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
+        // Warnings & Prompts (Collision Warnings, Conjunction Alerts & Scripted Tactical Advisories)
         if (hud.warningBanner) {
             if (scene.activeEventAlert) {
                 hud.warningBanner.textContent = scene.activeEventAlert;
+                hud.warningBanner.classList.add('active');
+            } else if (scene.conjunctionAlert && scene.conjunctionAlert.tca < 3.2) {
+                hud.warningBanner.textContent = `[ALERT] CONJUNCTION IMMINENT (T-${scene.conjunctionAlert.tca.toFixed(1)}s) - EVASIVE MANEUVER OR [Q] NUDGE`;
                 hud.warningBanner.classList.add('active');
             } else {
                 hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED';

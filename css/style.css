@@ -931,31 +931,6 @@ body, html {
     color: var(--salvage);
 }
 
-/* Conjunction Alert Banner */
-.hud-conjunction-banner {
-    position: absolute;
-    top: 52px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #381504;
-    border: 2px solid var(--salvage);
-    color: #fff;
-    font-family: var(--font-pixel);
-    font-size: 0.82rem;
-    letter-spacing: 1px;
-    padding: 8px 18px;
-    box-shadow: 4px 4px 0px #000;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.1s linear;
-    z-index: 50;
-    white-space: nowrap;
-}
-
-.hud-conjunction-banner.active {
-    opacity: 1;
-}
-
 /* Flat High-Contrast Warning Banner (No Emojis!) */
 .hud-warning-banner {
     position: absolute;

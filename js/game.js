@@ -1498,21 +1498,16 @@ class OrbitalGameScene extends Phaser.Scene {
 
         this.conjunctionAlert = mostCriticalConjunction;
 
-        // Render Conjunction Trajectory Lines and Intercept Reticle in fxGraphics
+        // Imminent conjunction danger triggers proximity warning & alarm sound
         if (this.conjunctionAlert) {
             const ca = this.conjunctionAlert;
-            this.fxGraphics.lineStyle(2, 0xf59e0b, 0.85);
-            this.fxGraphics.lineBetween(this.player.x, this.player.y, ca.interceptX, ca.interceptY);
-            this.fxGraphics.lineStyle(2, 0xef4444, 0.85);
-            this.fxGraphics.lineBetween(ca.target.x, ca.target.y, ca.interceptX, ca.interceptY);
-
-            // Warning reticle at predicted intercept point
-            this.fxGraphics.lineStyle(2, 0xef4444, 0.95);
-            this.fxGraphics.strokeCircle(ca.interceptX, ca.interceptY, 18 + Math.sin(this.elapsedTime * 15) * 4);
+            if (ca.tca < 3.2) {
+                imminentDanger = true;
+            }
 
             // Play warning sound with cooldown
-            if (this.conjunctionSoundCooldown <= 0 && ca.tca < 4.0) {
-                this.conjunctionSoundCooldown = 2.5;
+            if (this.conjunctionSoundCooldown <= 0 && ca.tca < 3.2) {
+                this.conjunctionSoundCooldown = 3.0;
                 window.soundSystem?.playConjunctionAlarm?.();
             }
         }
