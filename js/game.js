@@ -264,6 +264,7 @@ class OrbitalGameScene extends Phaser.Scene {
 
             const debris = this.debrisGroup.create(x, y, debrisMeta.spriteKey);
             debris.setDepth(5);
+            debris.debrisType = debrisMeta; // Compatible with all capture equipment
             debris.debrisMeta = debrisMeta;
             debris.setBounce(0.85);
             debris.setDamping(true);
@@ -293,6 +294,7 @@ class OrbitalGameScene extends Phaser.Scene {
         const hazard = this.hazardGroup.create(x, y, hazardMeta.spriteKey);
         hazard.setDepth(6);
         hazard.hazardMeta = hazardMeta;
+        hazard.hazardKey = hazardKey;
 
         const targetX = this.player.x + Phaser.Math.Between(-250, 250);
         const targetY = this.player.y + Phaser.Math.Between(-250, 250);
@@ -304,7 +306,7 @@ class OrbitalGameScene extends Phaser.Scene {
         hazard.body.setCircle(20, hazard.width / 2 - 20, hazard.height / 2 - 20);
 
         this.time.delayedCall(22000, () => {
-            if (hazard && hazard.active) {
+            if (hazard && typeof hazard.destroy === 'function') {
                 hazard.destroy();
             }
         });
@@ -481,6 +483,7 @@ class OrbitalGameScene extends Phaser.Scene {
         const hazard = this.hazardGroup.create(x, y, hazardMeta.spriteKey);
         hazard.setDepth(6);
         hazard.hazardMeta = hazardMeta;
+        hazard.hazardKey = hazardKey;
 
         // Trajectory aimed towards player's general sector with jitter
         const targetX = this.player.x + Phaser.Math.Between(-300, 300);
@@ -494,7 +497,7 @@ class OrbitalGameScene extends Phaser.Scene {
 
         // Auto destroy after lifespan to avoid clutter
         this.time.delayedCall(22000, () => {
-            if (hazard && hazard.active) {
+            if (hazard && typeof hazard.destroy === 'function') {
                 hazard.destroy();
             }
         });
@@ -809,7 +812,7 @@ class OrbitalGameScene extends Phaser.Scene {
         // 2. Process queued hazard destructions safely outside collision iteration
         while (this.pendingHazardDestructions && this.pendingHazardDestructions.length > 0) {
             const hazard = this.pendingHazardDestructions.pop();
-            if (hazard && hazard.active) {
+            if (hazard && typeof hazard.destroy === 'function') {
                 hazard.destroy();
             }
         }
@@ -1002,13 +1005,16 @@ class OrbitalGameScene extends Phaser.Scene {
         let imminentDanger = false;
         const frameDt = (typeof dt === 'number' && dt > 0) ? dt : (1 / 60);
 
+        if (!this.hazardGroup || !this.player) return;
+
         // Check all hazards for proximity
         this.hazardGroup.getChildren().forEach(h => {
-            if (!h.active) return;
+            if (!h || !h.active) return;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, h.x, h.y);
 
-            // Dynamic warning radius based on hazard metadata and sensor upgrade
-            const hazardWarningDist = (h.hazardMeta.warningRadius || 320) * this.radarMultiplier;
+            // Dynamic warning radius based on hazard metadata and sensor upgrade (with robust fallbacks)
+            const meta = h.hazardMeta || (h.hazardKey ? GAME_DATA.HAZARD_TYPES[h.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.meteoroid;
+            const hazardWarningDist = (meta?.warningRadius || 320) * (this.radarMultiplier || 1.0);
 
             // Proximity warning trigger
             if (dist < hazardWarningDist) {
@@ -1016,23 +1022,23 @@ class OrbitalGameScene extends Phaser.Scene {
             }
 
             // If hazard is a nuclear satellite, emit continuous radiation drain per second
-            if (h.hazardMeta.id === 'nuclear' && dist < h.hazardMeta.radiationRadius) {
-                this.battery = Math.max(0, this.battery - h.hazardMeta.batteryDrain * frameDt);
+            if (meta?.id === 'nuclear' && dist < (meta.radiationRadius || 180)) {
+                this.battery = Math.max(0, this.battery - (meta.batteryDrain || 15) * frameDt);
                 this.fxGraphics.lineStyle(1.5, 0x84cc16, 0.4);
-                this.fxGraphics.strokeCircle(h.x, h.y, h.hazardMeta.radiationRadius);
+                this.fxGraphics.strokeCircle(h.x, h.y, meta.radiationRadius || 180);
             }
         });
 
-        // Trigger Audio & Visual Warning Alert
+        // Trigger Audio & Visual Warning Alert safely
         if (imminentDanger) {
             if (!this.warningActive) {
                 this.warningActive = true;
-                window.soundSystem.playWarning(true);
+                window.soundSystem?.playWarning?.(true);
             }
         } else {
             if (this.warningActive) {
                 this.warningActive = false;
-                window.soundSystem.playWarning(false);
+                window.soundSystem?.playWarning?.(false);
             }
         }
 
@@ -1041,6 +1047,7 @@ class OrbitalGameScene extends Phaser.Scene {
     }
 
     drawHUDOffscreenPointers() {
+        if (!this.cameras || !this.cameras.main || !this.player) return;
         const cam = this.cameras.main;
         const viewW = cam.width;
         const viewH = cam.height;
@@ -1048,6 +1055,8 @@ class OrbitalGameScene extends Phaser.Scene {
 
         // Pointer helper
         const drawIndicator = (targetX, targetY, color, isStation = false) => {
+            if (typeof targetX !== 'number' || typeof targetY !== 'number' || isNaN(targetX) || isNaN(targetY)) return;
+
             // Check if target is inside screen viewport
             const screenX = targetX - cam.scrollX;
             const screenY = targetY - cam.scrollY;
@@ -1063,24 +1072,28 @@ class OrbitalGameScene extends Phaser.Scene {
             const edgeY = Phaser.Math.Clamp(cy + Math.sin(angle) * (viewH / 2 - padding), padding, viewH - padding);
 
             this.hudGraphics.fillStyle(color, 0.85);
-            this.hudGraphics.beginPath();
             const arrowSize = isStation ? 12 : 8;
             this.hudGraphics.fillCircle(edgeX, edgeY, arrowSize);
         };
 
         // Pointer to Aegis Station (Green)
-        drawIndicator(this.station.x, this.station.y, 0x10b981, true);
+        if (this.station) {
+            drawIndicator(this.station.x, this.station.y, 0x10b981, true);
+        }
 
         // Pointers to active hazards (Red)
-        this.hazardGroup.getChildren().forEach(h => {
-            if (h.active) {
-                drawIndicator(h.x, h.y, 0xef4444, false);
-            }
-        });
+        if (this.hazardGroup) {
+            this.hazardGroup.getChildren().forEach(h => {
+                if (h && h.active) {
+                    drawIndicator(h.x, h.y, 0xef4444, false);
+                }
+            });
+        }
     }
 
     handleShipDebrisBump(player, debris) {
         if (!debris || !debris.active) return;
+        if (!player || !player.body || !debris.body) return;
 
         // If debris is currently being pulled by tractor beam and we have cargo space, safely collect without collision damage
         const isTractorPull = debris.isBeingPulledByTractor && (this.time.now - (debris.tractorPullTime || 0) < 350);
@@ -1108,17 +1121,19 @@ class OrbitalGameScene extends Phaser.Scene {
         }
 
         debris.lastDamageTime = now;
-        window.soundSystem.playCollision();
+        window.soundSystem?.playCollision?.();
         this.collisionsCount++;
 
         // Meaningful high-speed impact damage scaling
         const severity = (impactSpeed - 60) / 160;
-        const impactDamage = Math.max(3, Math.min(32, Math.round(10 * severity * this.damageReduction)));
+        const impactDamage = Math.max(3, Math.min(32, Math.round(10 * severity * (this.damageReduction || 1.0))));
         this.hull = Math.max(0, this.hull - impactDamage);
 
         this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
         this.cameras.main.shake(120, Math.min(0.015, 0.003 * severity));
-        this.sparkParticles.emitParticleAt(player.x, player.y, 8);
+        if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+            this.sparkParticles.emitParticleAt(player.x, player.y, 8);
+        }
         this.showFloatingText(player.x, player.y - 25, `-${impactDamage} HULL`, '#f59e0b');
 
         if (this.hull <= 0) {
@@ -1128,17 +1143,22 @@ class OrbitalGameScene extends Phaser.Scene {
 
     handleShipHazardCollision(player, hazard) {
         if (!hazard || !hazard.active) return;
+        if (hazard._collided) return;
+        hazard._collided = true;
 
-        window.soundSystem.playExplosion();
+        window.soundSystem?.playExplosion?.();
         this.collisionsCount++;
 
-        const dmg = (hazard.hazardMeta.damage || 35) * this.damageReduction;
+        const meta = hazard.hazardMeta || (hazard.hazardKey ? GAME_DATA.HAZARD_TYPES[hazard.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.meteoroid;
+        const dmg = (meta.damage || 35) * (this.damageReduction || 1.0);
         this.hull = Math.max(0, this.hull - dmg);
 
         this.logFlightEvent('HAZARD', `Orbital anomaly collision! (-${Math.round(dmg)} Hull).`, 'crit');
 
         this.cameras.main.shake(300, 0.02);
-        this.sparkParticles.emitParticleAt(hazard.x, hazard.y, 25);
+        if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+            this.sparkParticles.emitParticleAt(hazard.x, hazard.y, 25);
+        }
         this.showFloatingText(player.x, player.y - 30, `-${Math.round(dmg)} HULL`, '#ef4444');
 
         // Physics safety: disable body and queue destruction safely outside collision callback

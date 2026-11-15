@@ -231,3 +231,25 @@
 7. **Unified Gameplay Engine & Save Preservation**:
    - All 8 sectors operate inside the same single Phaser `OrbitalGameScene`.
    - Existing career saves and progression remain completely preserved with zero breaking changes.
+
+---
+
+## Phase 3.1 — Fix Game Freeze on Meteor Flyby & Collision Edge Cases
+
+### Root Cause & Resolved Issues:
+1. **Web Audio Collision Warning Ramping (`InvalidAccessError`)**:
+   - In `playWarning()` in [js/audio.js](file:///c:/Users/jovin/OneDrive/Documents/Nasa/js/audio.js#L337-L366), `gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16)` threw an unhandled DOMException `InvalidAccessError` under low or muted audio volume (when `this.sfxVolume` is 0 or context is suspended).
+   - In Web Audio API specifications, exponential ramp functions throw an immediate error if either the initial or target value is ≤ 0.
+   - **Fix**: Replaced exponential ramp with `linearRampToValueAtTime(0.0001, now + 0.16)` bounded by `Math.max(0.0001, ...)`, guarded context state (`this.ctx.state === 'running'`), and wrapped with `try / catch` error suppression.
+
+2. **Proximity Radar Null-Metadata & Distance Evaluation**:
+   - In `handleProximityRadar()` in [js/game.js](file:///c:/Users/jovin/OneDrive/Documents/Nasa/js/game.js#L1005-L1040), hazards passing by the side triggered radar evaluation. If hazard metadata was unassigned, accessing `h.hazardMeta.warningRadius` threw a `TypeError`, freezing the update loop.
+   - **Fix**: Added safe metadata fallback `h.hazardMeta || GAME_DATA.HAZARD_TYPES[h.hazardKey] || GAME_DATA.HAZARD_TYPES.meteoroid` and optional chaining for all properties (`warningRadius`, `radiationRadius`, `batteryDrain`).
+
+3. **Hazard Re-entrancy & Group Cleanup**:
+   - Added re-entrancy lock `hazard._collided = true` in `handleShipHazardCollision()` to prevent multi-hit collision triggers within the same physics sub-step.
+   - Fixed `processPendingPhysicsActions()` and delayed call timers to safely call `hazard.destroy()` without depending on `hazard.active` being true.
+
+4. **HUD & Minimap Safe Guarding**:
+   - Added defensive checks in `drawHUDOffscreenPointers()`, `updateGameHUD()`, and `updateMinimap()` to ensure non-finite coordinates or missing canvas contexts never crash frame rendering.
+   - Assigned both `debris.debrisType` and `debris.debrisMeta` in `spawnDebrisCluster()` to maintain 100% compatibility with all three capture equipment types (robotic arm, capture net, magnetic beam).

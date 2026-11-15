@@ -335,33 +335,46 @@ class SoundSystem {
     }
 
     playWarning(trigger = true) {
-        if (!this.initialized) this.resume();
-        if (!this.sfxEnabled || !this.ctx) return;
-        if (trigger && !this.isWarningPlaying) {
-            this.isWarningPlaying = true;
-            this.warningInterval = setInterval(() => {
-                if (!this.isWarningPlaying || !this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(880, now);
-                osc.frequency.setValueAtTime(740, now + 0.08);
+        try {
+            if (!this.initialized) this.resume();
+            if (!this.sfxEnabled || !this.ctx) return;
+            if (trigger && !this.isWarningPlaying) {
+                this.isWarningPlaying = true;
+                if (this.warningInterval) {
+                    clearInterval(this.warningInterval);
+                    this.warningInterval = null;
+                }
+                this.warningInterval = setInterval(() => {
+                    try {
+                        if (!this.isWarningPlaying || !this.ctx || this.ctx.state !== 'running') return;
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(880, now);
+                        osc.frequency.setValueAtTime(740, now + 0.08);
 
-                gain.gain.setValueAtTime(0.2 * this.sfxVolume, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                        const vol = Math.max(0.0001, 0.2 * (this.sfxVolume || 0.8));
+                        gain.gain.setValueAtTime(vol, now);
+                        gain.gain.linearRampToValueAtTime(0.0001, now + 0.16);
 
-                osc.connect(gain);
-                gain.connect(this.masterGain);
-                osc.start(now);
-                osc.stop(now + 0.18);
-            }, 350);
-        } else if (!trigger && this.isWarningPlaying) {
-            this.isWarningPlaying = false;
-            if (this.warningInterval) {
-                clearInterval(this.warningInterval);
-                this.warningInterval = null;
+                        osc.connect(gain);
+                        gain.connect(this.masterGain);
+                        osc.start(now);
+                        osc.stop(now + 0.18);
+                    } catch (e) {
+                        // Safe audio error suppression
+                    }
+                }, 350);
+            } else if (!trigger && this.isWarningPlaying) {
+                this.isWarningPlaying = false;
+                if (this.warningInterval) {
+                    clearInterval(this.warningInterval);
+                    this.warningInterval = null;
+                }
             }
+        } catch (e) {
+            // Safe audio error suppression
         }
     }
 

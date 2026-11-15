@@ -1402,38 +1402,46 @@ class UIController {
         const toMapY = (y) => (y / worldH) * h;
 
         // Station (Clean green square)
-        ctx.fillStyle = '#10b981';
-        ctx.fillRect(toMapX(scene.station.x) - 4, toMapY(scene.station.y) - 4, 8, 8);
+        if (scene.station) {
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(toMapX(scene.station.x) - 4, toMapY(scene.station.y) - 4, 8, 8);
+        }
 
         // Debris (Salvage amber / cyan dots)
-        ctx.fillStyle = '#38bdf8';
-        scene.debrisGroup.getChildren().forEach(d => {
-            if (d.active && !d.isPendingCollection) {
-                ctx.fillRect(toMapX(d.x) - 1.5, toMapY(d.y) - 1.5, 3, 3);
-            }
-        });
+        if (scene.debrisGroup) {
+            ctx.fillStyle = '#38bdf8';
+            scene.debrisGroup.getChildren().forEach(d => {
+                if (d && d.active && !d.isPendingCollection && typeof d.x === 'number') {
+                    ctx.fillRect(toMapX(d.x) - 1.5, toMapY(d.y) - 1.5, 3, 3);
+                }
+            });
+        }
 
         // Hazards (Crisp danger red dots)
-        ctx.fillStyle = '#ef4444';
-        scene.hazardGroup.getChildren().forEach(haz => {
-            if (haz.active) {
-                ctx.fillRect(toMapX(haz.x) - 2.5, toMapY(haz.y) - 2.5, 5, 5);
-            }
-        });
+        if (scene.hazardGroup) {
+            ctx.fillStyle = '#ef4444';
+            scene.hazardGroup.getChildren().forEach(haz => {
+                if (haz && haz.active && typeof haz.x === 'number') {
+                    ctx.fillRect(toMapX(haz.x) - 2.5, toMapY(haz.y) - 2.5, 5, 5);
+                }
+            });
+        }
 
         // Player (High-contrast white arrow)
-        ctx.save();
-        ctx.translate(toMapX(scene.player.x), toMapY(scene.player.y));
-        ctx.rotate(scene.player.rotation);
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(6, 0);
-        ctx.lineTo(-4, -4);
-        ctx.lineTo(-2, 0);
-        ctx.lineTo(-4, 4);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
+        if (scene.player && typeof scene.player.x === 'number') {
+            ctx.save();
+            ctx.translate(toMapX(scene.player.x), toMapY(scene.player.y));
+            ctx.rotate(scene.player.rotation || 0);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(-4, -4);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
     }
 }
 
@@ -1448,56 +1456,73 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Live HUD update loop
     window.updateGameHUD = (scene) => {
+        if (!window.uiController || !window.uiController.hud) return;
         const hud = window.uiController.hud;
 
         // Fuel
-        const fuelPct = Math.max(0, (scene.fuel / scene.maxFuel) * 100);
-        hud.fuelBar.style.width = `${fuelPct}%`;
-        hud.fuelText.innerText = `${Math.round(fuelPct)}%`;
-        hud.fuelBar.classList.toggle('low', fuelPct < 25);
+        const maxFuel = scene.maxFuel || 100;
+        const fuelPct = Math.max(0, ((scene.fuel || 0) / maxFuel) * 100);
+        if (hud.fuelBar) {
+            hud.fuelBar.style.width = `${fuelPct}%`;
+            hud.fuelBar.classList.toggle('low', fuelPct < 25);
+        }
+        if (hud.fuelText) hud.fuelText.innerText = `${Math.round(fuelPct)}%`;
 
         // Battery
-        const batPct = Math.max(0, (scene.battery / scene.maxBattery) * 100);
-        hud.batteryBar.style.width = `${batPct}%`;
-        hud.batteryText.innerText = `${Math.round(batPct)}%`;
+        const maxBat = scene.maxBattery || 100;
+        const batPct = Math.max(0, ((scene.battery || 0) / maxBat) * 100);
+        if (hud.batteryBar) hud.batteryBar.style.width = `${batPct}%`;
+        if (hud.batteryText) hud.batteryText.innerText = `${Math.round(batPct)}%`;
 
         // Hull
-        const hullPct = Math.max(0, (scene.hull / scene.maxHull) * 100);
-        hud.hullBar.style.width = `${hullPct}%`;
-        hud.hullText.innerText = `${Math.round(hullPct)}%`;
-        hud.hullBar.classList.toggle('critical', hullPct < 30);
+        const maxHull = scene.maxHull || 100;
+        const hullPct = Math.max(0, ((scene.hull || 0) / maxHull) * 100);
+        if (hud.hullBar) {
+            hud.hullBar.style.width = `${hullPct}%`;
+            hud.hullBar.classList.toggle('critical', hullPct < 30);
+        }
+        if (hud.hullText) hud.hullText.innerText = `${Math.round(hullPct)}%`;
 
         // Cargo
-        hud.cargoCount.innerText = `${scene.cargo.length}/${scene.cargoCapacity}`;
-        let slotHtml = '';
-        for (let i = 0; i < scene.cargoCapacity; i++) {
-            const isFilled = i < scene.cargo.length;
-            slotHtml += `<span class="cargo-slot ${isFilled ? 'filled' : ''}"></span>`;
+        if (hud.cargoCount) hud.cargoCount.innerText = `${scene.cargo ? scene.cargo.length : 0}/${scene.cargoCapacity || 3}`;
+        if (hud.cargoSlots) {
+            let slotHtml = '';
+            for (let i = 0; i < (scene.cargoCapacity || 3); i++) {
+                const isFilled = scene.cargo && i < scene.cargo.length;
+                slotHtml += `<span class="cargo-slot ${isFilled ? 'filled' : ''}"></span>`;
+            }
+            hud.cargoSlots.innerHTML = slotHtml;
         }
-        hud.cargoSlots.innerHTML = slotHtml;
 
         // Score & Quota
-        hud.scoreText.innerText = scene.score.toLocaleString();
-        hud.quotaText.innerText = `${scene.debrisDeliveredCount} / ${scene.debrisTargetQuota}`;
-        hud.missionName.innerText = scene.missionConfig.name;
+        if (hud.scoreText) hud.scoreText.innerText = (scene.score || 0).toLocaleString();
+        if (hud.quotaText) hud.quotaText.innerText = `${scene.debrisDeliveredCount || 0} / ${scene.debrisTargetQuota || 0}`;
+        if (hud.missionName) hud.missionName.innerText = scene.missionConfig ? scene.missionConfig.name : '';
 
         // Timer
-        const mins = Math.floor(Math.max(0, scene.missionTime) / 60);
-        const secs = Math.floor(Math.max(0, scene.missionTime) % 60);
-        hud.timerText.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        const mTime = Math.max(0, scene.missionTime || 0);
+        const mins = Math.floor(mTime / 60);
+        const secs = Math.floor(mTime % 60);
+        if (hud.timerText) hud.timerText.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
         // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
-        if (scene.activeEventAlert) {
-            hud.warningBanner.textContent = scene.activeEventAlert;
-            hud.warningBanner.classList.add('active');
-        } else {
-            hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED';
-            hud.warningBanner.classList.toggle('active', scene.warningActive);
+        if (hud.warningBanner) {
+            if (scene.activeEventAlert) {
+                hud.warningBanner.textContent = scene.activeEventAlert;
+                hud.warningBanner.classList.add('active');
+            } else {
+                hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED';
+                hud.warningBanner.classList.toggle('active', !!scene.warningActive);
+            }
         }
 
-        const distToStation = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, scene.station.x, scene.station.y);
-        const inDockRange = distToStation <= scene.stationDockingRadius;
-        hud.dockingPrompt.classList.toggle('active', inDockRange && !scene.isDocked);
+        if (scene.station && scene.player) {
+            const distToStation = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, scene.station.x, scene.station.y);
+            const inDockRange = distToStation <= (scene.stationDockingRadius || 180);
+            if (hud.dockingPrompt) {
+                hud.dockingPrompt.classList.toggle('active', inDockRange && !scene.isDocked);
+            }
+        }
 
         // Minimap
         window.uiController.updateMinimap(scene);
