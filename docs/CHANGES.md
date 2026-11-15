@@ -54,6 +54,67 @@
   - Terminal corner brackets (`┌ ─ ─ ┐`, `└ ─ ─ ┘`) on command frames.
   - Tactical flight avionics HUD with segmented rectangular meters and bracketed alarm headers (`[ALERT] COLLISION WARNING`, `[DEPOT HARBOR DETECTED]`).
   - CRT-style minimap radar with crosshair reticle and pixel blips.
-  - Consistent redesign across Main Menu, Mission Design Studio, Flight Operations Manual, Local Top Runs, Hangar Workshop, HUD, and Modals.
+57:   - Consistent redesign across Main Menu, Mission Design Studio, Flight Operations Manual, Local Top Runs, Hangar Workshop, HUD, and Modals.
 - **Tools status:** `Impeccable` and `taste-skill` are not installed in the environment (reported honestly as requested).
 - **Preservation:** Phaser 3.80.1, vanilla JS architecture, physics, gameplay, LocalStorage saves, and mission logic remain 100% intact.
+
+---
+
+## [Phase 2 — Mission Design v2 and Debrief v2] - 2026-11-15
+### Status: Completed & Verified
+
+### 1. Four-Step Mission Design Flow
+- **Step 1: Need & Goals (`#design-step-1`):**
+  - Sector selection (LEO Corridor, Polar Orbit, Kessler Storm, GEO Graveyard).
+  - Client / Stakeholder selection (`PARTS_DATA.clients`: ESA Clean Space, NASA ODPO, AeroSat Commercial) with collision tolerances, bonus conditions, and payout multipliers.
+  - Contract specification dossier with measurable requirements (Quota, Mass clearance kg, Max collisions permitted, Minimum propellant reserve, Time window).
+- **Step 2: Concept of Operations & Trajectory (`#design-step-2`):**
+  - 6-Stage CONOPS sequence (Launch & Ascent, Orbital Insertion & Phasing, Proximity Rendezvous, Capture Operations, Depot Docking & Recycling, Controlled Disposal / De-orbit).
+  - Orbit Geometry & Trajectory Profile visualizer with custom Canvas rendering (Earth, inclination, target debris plane, Aegis Depot, de-orbit corridor, and telemetry metadata).
+  - Orbital Risk Assessment & Engineering Mitigation Matrix (Hypervelocity Fragment Strike, Eclipse Battery Depletion, Propellant Starvation, Tether Recoil).
+- **Step 3: Spacecraft Architecture Trade Study (`#design-step-3`):**
+  - Side-by-side comparison of **Lean** (Agile Interceptor), **Balanced** (Orbital Workhorse), and **Robust** (Industrial Platform) systems architectures.
+  - Interactive "ADOPT ARCHITECTURE" preset buttons that automatically populate Step 4 point design subsystems.
+- **Step 4: Point Design & Live Budgets (`#design-step-4`):**
+  - Subsystem selectors for Launch Vehicles, Spacecraft Buses, Propulsion Systems, EPS Power, Capture Equipment, and Ground / Relay Communications.
+  - Live Engineering Budgets & Margins Dashboard tracking Mass Budget (% margin), Fairing Volume Envelope (% margin), Power Balance (% margin), Comms link coverage/latency, and Lifecycle Cost.
+  - Formal Design Review Gateway with status badge (`PASS` / `WARNING` / `FAIL`). Critical deficits (e.g. payload mass exceeding launcher capacity) trigger `FAIL`, disable the Launch button, and display explicit remediation guidance.
+
+### 2. Spacecraft Components Catalog (`data/parts.js`)
+- Created verified parts catalog with authentic aerospace heritage:
+  - Launch Vehicles: Rocket Lab Electron (320kg / 2.5m³), SpaceX Falcon 9 (2800kg / 14.5m³), ESA Ariane 64 (6500kg / 28m³).
+  - Spacecraft Buses: Aero-Dart Scout, Orbital Mule Collector, Titan Hauler Lifter.
+  - Propulsion: Nitrogen Cold Gas RCS, MMH/NTO Bipropellant, Xenon Hall-Effect Ion Propulsion, Titanium Auxiliary Bladders.
+  - EPS Power: Triple-Junction GaAs Body Solar Arrays, Deployable Dual-Tracking Wings, Supercapacitor Bank.
+  - Capture Equipment: Robotic Grapple Arm, Wide-Angle Capture Net, Magnetic Tractor Beam.
+  - Ground & Relay Comms: Regional Direct S-Band Passes, NASA TDRSS Geostationary Relay Link.
+  - Client Stakeholders: ESA Clean Space Office, NASA ODPO, AeroSat Global.
+  - Pre-configured trade study baseline presets.
+  - All simplified arcade values clearly labelled with `[ESTIMATE]`.
+
+### 3. Spacecraft Choices Affect Gameplay (`js/game.js`)
+- Spacecraft wet mass directly impacts flight physics: inertia, acceleration scaling, maximum speed, and RCS yaw turn rate.
+- Propulsion choice sets propellant fuel capacity and burn rate.
+- Power choice sets battery storage pool and solar recharge rate.
+- Ground comms selection scales sensor warning radar range (+25% with TDRSS Relay).
+- Client rules enforce collision thresholds and calculate contract bonuses.
+- Flight telemetry logger (`logFlightEvent`) records all insertion, capture, docking, collision, and reserve alerts chronologically.
+
+### 4. Debrief v2 Modal (`#modal-results`)
+- Contract Requirements Audit table (Quota, Mass, Collision limit, Fuel reserve, Time limit) with individual PASS/FAIL verdicts.
+- CONOPS Planned vs Actual timeline comparison across all 5 flight stages.
+- Chronological flight telemetry events stream.
+- Actionable redesign recommendations analyzing flight performance.
+- Client contract verdict and bonus rewards.
+- Design-Sharing Code system with copy and import functionality.
+
+### 5. New Screens & Modals
+- `#modal-tutorial`: Systems engineering 4-step walkthrough.
+- `#modal-sources`: Verified aerospace data citations (NASA ODPO, ESA ClearSpace, IADC, launch vehicle user manuals) with explicit `[ESTIMATE]` tags.
+- `#modal-credits`: Project attribution, engine, typography, and audio synthesis credits.
+- `#modal-share-code`: Custom configuration code generator and parser.
+- Quick Demo preset button ("⚡ QUICK DEMO") on mission design header.
+
+### 6. Architecture & Save Preservation
+- Vanilla JS, Phaser 3.80.1, and LocalStorage saves remain 100% backward-compatible.
+- All Phase 1 mission control pixel-art semantic tokens and styling preserved.

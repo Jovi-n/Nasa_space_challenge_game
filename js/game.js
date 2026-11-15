@@ -10,41 +10,80 @@ class OrbitalGameScene extends Phaser.Scene {
 
     init(data) {
         this.missionConfig = data.level || GAME_DATA.LEVELS[0];
-        this.shipConfig = GAME_DATA.SHIPS[data.shipId || 'scout'];
-        this.equipmentConfig = GAME_DATA.EQUIPMENT[data.equipmentId || 'arm'];
-        this.payloadConfig = GAME_DATA.PAYLOAD_TUNINGS[data.payloadId || 'balanced'];
+
+        // Phase 2 Point Design Components
+        this.pointDesign = {
+            client: data.client || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.clients.esa : null),
+            launchVehicle: data.launchVehicle || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.launchVehicles.falcon9 : null),
+            bus: data.bus || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.buses[data.shipId || 'collector'] : null),
+            propulsion: data.propulsion || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.propulsionTanks.hypergolic : null),
+            power: data.power || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.powerSystems.deployable_wings : null),
+            equipment: data.equipment || GAME_DATA.EQUIPMENT[data.equipmentId || 'arm'],
+            groundComms: data.groundComms || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.groundComms.regional_passes : null),
+            budgets: data.budgets || null,
+            designCode: data.designCode || ''
+        };
+
+        const busId = this.pointDesign.bus ? this.pointDesign.bus.id : (data.shipId || 'scout');
+        this.shipConfig = GAME_DATA.SHIPS[busId] || GAME_DATA.SHIPS['scout'];
+        this.equipmentConfig = this.pointDesign.equipment || GAME_DATA.EQUIPMENT[data.equipmentId || 'arm'];
+        this.payloadConfig = GAME_DATA.PAYLOAD_TUNINGS[data.payloadId || 'balanced'] || { speedMod: 1, fuelMod: 1, batteryMod: 1, hullMod: 1, handlingMod: 1, solarMod: 1 };
         
         // Persistent Upgrades
         const save = OrbitalStorage.load();
         this.upgrades = save.upgrades || {};
 
-        // Calculate final stats with upgrades & payload modifiers
+        // Calculate final stats with upgrades & Point Design physics modifiers
         const engineLvl = this.upgrades.engine || 0;
         const hullLvl = this.upgrades.hull || 0;
         const batteryLvl = this.upgrades.battery || 0;
         const cargoLvl = this.upgrades.cargo || 0;
         const sensorLvl = this.upgrades.sensor || 0;
 
-        this.maxSpeed = (this.shipConfig.speed * (1 + engineLvl * 0.08)) * this.payloadConfig.speedMod;
-        this.acceleration = (this.shipConfig.acceleration * (1 + engineLvl * 0.06)) * this.payloadConfig.speedMod;
-        this.turnRate = this.shipConfig.turnRate * (this.payloadConfig.handlingMod || 1.0);
+        // Spacecraft physics affected by Point Design Wet Mass
+        const totalWetMassKg = this.pointDesign.budgets ? this.pointDesign.budgets.totalWetMassKg : 650;
+        const massRatio = Math.max(0.65, Math.min(2.2, totalWetMassKg / 650));
 
-        this.maxFuel = (this.shipConfig.maxFuel) * this.payloadConfig.fuelMod;
-        this.fuelBurnRate = (this.shipConfig.fuelBurnRate * (1 - engineLvl * 0.12));
+        const baseBusSpeed = this.pointDesign.bus?.baseSpeed || this.shipConfig.speed || 300;
+        const baseTurnRate = this.pointDesign.bus?.turnRate || this.shipConfig.turnRate || 180;
+        const maxBaseHull = this.pointDesign.bus?.maxHull || this.shipConfig.maxHull || 120;
+
+        this.maxSpeed = ((baseBusSpeed * (1 + engineLvl * 0.08)) / Math.pow(massRatio, 0.22)) * (this.payloadConfig.speedMod || 1.0);
+        this.acceleration = ((baseBusSpeed * 0.58 * (1 + engineLvl * 0.06)) / Math.sqrt(massRatio)) * (this.payloadConfig.speedMod || 1.0);
+        this.turnRate = ((baseTurnRate * (1 + engineLvl * 0.03)) / massRatio) * (this.payloadConfig.handlingMod || 1.0);
+
+        // Propulsion subsystem: fuel pool & burn rate
+        this.maxFuel = (this.pointDesign.propulsion?.fuelCapacityL || this.shipConfig.maxFuel) * (this.payloadConfig.fuelMod || 1.0);
+        const baseBurnRate = this.pointDesign.propulsion?.fuelBurnRate || this.shipConfig.fuelBurnRate;
+        this.fuelBurnRate = baseBurnRate * (1 - engineLvl * 0.12);
         this.fuel = this.maxFuel;
 
-        this.maxBattery = (this.shipConfig.maxBattery * (1 + batteryLvl * 0.2)) * this.payloadConfig.batteryMod;
-        this.batteryRechargeRate = (this.shipConfig.batteryRechargeRate * (1 + batteryLvl * 0.25)) * (this.payloadConfig.solarMod || 1.0);
+        // Power subsystem: battery capacity & solar recharge
+        const baseBatteryPool = this.pointDesign.power?.batteryPool || this.shipConfig.maxBattery;
+        const baseRecharge = this.pointDesign.power?.rechargeRate || this.shipConfig.batteryRechargeRate;
+        this.maxBattery = (baseBatteryPool * (1 + batteryLvl * 0.2)) * (this.payloadConfig.batteryMod || 1.0);
+        this.batteryRechargeRate = (baseRecharge * (1 + batteryLvl * 0.25)) * (this.payloadConfig.solarMod || 1.0);
         this.battery = this.maxBattery;
 
-        this.maxHull = (this.shipConfig.maxHull * (1 + hullLvl * 0.2)) * this.payloadConfig.hullMod;
+        // Hull armor & damage reduction
+        this.maxHull = (maxBaseHull * (1 + hullLvl * 0.2)) * (this.payloadConfig.hullMod || 1.0);
         this.hull = this.maxHull;
         this.damageReduction = Math.max(0.25, 1 - (hullLvl * 0.15));
 
-        this.cargoCapacity = this.shipConfig.cargoCapacity + cargoLvl;
+        // Cargo capacity
+        const baseCargo = this.pointDesign.bus?.cargoCapacity || this.shipConfig.cargoCapacity;
+        this.cargoCapacity = baseCargo + cargoLvl;
         this.cargo = []; // Array of collected debris items
 
-        this.radarMultiplier = 1 + (sensorLvl * 0.15);
+        // Communications & Ground Relay affects early warning radar
+        const commsBonus = this.pointDesign.groundComms?.radarRangeBonus || 1.0;
+        this.radarMultiplier = (1 + (sensorLvl * 0.15)) * commsBonus;
+
+        // Client Constraints & Objectives
+        this.clientConfig = this.pointDesign.client || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.clients.esa : { id: 'esa', name: 'ESA Clean Space', payoutMultiplier: 1.25, maxCollisionsAllowed: 1 });
+        this.maxCollisionsAllowed = this.clientConfig.maxCollisionsAllowed || 3;
+        this.clientPayoutMultiplier = this.clientConfig.payoutMultiplier || 1.0;
+        this.clientBonusCondition = this.clientConfig.bonusCondition || 'Zero collisions and safe return';
 
         // Mission Run State
         this.score = 0;
@@ -65,9 +104,23 @@ class OrbitalGameScene extends Phaser.Scene {
         this.activeNets = [];
         this.warningActive = false;
 
+        // Telemetry milestones
+        this.flightEvents = [];
+        this.firstCaptureTime = null;
+        this.firstDockTime = null;
+        this.loggedLowFuel = false;
+        this.loggedLowBat = false;
+
         // Queues for physics-safe creation / destruction
         this.pendingCollections = [];
         this.pendingHazardDestructions = [];
+    }
+
+    logFlightEvent(tag, message, status = 'info') {
+        const timeSec = Math.round(this.elapsedTime);
+        if (!this.flightEvents) this.flightEvents = [];
+        this.flightEvents.push({ time: timeSec, tag, message, status });
+        if (this.flightEvents.length > 50) this.flightEvents.shift();
     }
 
     preload() {
@@ -140,6 +193,9 @@ class OrbitalGameScene extends Phaser.Scene {
         // 10. Direct Graphics Overlay for Tether, Tractor Beam, & Indicators
         this.fxGraphics = this.add.graphics().setDepth(20);
         this.hudGraphics = this.add.graphics().setDepth(100).setScrollFactor(0);
+
+        // Initial Mission Flight Telemetry Log
+        this.logFlightEvent('INSERTION', `Orbital injection complete. Sector ${this.missionConfig.name.split(':')[0]} nominal.`, 'success');
 
         // Notify UI that mission has officially launched
         if (window.onGameSceneReady) {
@@ -381,6 +437,16 @@ class OrbitalGameScene extends Phaser.Scene {
             this.battery = Math.min(this.maxBattery, this.battery + this.batteryRechargeRate * dt);
         }
 
+        // Low Fuel & Battery Telemetry Alerts
+        if (this.fuel < (this.maxFuel * 0.22) && !this.loggedLowFuel) {
+            this.loggedLowFuel = true;
+            this.logFlightEvent('WARNING', 'Propellant level below 22% reserve margin.', 'warn');
+        }
+        if (this.battery < (this.maxBattery * 0.22) && !this.loggedLowBat) {
+            this.loggedLowBat = true;
+            this.logFlightEvent('WARNING', 'Battery capacity below 22% reserve margin.', 'warn');
+        }
+
         // 7. Update Game HUD DOM
         if (window.updateGameHUD) {
             window.updateGameHUD(this);
@@ -610,6 +676,8 @@ class OrbitalGameScene extends Phaser.Scene {
             if (this.cargo.length < this.cargoCapacity) {
                 this.cargo.push(meta);
                 this.missionMassDeorbitedKg = (this.missionMassDeorbitedKg || 0) + (meta.mass || 50);
+                this.firstCaptureTime = this.firstCaptureTime || Math.max(1, Math.round(this.elapsedTime));
+                this.logFlightEvent('CAPTURE', `Secured ${meta.name} (${meta.mass || 50} kg). Cargo hold: ${this.cargo.length}/${this.cargoCapacity}.`, 'info');
                 window.soundSystem.playCollect(1);
                 this.sparkParticles.emitParticleAt(this.player.x, this.player.y, 12);
                 this.showFloatingText(this.player.x, this.player.y - 25, `+${meta.name}`, '#38bdf8');
@@ -777,12 +845,16 @@ class OrbitalGameScene extends Phaser.Scene {
         this.creditsEarned += roundCredits;
         if (itemsCount > 0) {
             this.deliveriesCompleted++;
+            this.firstDockTime = this.firstDockTime || Math.max(2, Math.round(this.elapsedTime));
+            this.logFlightEvent('DEPOT_DOCK', `Soft docked with Aegis Depot. Offloaded ${itemsCount} items (${this.debrisDeliveredCount}/${this.debrisTargetQuota} quota).`, 'success');
         }
 
         // Refuel, Recharge battery, Repair hull at the station depot!
         this.fuel = this.maxFuel;
         this.battery = this.maxBattery;
         this.hull = this.maxHull;
+        this.loggedLowFuel = false;
+        this.loggedLowBat = false;
 
         // Emit recycling particle fountain
         this.recycleParticles.emitParticleAt(this.station.x, this.station.y, 30);
@@ -919,6 +991,7 @@ class OrbitalGameScene extends Phaser.Scene {
         debris.lastDamageTime = now;
         window.soundSystem.playCollision();
         this.collisionsCount++;
+        this.logFlightEvent('IMPACT', `Debris collision at ${Math.round(impactSpeed)} px/s (-${impactDamage} Hull).`, 'crit');
 
         // Meaningful high-speed impact damage scaling
         const severity = (impactSpeed - 60) / 160;
@@ -938,6 +1011,7 @@ class OrbitalGameScene extends Phaser.Scene {
 
         window.soundSystem.playExplosion();
         this.collisionsCount++;
+        this.logFlightEvent('HAZARD', `Orbital anomaly collision! (-${Math.round(dmg)} Hull).`, 'crit');
 
         const dmg = (hazard.hazardMeta.damage || 35) * this.damageReduction;
         this.hull = Math.max(0, this.hull - dmg);
@@ -991,14 +1065,121 @@ class OrbitalGameScene extends Phaser.Scene {
             window.soundSystem.playMissionFailed();
         }
 
+        // Telemetry conclusion event
+        this.logFlightEvent(isVictory ? 'DEORBIT' : 'ABORT', reason, isVictory ? 'success' : 'crit');
+
         // Efficiency Bonus calculations
         const timeBonus = isVictory ? Math.max(0, Math.floor(this.missionTime * 15)) : 0;
         const healthPercent = this.hull / this.maxHull;
         const healthBonus = isVictory ? Math.floor(healthPercent * 500) : 0;
         const basePayout = isVictory ? this.missionConfig.basePayout : 100;
 
-        const totalMissionScore = this.score + timeBonus + healthBonus;
-        const totalCreditsGained = this.creditsEarned + basePayout;
+        // 1. Requirements Audit Table
+        const minTargetMass = this.debrisTargetQuota * 45;
+        const actualMass = Math.round(this.missionMassDeorbitedKg || (this.debrisDeliveredCount * 50));
+        const finalFuelPct = Math.max(0, Math.round((this.fuel / this.maxFuel) * 100));
+
+        const requirementsAudit = [
+            {
+                name: 'Orbital Debris Quota',
+                target: `≥ ${this.debrisTargetQuota} Units`,
+                actual: `${this.debrisDeliveredCount} Units`,
+                isPass: this.debrisDeliveredCount >= this.debrisTargetQuota
+            },
+            {
+                name: 'Minimum Cleansed Mass',
+                target: `≥ ${minTargetMass} kg`,
+                actual: `${actualMass} kg`,
+                isPass: actualMass >= minTargetMass
+            },
+            {
+                name: 'Client Collision Tolerance',
+                target: `≤ ${this.maxCollisionsAllowed} Impacts`,
+                actual: `${this.collisionsCount} Impacts`,
+                isPass: this.collisionsCount <= this.maxCollisionsAllowed
+            },
+            {
+                name: 'Propellant Reserve Margin',
+                target: `≥ 25% Reserve`,
+                actual: `${finalFuelPct}% (${Math.round(this.fuel)} L)`,
+                isPass: finalFuelPct >= 25
+            },
+            {
+                name: 'Allocated Time Window',
+                target: `≤ ${this.missionConfig.timeLimit}s`,
+                actual: `${Math.round(this.elapsedTime)}s`,
+                isPass: this.elapsedTime <= this.missionConfig.timeLimit
+            }
+        ];
+
+        // 2. CONOPS Planned vs Actual Timeline
+        const tFirstCapture = this.firstCaptureTime ? `T+${this.firstCaptureTime}s` : 'T+--s';
+        const tFirstDock = this.firstDockTime ? `T+${this.firstDockTime}s` : 'T+--s';
+        const tEnd = `T+${Math.round(this.elapsedTime)}s`;
+
+        const timelineComparison = [
+            { name: 'Stage 01: Launch & Injection', status: 'COMPLETE', timestamp: 'T+00s' },
+            { name: 'Stage 02: Orbital Insertion', status: 'NOMINAL', timestamp: 'T+02s' },
+            { name: 'Stage 03: Proximity Capture Ops', status: this.firstCaptureTime ? 'EXECUTED' : 'INCOMPLETE', timestamp: tFirstCapture },
+            { name: 'Stage 04: Depot Docking & Transfer', status: this.firstDockTime ? 'DELIVERED' : 'INCOMPLETE', timestamp: tFirstDock },
+            { name: 'Stage 05: Controlled De-orbit', status: isVictory ? 'DEORBITED' : 'ABORTED', timestamp: tEnd }
+        ];
+
+        // 3. Client Contract Bonus Evaluation
+        let clientBonusAchieved = false;
+        let bonusCredits = 0;
+        let clientVerdict = 'Standard Contract Fulfilled';
+
+        if (isVictory) {
+            if (this.clientConfig.id === 'esa') {
+                if (this.collisionsCount === 0) {
+                    clientBonusAchieved = true;
+                    bonusCredits = 350;
+                    clientVerdict = 'ESA Zero-Anomaly Bonus Awarded (+350 Scrap)';
+                } else if (this.collisionsCount > this.maxCollisionsAllowed) {
+                    clientVerdict = 'Contract Warning: Exceeded ESA Collision Tolerance';
+                }
+            } else if (this.clientConfig.id === 'nasa') {
+                if (this.debrisDeliveredCount >= this.debrisTargetQuota && finalFuelPct >= 25) {
+                    clientBonusAchieved = true;
+                    bonusCredits = 300;
+                    clientVerdict = 'NASA High-Resilience Corridor Bonus (+300 Scrap)';
+                }
+            } else if (this.clientConfig.id === 'commercial') {
+                if (this.elapsedTime <= (this.missionConfig.timeLimit * 0.6)) {
+                    clientBonusAchieved = true;
+                    bonusCredits = 400;
+                    clientVerdict = 'AeroSat Rapid Turnaround Bonus (+400 Scrap)';
+                }
+            }
+        } else {
+            clientVerdict = 'Contract Breached: Mission Incomplete';
+        }
+
+        const totalCreditsGained = Math.round((this.creditsEarned + basePayout) * (this.clientPayoutMultiplier || 1.0)) + bonusCredits;
+        const totalMissionScore = this.score + timeBonus + healthBonus + (clientBonusAchieved ? 500 : 0);
+
+        // 4. Actionable Redesign Recommendations
+        let redesignRecommendation = '';
+        if (!isVictory) {
+            if (reason.includes('HULL BREACH') || reason.includes('COLLISION')) {
+                redesignRecommendation = 'STRUCTURAL REINFORCEMENT NEEDED: Spacecraft succumbed to hypervelocity collision damage. RECOMMENDATION: Upgrade to Titan Hauler Bus (reinforced armor) or select TDRSS Relay for early radar collision warnings.';
+            } else if (reason.includes('FUEL') || this.fuel <= 0) {
+                redesignRecommendation = 'PROPULSION MARGIN DEFICIT: Propellant reserves depleted before quota was cleared. RECOMMENDATION: Switch to Xenon Hall-Effect Ion Propulsion for high specific impulse or install Auxiliary Titanium Propellant Bladders.';
+            } else if (reason.includes('TIME')) {
+                redesignRecommendation = 'INTERCEPTION LATENCY DEFICIT: Time window elapsed. RECOMMENDATION: Adopt Lean Architecture (Aero-Dart Scout Bus + Cold Gas) for superior agility and speed.';
+            } else {
+                redesignRecommendation = 'SYSTEMS ANOMALY: Mission aborted. RECOMMENDATION: Adopt the Balanced Architecture preset (Falcon 9 + Collector + Hypergolic) for optimal mission resilience.';
+            }
+        } else {
+            if (this.collisionsCount > this.maxCollisionsAllowed) {
+                redesignRecommendation = `COLLISION MITIGATION ALERT: Sustained ${this.collisionsCount} impacts, violating client limit of ${this.maxCollisionsAllowed}. RECOMMENDATION: Use Robotic Grapple Arm for standoff distance capture, or equip TDRSS Relay for earlier warning.`;
+            } else if (finalFuelPct < 25) {
+                redesignRecommendation = 'FUEL MARGIN TIGHT: Completed mission but returned with low propellant reserve. RECOMMENDATION: Add Auxiliary Bladders or use Xenon Ion drive on long-distance sectors.';
+            } else {
+                redesignRecommendation = 'FLIGHT EXCELLENCE: Spacecraft systems performed within all nominal envelopes. Architecture is flight-ready for higher-density sectors.';
+            }
+        }
 
         // Calculate Star Rating
         let stars = 1;
@@ -1061,7 +1242,7 @@ class OrbitalGameScene extends Phaser.Scene {
         // Save ONCE with the unified save object
         OrbitalStorage.save(save);
 
-        // Show Results Modal in DOM UI
+        // Show Debrief v2 Modal in DOM UI
         if (window.showMissionResultsModal) {
             window.showMissionResultsModal({
                 isVictory,
@@ -1077,7 +1258,13 @@ class OrbitalGameScene extends Phaser.Scene {
                 totalScore: totalMissionScore,
                 creditsEarned: totalCreditsGained,
                 stars: stars,
-                levelId: this.missionConfig.id
+                levelId: this.missionConfig.id,
+                requirementsAudit: requirementsAudit,
+                timelineComparison: timelineComparison,
+                flightEvents: this.flightEvents || [],
+                redesignRecommendation: redesignRecommendation,
+                clientVerdict: clientVerdict,
+                designCode: this.designCode || (window.uiController ? window.uiController.generateDesignCode() : '')
             });
         }
     }

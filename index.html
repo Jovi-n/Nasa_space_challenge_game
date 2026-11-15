@@ -34,10 +34,12 @@
                 Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
             </p>
             <div class="menu-buttons">
-                <button id="btn-menu-start" class="btn-primary">START MISSION</button>
+                <button id="btn-menu-start" class="btn-primary">START MISSION DESIGN</button>
                 <button id="btn-menu-hangar" class="btn-secondary">HANGAR & UPGRADES</button>
                 <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL & HOW TO PLAY</button>
                 <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS & LEADERBOARD</button>
+                <button id="btn-menu-sources" class="btn-secondary">DATA & AEROSPACE SOURCES</button>
+                <button id="btn-menu-credits" class="btn-secondary">MISSION CREDITS</button>
             </div>
             <div class="audio-controls">
                 <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
@@ -47,53 +49,214 @@
     </div>
 
     <!-- ====================================================================
-         2. MISSION DESIGN MODE SCREEN (Core Differentiator)
+         2. MISSION DESIGN MODE SCREEN (4-STEP SYSTEMS ENGINEERING FLOW)
          ==================================================================== -->
     <div id="screen-mission-design" class="screen-layer hidden">
         <div class="design-container">
             <div class="panel-header">
                 <div>
-                    <h2 class="panel-title">MISSION DESIGN STUDIO</h2>
-                    <div style="font-family: var(--font-mono); color: var(--neon-cyan); font-size: 0.9rem;">
-                        ORBITAL FLIGHT RECON & PAYLOAD SPECIFICATION
+                    <h2 class="panel-title">MISSION DESIGN STUDIO v2</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        SYSTEMS ENGINEERING: CONTRACT // CONOPS // TRADE STUDY // POINT DESIGN
                     </div>
                 </div>
-                <button class="btn-secondary btn-back-to-menu">MAIN MENU</button>
-            </div>
-
-            <!-- Target Orbit & Level Select -->
-            <div class="section-label">1. SELECT TARGET ORBIT & MISSION SECTOR</div>
-            <div id="design-level-select" class="level-cards-grid"></div>
-
-            <!-- Active Mission Briefing Dossier -->
-            <div id="design-mission-briefing" class="mission-dossier-box"></div>
-
-            <!-- Spacecraft & Equipment Grids -->
-            <div class="design-grid">
-                <!-- Spacecraft Selection -->
-                <div>
-                    <div class="section-label">2. SELECT SPACECRAFT AIRFRAME</div>
-                    <div id="design-ship-select" class="cards-row"></div>
-                </div>
-
-                <!-- Equipment Selection -->
-                <div>
-                    <div class="section-label">3. SELECT RETRIEVAL EQUIPMENT</div>
-                    <div id="design-equipment-select" class="cards-row"></div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <button id="btn-quick-demo" class="btn-secondary" style="border-color: var(--clean); color: var(--clean);">⚡ QUICK DEMO</button>
+                    <button id="btn-design-tutorial" class="btn-secondary">TUTORIAL</button>
+                    <button id="btn-design-share" class="btn-secondary">SHARE CODE</button>
+                    <button class="btn-secondary btn-back-to-menu">MAIN MENU</button>
                 </div>
             </div>
 
-            <!-- Payload Tuning Presets -->
-            <div style="margin-bottom: 25px;">
-                <div class="section-label">4. MISSION PAYLOAD & SUBSYSTEM TUNING</div>
-                <div id="design-payload-select" class="cards-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));"></div>
-            </div>
-
-            <!-- Launch Button -->
-            <div style="text-align: center;">
-                <button id="btn-launch-mission" class="btn-primary" style="font-size: 1.3rem; padding: 18px 45px;">
-                    LAUNCH ORBITAL INSERTION
+            <!-- 4-Step Navigation Tabs -->
+            <div class="design-step-tabs">
+                <button class="step-tab-btn active" data-step="1">
+                    <span class="step-num">01</span>
+                    <span class="step-text">NEED &amp; GOALS</span>
                 </button>
+                <button class="step-tab-btn" data-step="2">
+                    <span class="step-num">02</span>
+                    <span class="step-text">CONCEPT &amp; CONOPS</span>
+                </button>
+                <button class="step-tab-btn" data-step="3">
+                    <span class="step-num">03</span>
+                    <span class="step-text">TRADE STUDY</span>
+                </button>
+                <button class="step-tab-btn" data-step="4">
+                    <span class="step-num">04</span>
+                    <span class="step-text">POINT DESIGN &amp; BUDGETS</span>
+                </button>
+            </div>
+
+            <!-- STEP 1: NEED & GOALS -->
+            <div id="design-step-1" class="design-step-view active">
+                <div class="section-label">A. SELECT TARGET ORBIT &amp; MISSION SECTOR</div>
+                <div id="design-level-select" class="level-cards-grid"></div>
+
+                <div class="section-label">B. SELECT CLIENT / CONTRACT STAKEHOLDER</div>
+                <div id="design-client-select" class="client-cards-grid"></div>
+
+                <div class="section-label">C. CONTRACT SPECIFICATION &amp; MEASURABLE REQUIREMENTS</div>
+                <div id="design-requirements-dossier" class="mission-dossier-box"></div>
+
+                <div class="step-nav-bar">
+                    <div></div>
+                    <button class="btn-primary btn-next-step" data-target="2">PROCEED TO CONOPS →</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: CONCEPT OF OPERATIONS (CONOPS) -->
+            <div id="design-step-2" class="design-step-view">
+                <div class="conops-grid">
+                    <!-- Left: Timeline Sequence -->
+                    <div>
+                        <div class="section-label">A. MISSION PHASE TIMELINE SEQUENCE</div>
+                        <div class="conops-timeline">
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 01</div>
+                                <div class="stage-title">LAUNCH &amp; ASCENT</div>
+                                <div class="stage-desc">Suborbital staging, fairing jettison above atmosphere, booster disposal.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 02</div>
+                                <div class="stage-title">ORBITAL INSERTION &amp; PHASING</div>
+                                <div class="stage-desc">Circularization burn at target altitude. Hohmann phasing transfer to match debris orbital plane.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 03</div>
+                                <div class="stage-title">PROXIMITY RENDEZVOUS</div>
+                                <div class="stage-desc">Relative navigation radar acquisition within 2 km. Relative velocity reduction to &lt; 2 m/s.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 04</div>
+                                <div class="stage-title">PROXIMITY CAPTURE OPERATIONS</div>
+                                <div class="stage-desc">Deployment of Grapple Tether, Expanding Mesh Net, or Magnetic Cone. Secure payload into intake bay.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 05</div>
+                                <div class="stage-title">DEPOT DOCKING &amp; RECYCLING</div>
+                                <div class="stage-desc">Approach Aegis Station perimeter. Autonomous soft docking and cargo transfer into orbital smelter.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 06</div>
+                                <div class="stage-title">CONTROLLED DISPOSAL &amp; DE-ORBIT</div>
+                                <div class="stage-desc">Retro-grade burn shedding perigee into South Pacific Ocean Uninhabited Area (SPOUA) or graveyard boost.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Orbit Diagram & Risks -->
+                    <div>
+                        <div class="section-label">B. ORBIT GEOMETRY &amp; TRAJECTORY PROFILE</div>
+                        <div class="orbit-diagram-card">
+                            <div id="orbit-diagram-container" class="orbit-canvas-wrapper">
+                                <canvas id="orbit-canvas" width="460" height="240"></canvas>
+                            </div>
+                            <div id="orbit-telemetry-meta" class="orbit-meta-bar"></div>
+                        </div>
+
+                        <div class="section-label" style="margin-top: 18px;">C. ORBITAL RISK ASSESSMENT &amp; MITIGATION MATRIX</div>
+                        <div class="risk-matrix-table-wrap">
+                            <table class="risk-matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th>IDENTIFIED RISK</th>
+                                        <th>LIKELIHOOD</th>
+                                        <th>SEVERITY</th>
+                                        <th>ENGINEERING MITIGATION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Hypervelocity Fragment Strike</strong></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td><span class="risk-badge high">HIGH</span></td>
+                                        <td>Whipple bumper shielding &amp; proactive radar tracking</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Eclipse Battery Depletion</strong></td>
+                                        <td><span class="risk-badge high">HIGH</span></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td>Deployable dual-tracking arrays or supercapacitor reserve</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Propellant Starvation Drift</strong></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td><span class="risk-badge crit">CRIT</span></td>
+                                        <td>High-Isp Ion drives or titanium auxiliary bladders</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tether Recoil / Mechanical Snag</strong></td>
+                                        <td><span class="risk-badge low">LOW</span></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td>Redundant pyrotechnic guillotine cable cutters</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-nav-bar">
+                    <button class="btn-secondary btn-prev-step" data-target="1">← BACK TO NEED &amp; GOALS</button>
+                    <button class="btn-primary btn-next-step" data-target="3">PROCEED TO TRADE STUDY →</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: TRADE STUDY -->
+            <div id="design-step-3" class="design-step-view">
+                <div class="section-label">SPACECRAFT ARCHITECTURE TRADE STUDY (LEAN vs BALANCED vs ROBUST)</div>
+                <p style="color: var(--ink-muted); font-size: 0.95rem; margin-bottom: 16px;">
+                    Compare systems architectures across mass envelope, lifecycle cost, delta-V endurance, and operational risk. Select an architecture to automatically configure Step 4 point design presets.
+                </p>
+                <div id="trade-architectures-grid" class="trade-grid"></div>
+
+                <div class="step-nav-bar">
+                    <button class="btn-secondary btn-prev-step" data-target="2">← BACK TO CONOPS</button>
+                    <button class="btn-primary btn-next-step" data-target="4">PROCEED TO POINT DESIGN →</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: POINT DESIGN & LIVE BUDGETS -->
+            <div id="design-step-4" class="design-step-view">
+                <div class="point-design-layout">
+                    <!-- Left: Subsystem Selectors -->
+                    <div class="subsystems-column">
+                        <div class="section-label">1. LAUNCH VEHICLE ALLOTMENT</div>
+                        <div id="select-launch-vehicle" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">2. SPACECRAFT AIRFRAME BUS</div>
+                        <div id="select-spacecraft-bus" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">3. PROPULSION &amp; PROPELLANT TANK</div>
+                        <div id="select-propulsion" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">4. ELECTRICAL POWER SUBSYSTEM (EPS)</div>
+                        <div id="select-power" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">5. RETRIEVAL &amp; CAPTURE PAYLOAD</div>
+                        <div id="select-equipment" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">6. COMMUNICATIONS &amp; GROUND RELAY</div>
+                        <div id="select-ground-comms" class="subsystem-selector-row"></div>
+                    </div>
+
+                    <!-- Right: Live Budgets & Design Review Board -->
+                    <div class="budgets-column">
+                        <div class="section-label">LIVE ENGINEERING BUDGETS &amp; MARGINS</div>
+                        <div id="budgets-dashboard" class="budgets-card"></div>
+
+                        <div class="section-label" style="margin-top: 18px;">FORMAL DESIGN REVIEW (GATEWAY)</div>
+                        <div id="design-review-board" class="review-board-card"></div>
+                    </div>
+                </div>
+
+                <div class="step-nav-bar" style="margin-top: 24px;">
+                    <button class="btn-secondary btn-prev-step" data-target="3">← BACK TO TRADE STUDY</button>
+                    <button id="btn-launch-mission" class="btn-primary" style="font-size: 1.25rem; padding: 16px 40px;">
+                        🚀 LAUNCH ORBITAL INSERTION
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -340,43 +503,62 @@
     </div>
 
     <!-- ====================================================================
-         7. MISSION RESULTS / DEBRIEF MODAL
+         7. MISSION DEBRIEF v2 MODAL (CONTRACT AUDIT & FLIGHT TELEMETRY)
          ==================================================================== -->
     <div id="modal-results" class="modal-layer hidden">
-        <div class="results-box">
-            <div id="results-headline" class="results-title victory">MISSION ACCOMPLISHED</div>
-            <div id="results-reason" class="results-reason">ORBITAL ZONE SUCCESSFULLY CLEANSED</div>
-            <div id="res-stars" class="results-stars">★★★</div>
+        <div class="results-box debrief-box">
+            <div class="debrief-header">
+                <div>
+                    <div id="results-headline" class="results-title victory">MISSION ACCOMPLISHED</div>
+                    <div id="results-reason" class="results-reason">ORBITAL ZONE SUCCESSFULLY CLEANSED</div>
+                </div>
+                <div id="res-stars" class="results-stars">★★★</div>
+            </div>
 
-            <div class="results-stats">
-                <div class="res-row">
-                    <span>Debris Recycled:</span>
-                    <strong id="res-debris">8 / 8</strong>
+            <!-- Debrief Body Grid -->
+            <div class="debrief-grid">
+                <!-- Requirements Audit -->
+                <div class="debrief-panel">
+                    <div class="panel-sub-title">1. CONTRACT REQUIREMENTS AUDIT</div>
+                    <table class="debrief-table">
+                        <thead>
+                            <tr>
+                                <th>REQUIREMENT</th>
+                                <th>TARGET</th>
+                                <th>ACTUAL</th>
+                                <th>VERDICT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="debrief-audit-tbody"></tbody>
+                    </table>
                 </div>
-                <div class="res-row">
-                    <span>Depot Deliveries:</span>
-                    <strong id="res-deliveries">2</strong>
+
+                <!-- Timeline Comparison -->
+                <div class="debrief-panel">
+                    <div class="panel-sub-title">2. CONOPS PLANNED VS ACTUAL TIMELINE</div>
+                    <div id="debrief-timeline-view" class="debrief-timeline-box"></div>
                 </div>
-                <div class="res-row">
-                    <span>Fuel Consumed:</span>
-                    <strong id="res-fuel">42 L</strong>
-                </div>
-                <div class="res-row">
-                    <span>Hull Collisions:</span>
-                    <strong id="res-collisions">0</strong>
-                </div>
-                <div class="res-row highlight">
-                    <span>Mission Score:</span>
-                    <strong id="res-score">4,850 PTS</strong>
-                </div>
-                <div class="res-row highlight">
-                    <span>Scrap Credits Earned:</span>
-                    <strong id="res-credits">+650 Scrap</strong>
-                </div>
+            </div>
+
+            <!-- Flight Telemetry Events Log -->
+            <div class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">3. FLIGHT TELEMETRY LOG (CHRONOLOGICAL)</div>
+                <div id="debrief-flight-log" class="flight-log-stream"></div>
+            </div>
+
+            <!-- Redesign Recommendations & Architecture Rating -->
+            <div id="debrief-recommendations-panel" class="debrief-recommendations-card"></div>
+
+            <!-- Design Sharing Code -->
+            <div class="share-code-display-bar">
+                <span class="share-label">SPACECRAFT DESIGN CODE:</span>
+                <code id="debrief-share-code" class="share-code-text">OC2-M01-ESA-F9-COL-HYP-WNG-NET-TDR</code>
+                <button id="btn-copy-debrief-code" class="btn-secondary" style="padding: 6px 14px; font-size: 0.8rem;">COPY CODE</button>
             </div>
 
             <div class="results-actions">
                 <button id="btn-results-next" class="btn-primary">NEXT MISSION</button>
+                <button id="btn-results-redesign" class="btn-secondary">REDESIGN IN STUDIO</button>
                 <button id="btn-results-retry" class="btn-secondary">REPLAY MISSION</button>
                 <button id="btn-results-hangar" class="btn-secondary">UPGRADE HANGAR</button>
             </div>
@@ -397,7 +579,131 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         9. SYSTEMS DESIGN TUTORIAL MODAL
+         ==================================================================== -->
+    <div id="modal-tutorial" class="modal-layer hidden">
+        <div class="results-box modal-content-box">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">SYSTEMS ENGINEERING MISSION DESIGN TUTORIAL</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-tutorial">CLOSE</button>
+            </div>
+            <div class="tutorial-body">
+                <div class="tutorial-step">
+                    <h4>STEP 1: NEED &amp; GOALS</h4>
+                    <p>Every space mission begins with client requirements. Select your orbital sector and review the contract stakeholder (ESA, NASA, or Commercial). Note the strict limits: collision tolerances, required quota, and fuel return reserves.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 2: CONCEPT OF OPERATIONS (CONOPS)</h4>
+                    <p>Plan the 6-stage flight sequence from launch to controlled de-orbit. Review orbital geometry (inclination, altitude) and identify top mission hazards to size your protective subsystems accordingly.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 3: ARCHITECTURE TRADE STUDY</h4>
+                    <p>Compare Lean (fast, low mass), Balanced (versatile workhorse), and Robust (heavy industrial) architectures. You can adopt any baseline preset with one click to seed your point design.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 4: POINT DESIGN &amp; LIVE BUDGETS</h4>
+                    <p>Select specific subsystems (Launcher, Bus, Propulsion, EPS Power, Capture Tool, and Comms). Monitor live Mass Margin, Fairing Volume Margin, and Power Generation vs Draw. Ensure your design achieves a <strong>PASS</strong> status before launching!</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-primary btn-close-modal" data-modal="modal-tutorial">UNDERSTOOD // RETURN TO STUDIO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         10. DATA & AEROSPACE SOURCES MODAL
+         ==================================================================== -->
+    <div id="modal-sources" class="modal-layer hidden">
+        <div class="results-box modal-content-box">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">AEROSPACE DATA &amp; SOURCES (VERIFIED HERITAGE)</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-sources">CLOSE</button>
+            </div>
+            <div class="sources-list">
+                <div class="source-item">
+                    <div class="source-name">NASA Johnson Space Center - Orbital Debris Program Office (ODPO)</div>
+                    <div class="source-ref">Reference: NASA Technical Standard NASA-STD-8719.14 // Limiting Orbital Debris</div>
+                    <div class="source-desc">Orbital debris density profiles, Kessler Syndrome cascading models, and 25-year post-mission disposal guidelines. [ESTIMATE used for arcade debris fragment sizing].</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">ESA Clean Space Office &amp; ClearSpace-1 Initiative</div>
+                    <div class="source-ref">Reference: ESA Active Debris Removal (ADR) Roadmap &amp; VESPA Upper Stage Capture</div>
+                    <div class="source-desc">European Code of Conduct for Space Debris Mitigation, robotic arm capture dynamics, and net capture concepts verified through ClearSpace-1 mission architecture.</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">Rocket Lab Electron &amp; SpaceX Falcon 9 Flight Manuals</div>
+                    <div class="source-ref">Reference: Commercial Launch Vehicle User Guides (Payload Planner Handbooks)</div>
+                    <div class="source-desc">Launch vehicle payload capacities to 500km LEO (Electron ~300kg, Falcon 9 normalized mission allotments, Ariane 64 heavy payload envelopes). [ESTIMATE applied to fairing internal volume allotments].</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">NASA Space Network // Tracking and Data Relay Satellite System (TDRSS)</div>
+                    <div class="source-ref">Reference: Space Communications and Navigation (SCaN) Program</div>
+                    <div class="source-desc">Geostationary orbital inter-satellite relay architecture providing continuous high-bandwidth telemetry and low-latency tracking. [ESTIMATE applied to radar early-warning bonus].</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-secondary btn-close-modal" data-modal="modal-sources">RETURN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         11. CREDITS MODAL
+         ==================================================================== -->
+    <div id="modal-credits" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 580px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL CLEANUP: MISSION ZERO CREDITS</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-credits">CLOSE</button>
+            </div>
+            <div class="credits-body" style="font-family: var(--font-body); line-height: 1.8; font-size: 1.05rem;">
+                <p><strong>ORBITAL CLEANUP: MISSION ZERO</strong><br><span style="color: var(--ink-muted); font-size: 0.9rem;">Systems Engineering &amp; Space Flight Architecture Edition</span></p>
+                <div style="margin: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 12px 0;">
+                    <div><strong>Game Engine:</strong> Phaser 3.80.1 (Arcade Physics)</div>
+                    <div><strong>Architecture:</strong> Vanilla JavaScript, HTML5 Canvas, Web Audio API</div>
+                    <div><strong>Pixel Art Typography:</strong> Silkscreen (Jason Kottke, Google Fonts / OFL)</div>
+                    <div><strong>Telemetry Typography:</strong> Share Tech Mono &amp; Rajdhani</div>
+                    <div><strong>Sound FX Synthesis:</strong> Custom Web Audio procedural oscillator synthesis</div>
+                    <div><strong>Orbital Mechanics Modeling:</strong> Simplified 2D Cartesian Keplerian translation</div>
+                </div>
+                <p style="color: var(--clean); font-family: var(--font-mono); font-size: 0.85rem;">MISSION READY // STANDING BY FOR ORBITAL INSERTION</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-secondary btn-close-modal" data-modal="modal-credits">RETURN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         12. DESIGN SHARING CODE MODAL (IMPORT / EXPORT)
+         ==================================================================== -->
+    <div id="modal-share-code" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 560px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">SPACECRAFT CONFIGURATION SHARING CODE</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-share-code">CLOSE</button>
+            </div>
+            <div style="margin-bottom: 18px;">
+                <p style="color: var(--ink-muted); font-size: 0.95rem; margin-bottom: 10px;">
+                    Share your custom spacecraft point design or paste a mission code from another commander:
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="share-code-input" class="share-code-input" placeholder="Paste design code here (e.g. OC2-M01-ESA-F9-COL-HYP-WNG-NET-TDR)" />
+                    <button id="btn-import-code" class="btn-primary" style="padding: 10px 18px;">IMPORT</button>
+                </div>
+                <div id="share-code-status" style="font-family: var(--font-mono); font-size: 0.85rem; margin-top: 8px; min-height: 20px;"></div>
+            </div>
+            <div style="text-align: center; border-top: 1px solid var(--border); padding-top: 14px;">
+                <button id="btn-copy-current-code" class="btn-secondary">COPY CURRENT DESIGN CODE</button>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-share-code" style="margin-left: 10px;">RETURN</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Game Scripts -->
+    <script src="data/parts.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/data.js"></script>
     <script src="js/graphics.js"></script>
