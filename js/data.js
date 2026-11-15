@@ -274,75 +274,31 @@ const GAME_DATA = {
         }
     },
 
-    // Mission Levels
-    LEVELS: [
+    // Mission Levels - Defined dynamically from data/missions.js
+    LEVELS: (typeof MISSIONS_DATA !== 'undefined' && Array.isArray(MISSIONS_DATA) && MISSIONS_DATA.length > 0)
+        ? MISSIONS_DATA
+        : [
         {
             id: 1,
-            name: 'Mission 01: Low Earth Orbit (LEO)',
+            name: 'Sector 01: LEO Station Corridor',
             subtitle: 'ISS Protection Corridor (Alt: 420 km)',
+            altitudeKm: 420,
+            inclination: '51.6° LEO',
+            orbitalPeriodMin: 92.8,
+            objective: 'TUTORIAL / CORRIDOR CLEARANCE: Collect 8 loose debris items to secure the ISS arrival corridor.',
+            historicalReference: '[FACT - NASA ODPO] The International Space Station (ISS) orbits at an average altitude of ~420 km with a 51.6° orbital inclination. Between 1999 and 2024, the ISS conducted over 35 Debris Avoidance Maneuvers (DAMs). [ESTIMATE] This mission models local intercept and retrieval of discarded cubesats and solar array fragments.',
             briefing: 'A recent second-stage separation has created a debris trail crossing the international space station traffic lane. Clear the zone before scheduled crew dragon arrival.',
             targetQuota: 8,
             debrisTypes: ['fragment', 'solar', 'cubesat'],
             initialDebrisCount: 16,
             respawnRate: 4000,
-            hazardRate: 14000,
+            hazardRate: 16000,
             hazardTypes: ['meteoroid'],
             maxHazards: 2,
-            timeLimit: 150, // seconds
+            timeLimit: 150,
             worldSize: { width: 3200, height: 3200 },
             basePayout: 500,
             starThresholds: [800, 1800, 3000]
-        },
-        {
-            id: 2,
-            name: 'Mission 02: Sun-Synchronous Polar Orbit',
-            subtitle: 'Earth Observation Graveyard (Alt: 780 km)',
-            briefing: 'Decommissioned weather observation satellites and shattered solar arrays are cascading across the polar corridor. Rapid debris interception required.',
-            targetQuota: 14,
-            debrisTypes: ['fragment', 'solar', 'cubesat', 'satellite'],
-            initialDebrisCount: 22,
-            respawnRate: 3500,
-            hazardRate: 9000,
-            hazardTypes: ['meteoroid', 'hypergolic'],
-            maxHazards: 4,
-            timeLimit: 180,
-            worldSize: { width: 3600, height: 3600 },
-            basePayout: 900,
-            starThresholds: [1500, 3200, 5200]
-        },
-        {
-            id: 3,
-            name: 'Mission 03: Kessler Cascade Zone',
-            subtitle: 'Critical Collision Storm (Alt: 1,200 km)',
-            briefing: 'ALERT: An uncatalogued kinetic collision has triggered a chain-reaction Kessler cascade. Collect high-priority booster sections while dodging hypergolic clouds and high-velocity shrapnel.',
-            targetQuota: 20,
-            debrisTypes: ['fragment', 'solar', 'cubesat', 'booster', 'satellite'],
-            initialDebrisCount: 28,
-            respawnRate: 2800,
-            hazardRate: 6500,
-            hazardTypes: ['meteoroid', 'hypergolic', 'nuclear'],
-            maxHazards: 6,
-            timeLimit: 210,
-            worldSize: { width: 4200, height: 4200 },
-            basePayout: 1500,
-            starThresholds: [2500, 5500, 8500]
-        },
-        {
-            id: 4,
-            name: 'Mission 04: Geostationary Graveyard',
-            subtitle: 'Operation Cleanse - Earth Ring (Alt: 35,786 km)',
-            briefing: 'FINAL OPERATION: Deep-space graveyard orbit contains massive derelict communication arrays and experimental prototype fusion cores. Cleanse the orbital ring to secure humanity’s gateway to the stars.',
-            targetQuota: 25,
-            debrisTypes: ['solar', 'cubesat', 'booster', 'satellite', 'core'],
-            initialDebrisCount: 34,
-            respawnRate: 2200,
-            hazardRate: 5000,
-            hazardTypes: ['meteoroid', 'hypergolic', 'nuclear'],
-            maxHazards: 8,
-            timeLimit: 240,
-            worldSize: { width: 4800, height: 4800 },
-            basePayout: 2500,
-            starThresholds: [4000, 8500, 14000]
         }
     ],
 

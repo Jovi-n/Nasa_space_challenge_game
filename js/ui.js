@@ -304,7 +304,8 @@ class UIController {
         // Results Modal / Debrief Actions
         document.getElementById('btn-results-next')?.addEventListener('click', () => {
             this.screens.resultsModal.classList.add('hidden');
-            if (this.selectedLevelId < 4) {
+            const maxLvl = GAME_DATA.LEVELS ? GAME_DATA.LEVELS.length : 8;
+            if (this.selectedLevelId < maxLvl) {
                 this.selectedLevelId++;
                 this.switchScreen('missionDesign');
                 this.switchDesignStep(1);
@@ -473,12 +474,30 @@ class UIController {
      * STEP 1: NEED & GOALS (Sector, Client, Contract Requirements Dossier)
      */
     renderStep1NeedAndGoals() {
-        // 1. Sector Level Cards
+        // 1. Sector Level Cards (All 8 Data-Driven Sectors with Progressive Unlocks)
         const levelContainer = document.getElementById('design-level-select');
         if (levelContainer) {
             levelContainer.innerHTML = '';
+            
+            // Count completed sectors (stars > 0 or recorded high score)
+            const completedCount = Object.keys(this.save.stars || {}).filter(k => (this.save.stars[k] || 0) > 0).length;
+
             GAME_DATA.LEVELS.forEach(lvl => {
-                const isLocked = lvl.id > this.save.unlockedLevels;
+                let isLocked = false;
+                let lockMsg = '';
+                if (lvl.id === 1) {
+                    isLocked = false;
+                } else if (lvl.id === 8) {
+                    // Finale requires five completed sectors
+                    isLocked = completedCount < 5;
+                    lockMsg = `[LOCKED - REQUIRES 5 COMPLETED SECTORS (${completedCount}/5)]`;
+                } else {
+                    // Progressive unlock: either reached via unlockedLevels or previous sector beaten
+                    const prevCleared = ((this.save.stars || {})[lvl.id - 1] > 0) || ((this.save.highScores || {})[lvl.id - 1] > 0);
+                    isLocked = (lvl.id > (this.save.unlockedLevels || 1)) && !prevCleared;
+                    lockMsg = '[LOCKED - CLEAR PREVIOUS SECTOR]';
+                }
+
                 const isSelected = lvl.id === this.selectedLevelId;
                 const stars = this.save.stars[lvl.id] || 0;
                 const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
@@ -493,7 +512,7 @@ class UIController {
                         <span>Target Quota: ${lvl.targetQuota} Units</span>
                         <span class="stars">${starStr}</span>
                     </div>
-                    ${isLocked ? '<div class="lock-overlay">[LOCKED - CLEAR PREVIOUS SECTOR]</div>' : ''}
+                    ${isLocked ? `<div class="lock-overlay">${lockMsg}</div>` : ''}
                 `;
 
                 if (!isLocked) {
@@ -611,8 +630,13 @@ class UIController {
                 <p style="margin: 8px 0; font-family: var(--font-body); font-size: 1rem; color: var(--ink);">
                     ${activeLevel.briefing}
                 </p>
+                ${activeLevel.historicalReference ? `
+                <div style="margin: 10px 0; padding: 8px 12px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--accent-cyan); font-size: 0.82rem; line-height: 1.45; color: var(--ink);">
+                    <strong style="color: var(--accent-cyan);">HISTORICAL FLIGHT DOSSIER //</strong> ${activeLevel.historicalReference}
+                </div>` : ''}
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; font-family: var(--font-mono); font-size: 0.85rem;">
-                    <div>• Sector Altitude: <strong style="color: var(--accent-cyan);">${activeLevel.subtitle.match(/Alt: [^)]+/)?.[0] || 'LEO 480km'}</strong></div>
+                    <div>• Sector Altitude: <strong style="color: var(--accent-cyan);">${activeLevel.altitudeKm ? `${activeLevel.altitudeKm.toLocaleString()} km` : (activeLevel.subtitle.match(/Alt: [^)]+/)?.[0] || 'LEO 480km')}</strong></div>
+                    <div>• Orbital Inclination: <strong style="color: var(--accent-cyan);">${activeLevel.inclination || '51.6° LEO'}</strong></div>
                     <div>• Mandatory Target Quota: <strong style="color: var(--clean);">${activeLevel.targetQuota} Debris Items</strong></div>
                     <div>• Minimum Mass Clearance: <strong style="color: var(--clean);">${minMassKg} kg</strong></div>
                     <div>• Max Collision Limit: <strong style="color: var(--danger);">${activeClient.maxCollisionsAllowed} Impact(s)</strong></div>
@@ -630,12 +654,13 @@ class UIController {
         const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
         const metaBar = document.getElementById('orbit-telemetry-meta');
         if (metaBar) {
-            const altMatch = activeLevel.subtitle.match(/Alt: ([^)]+)/);
-            const altitudeStr = altMatch ? altMatch[1] : '480 km';
+            const altitudeStr = activeLevel.altitudeKm ? `${activeLevel.altitudeKm.toLocaleString()} km` : '480 km';
+            const inclinationStr = activeLevel.inclination || '51.6° LEO';
+            const periodStr = activeLevel.orbitalPeriodMin ? `${activeLevel.orbitalPeriodMin} MIN` : '94.2 MIN';
             metaBar.innerHTML = `
                 <span>ALTITUDE: <strong>${altitudeStr}</strong></span>
-                <span>INCLINATION: <strong>51.6° LEO</strong></span>
-                <span>PERIOD: <strong>94.2 MIN</strong></span>
+                <span>INCLINATION: <strong>${inclinationStr}</strong></span>
+                <span>PERIOD: <strong>${periodStr}</strong></span>
                 <span>ECCENTRICITY: <strong>&lt; 0.002</strong></span>
             `;
         }
@@ -687,29 +712,36 @@ class UIController {
         ctx.font = '9px "Share Tech Mono"';
         ctx.fillText('EARTH', earthX - 14, earthY + 3);
 
-        // Elliptical Orbit Track
+        // Elliptical Orbit Track (Scaled to altitude)
+        const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
+        const isGEO = (activeLevel.altitudeKm || 0) > 10000;
+        const orbitRadiusX = isGEO ? 245 : 190;
+        const orbitRadiusY = isGEO ? 105 : 85;
+
         ctx.save();
         ctx.translate(earthX, earthY);
-        ctx.strokeStyle = '#2b3f5c';
+        ctx.strokeStyle = activeLevel.palette?.accentColor || '#2b3f5c';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 190, 85, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, orbitRadiusX, orbitRadiusY, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
 
-        // Target Debris Belt Zone (Scattered amber particles along outer arc)
-        ctx.fillStyle = '#f59e0b';
-        const debrisPoints = [
-            [260, 55], [290, 70], [315, 95], [330, 120], [320, 150], [295, 175], [265, 190]
-        ];
+        // Target Debris Belt Zone (Scattered particles along outer arc)
+        const debrisColor = activeLevel.palette?.accentColor || '#f59e0b';
+        ctx.fillStyle = debrisColor;
+        const debrisPoints = isGEO
+            ? [[300, 45], [330, 65], [360, 95], [375, 120], [360, 150], [335, 180], [305, 195]]
+            : [[260, 55], [290, 70], [315, 95], [330, 120], [320, 150], [295, 175], [265, 190]];
         debrisPoints.forEach(pt => {
             ctx.fillRect(pt[0], pt[1], 4, 4);
         });
 
-        ctx.fillStyle = '#f59e0b';
+        ctx.fillStyle = debrisColor;
         ctx.font = '10px "Share Tech Mono"';
-        ctx.fillText('[TARGET DEBRIS PLANE]', 220, 42);
+        const sectorShort = activeLevel.name.split(':')[0] || 'TARGET SECTOR';
+        ctx.fillText(`[${sectorShort.toUpperCase()} - ${activeLevel.altitudeKm || 420} KM]`, 180, 42);
 
         // Aegis Recycling Depot Marker (Green Station Box)
         const depotX = 220;
@@ -1132,7 +1164,7 @@ class UIController {
             parts.forEach(part => {
                 if (part.startsWith('M')) {
                     const num = parseInt(part.replace('M', ''), 10);
-                    if (num >= 1 && num <= 4) this.selectedLevelId = num;
+                    if (num >= 1 && num <= 8) this.selectedLevelId = num;
                 } else if (part.startsWith('CLI_')) {
                     const val = part.replace('CLI_', '');
                     if (PARTS_DATA.clients[val]) this.selectedClientId = val;
@@ -1454,8 +1486,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const secs = Math.floor(Math.max(0, scene.missionTime) % 60);
         hud.timerText.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
-        // Warnings & Prompts
-        hud.warningBanner.classList.toggle('active', scene.warningActive);
+        // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
+        if (scene.activeEventAlert) {
+            hud.warningBanner.textContent = scene.activeEventAlert;
+            hud.warningBanner.classList.add('active');
+        } else {
+            hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED';
+            hud.warningBanner.classList.toggle('active', scene.warningActive);
+        }
 
         const distToStation = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, scene.station.x, scene.station.y);
         const inDockRange = distToStation <= scene.stationDockingRadius;

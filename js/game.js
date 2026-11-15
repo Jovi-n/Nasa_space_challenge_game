@@ -114,6 +114,12 @@ class OrbitalGameScene extends Phaser.Scene {
         // Queues for physics-safe creation / destruction
         this.pendingCollections = [];
         this.pendingHazardDestructions = [];
+
+        // Phase 3 Data-Driven Scripted Events & Sector Atmospheric Drag
+        this.triggeredScriptedEvents = new Set();
+        this.activeAtmosphericDrag = 1.0;
+        this.activeEventAlert = null;
+        this.eventAlertTimer = 0;
     }
 
     logFlightEvent(tag, message, status = 'info') {
@@ -204,28 +210,33 @@ class OrbitalGameScene extends Phaser.Scene {
     }
 
     createSpaceEnvironment(w, h) {
-        // Deep space background color
-        this.cameras.main.setBackgroundColor('#050814');
+        // Sector-specific visual palette
+        const palette = this.missionConfig.palette || {};
+        const bgColor = palette.spaceBg || '#050814';
+        this.cameras.main.setBackgroundColor(bgColor);
 
-        // Distant Parallax Stars (Generated once on graphics layer)
+        // Distant Parallax Stars (Generated once on graphics layer with sector colors)
         const starGraphics = this.add.graphics().setDepth(-10);
+        const starColors = palette.starColors || [0xffffff, 0x38bdf8, 0xa855f7, 0xfde047];
         for (let i = 0; i < 600; i++) {
             const x = Phaser.Math.Between(0, w);
             const y = Phaser.Math.Between(0, h);
             const r = Phaser.Math.FloatBetween(0.5, 2.0);
             const alpha = Phaser.Math.FloatBetween(0.3, 0.95);
-            const colors = [0xffffff, 0x38bdf8, 0xa855f7, 0xfde047];
-            const color = Phaser.Utils.Array.GetRandom(colors);
+            const color = Phaser.Utils.Array.GetRandom(starColors);
 
             starGraphics.fillStyle(color, alpha);
             starGraphics.fillCircle(x, y, r);
         }
 
-        // Animated Rotating Earth (Parallax background)
+        // Animated Rotating Earth (Parallax background, scaled by orbital altitude)
+        const earthScale = palette.earthScale || 1.0;
+        const earthAlpha = palette.earthAlpha !== undefined ? palette.earthAlpha : 0.92;
         this.earth = this.add.sprite(w * 0.45, h * 0.48, 'earth_bg')
             .setDepth(-5)
             .setScrollFactor(0.2) // Parallax depth
-            .setAlpha(0.92);
+            .setScale(earthScale)
+            .setAlpha(earthAlpha);
 
         // Slow orbital rotation of Earth
         this.tweens.add({
@@ -234,6 +245,95 @@ class OrbitalGameScene extends Phaser.Scene {
             duration: 360000,
             repeat: -1
         });
+    }
+
+    /**
+     * Scripted Event Handler: Spawns a localized debris cluster near the player
+     */
+    spawnDebrisCluster(count, originX, originY) {
+        const allowedTypes = this.missionConfig.debrisTypes || ['fragment'];
+        for (let i = 0; i < count; i++) {
+            const debrisKey = Phaser.Utils.Array.GetRandom(allowedTypes);
+            const debrisMeta = GAME_DATA.DEBRIS_TYPES[debrisKey];
+            if (!debrisMeta) continue;
+
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Phaser.Math.Between(260, 520);
+            const x = Phaser.Math.Clamp(originX + Math.cos(angle) * dist, 120, this.missionConfig.worldSize.width - 120);
+            const y = Phaser.Math.Clamp(originY + Math.sin(angle) * dist, 120, this.missionConfig.worldSize.height - 120);
+
+            const debris = this.debrisGroup.create(x, y, debrisMeta.spriteKey);
+            debris.setDepth(5);
+            debris.debrisMeta = debrisMeta;
+            debris.setBounce(0.85);
+            debris.setDamping(true);
+            debris.setDrag(0.992);
+            debris.setVelocity(Phaser.Math.Between(-120, 120), Phaser.Math.Between(-120, 120));
+            debris.setAngularVelocity(Phaser.Math.Between(-60, 60));
+            const r = debrisMeta.size ? (debrisMeta.size / 2) : 16;
+            debris.body.setCircle(r);
+        }
+    }
+
+    /**
+     * Scripted Event Handler: Spawns a targeted hazardous obstacle
+     */
+    spawnSpecificHazard(hazardKey) {
+        const hazardMeta = GAME_DATA.HAZARD_TYPES[hazardKey] || GAME_DATA.HAZARD_TYPES.meteoroid;
+        const w = this.missionConfig.worldSize.width;
+        const h = this.missionConfig.worldSize.height;
+
+        let x, y;
+        const edge = Phaser.Math.Between(0, 3);
+        if (edge === 0) { x = Phaser.Math.Between(100, w - 100); y = 80; }
+        else if (edge === 1) { x = w - 80; y = Phaser.Math.Between(100, h - 100); }
+        else if (edge === 2) { x = Phaser.Math.Between(100, w - 100); y = h - 80; }
+        else { x = 80; y = Phaser.Math.Between(100, h - 100); }
+
+        const hazard = this.hazardGroup.create(x, y, hazardMeta.spriteKey);
+        hazard.setDepth(6);
+        hazard.hazardMeta = hazardMeta;
+
+        const targetX = this.player.x + Phaser.Math.Between(-250, 250);
+        const targetY = this.player.y + Phaser.Math.Between(-250, 250);
+        const trajectory = Phaser.Math.Angle.Between(x, y, targetX, targetY);
+        const speed = (hazardMeta.speed || 180) * 1.1;
+
+        hazard.setVelocity(Math.cos(trajectory) * speed, Math.sin(trajectory) * speed);
+        hazard.setAngularVelocity(Phaser.Math.Between(-80, 80));
+        hazard.body.setCircle(20, hazard.width / 2 - 20, hazard.height / 2 - 20);
+
+        this.time.delayedCall(22000, () => {
+            if (hazard && hazard.active) {
+                hazard.destroy();
+            }
+        });
+    }
+
+    /**
+     * Triggers a scripted narrative or tactical event from mission configuration
+     */
+    triggerScriptedEvent(evt) {
+        const isInfo = evt.effect === 'telemetry';
+        this.logFlightEvent(evt.tag, evt.message, isInfo ? 'info' : 'warn');
+        this.activeEventAlert = `[${evt.tag}] ${evt.message}`;
+        this.eventAlertTimer = 5.0; // Banner visible for 5s
+
+        if (window.soundSystem?.playAlert) {
+            window.soundSystem.playAlert();
+        }
+
+        if (evt.effect === 'spawn_wave') {
+            this.spawnDebrisCluster(evt.count || 3, this.player.x, this.player.y);
+        } else if (evt.effect === 'spawn_hazard') {
+            this.spawnSpecificHazard(evt.hazardType || 'meteoroid');
+        } else if (evt.effect === 'drag_surge') {
+            this.activeAtmosphericDrag = 0.70;
+            this.time.delayedCall(20000, () => {
+                this.activeAtmosphericDrag = 1.0;
+                this.logFlightEvent('DRAG RECOVERY', 'Atmospheric density restored to baseline.', 'info');
+            });
+        }
     }
 
     createSpaceStation(x, y) {
@@ -447,7 +547,25 @@ class OrbitalGameScene extends Phaser.Scene {
             this.logFlightEvent('WARNING', 'Battery capacity below 22% reserve margin.', 'warn');
         }
 
-        // 7. Update Game HUD DOM
+        // 7. Data-Driven Scripted Events Handling
+        if (this.missionConfig && this.missionConfig.scriptedEvents) {
+            this.missionConfig.scriptedEvents.forEach((evt, idx) => {
+                if (this.elapsedTime >= evt.time && !this.triggeredScriptedEvents.has(idx)) {
+                    this.triggeredScriptedEvents.add(idx);
+                    this.triggerScriptedEvent(evt);
+                }
+            });
+        }
+
+        // Active Event Alert Countdown
+        if (this.eventAlertTimer > 0) {
+            this.eventAlertTimer -= dt;
+            if (this.eventAlertTimer <= 0) {
+                this.activeEventAlert = null;
+            }
+        }
+
+        // 8. Update Game HUD DOM
         if (window.updateGameHUD) {
             window.updateGameHUD(this);
         }
@@ -472,8 +590,9 @@ class OrbitalGameScene extends Phaser.Scene {
         if ((this.cursors.up.isDown || this.keyW.isDown) && this.fuel > 0) {
             isThrusting = true;
             const angle = this.player.rotation;
-            const ax = Math.cos(angle) * this.acceleration;
-            const ay = Math.sin(angle) * this.acceleration;
+            const dragMod = this.activeAtmosphericDrag || 1.0;
+            const ax = Math.cos(angle) * this.acceleration * dragMod;
+            const ay = Math.sin(angle) * this.acceleration * dragMod;
 
             this.player.setAcceleration(ax, ay);
 
@@ -1202,7 +1321,8 @@ class OrbitalGameScene extends Phaser.Scene {
 
         if (isVictory) {
             save.missionsCompleted++;
-            if (this.missionConfig.id >= save.unlockedLevels && save.unlockedLevels < 4) {
+            const maxLevels = (typeof MISSIONS_DATA !== 'undefined' ? MISSIONS_DATA.length : (GAME_DATA.LEVELS ? GAME_DATA.LEVELS.length : 8));
+            if (this.missionConfig.id >= save.unlockedLevels && save.unlockedLevels < maxLevels) {
                 save.unlockedLevels = this.missionConfig.id + 1;
             }
             if (totalMissionScore > (save.highScores[this.missionConfig.id] || 0)) {

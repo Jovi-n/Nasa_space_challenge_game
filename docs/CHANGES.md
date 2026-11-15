@@ -184,3 +184,50 @@
   - When this error was thrown inside Phaser's physics collision handler, it immediately crashed Phaser's main animation/update loop, leaving the game permanently stuck/frozen on collision.
   - A similar TDZ access existed in `handleShipDebrisBump()` where `impactDamage` was referenced before declaration.
 - **Fix**: Reordered variable calculations in both `handleShipHazardCollision()` and `handleShipDebrisBump()` in [js/game.js](file:///c:/Users/jovin/OneDrive/Documents/Nasa/js/game.js#L990-L1025) so damages are computed before logging telemetry. Collision impacts now apply hull damage, camera shake, floating indicators, and telemetry logging cleanly without interruption.
+
+---
+
+## [Phase 3 — Eight Data-Driven Orbital Sectors] - 2026-11-15
+### Status: Completed & Verified
+
+### Key Deliverables & Enhancements:
+1. **Pure Data-Driven Sector Missions Architecture (`data/missions.js`)**:
+   - Created `data/missions.js` defining all 8 orbital sectors as structured, pure data objects instead of hardcoding level logic in `game.js`.
+   - Connected `data/missions.js` into `index.html` and wired `GAME_DATA.LEVELS` in `js/data.js` to dynamically load `MISSIONS_DATA`.
+   - All sector configurations define: `id`, `name`, `subtitle`, `altitudeKm`, `inclination`, `orbitalPeriodMin`, `briefing`, `historicalReference`, `objective`, `targetQuota`, `debrisTypes`, `initialDebrisCount`, `respawnRate`, `hazardRate`, `hazardTypes`, `maxHazards`, `timeLimit`, `worldSize`, `basePayout`, `starThresholds`, `palette`, and `scriptedEvents`.
+
+2. **Eight Implemented Orbital Sectors**:
+   - **Sector 01: LEO Station Corridor (Alt: 420 km)**: ISS protection corridor tutorial. Targets loose cubesats and bolts crossing the 4x50x50 km ISS ellipsoidal safety box before crew dragon docking.
+   - **Sector 02: Upper-Stage Breakup Cloud (Alt: 850 km)**: Long March 6A (CZ-6A) 2022 breakup event in sun-synchronous polar orbit. Salvage rocket hull casing and booster fragments while containing drifting hypergolic plumes.
+   - **Sector 03: Cosmos 2251 / Iridium 33 (Alt: 789 km)**: Historic February 10, 2009 hypervelocity collision cloud. Intercept communication bus and solar array fragments crossing polar planes at 11.65 km/s relative speed.
+   - **Sector 04: Low-Altitude Breakup (Alt: 280 km)**: Thermospheric re-entry storm. Simulates February 2022 geomagnetic storm drag surge; active atmospheric drag decelerates the craft as players rescue micro-satellites before atmospheric incineration.
+   - **Sector 05: Constellation Corridor (Alt: 550 km)**: 550 km megaconstellation shell. Clear deployment rings and defunct cubesats without colliding with active commercial broadband satellites.
+   - **Sector 06: Fengyun-1C Breakup Cloud (Alt: 865 km)**: The historic 2007 ASAT kinetic collision cloud (the worst debris event in human history with 3,500+ tracked fragments). Collect toxic structural members while evading dense projectile fragment swarms.
+   - **Sector 07: GEO Graveyard (Alt: 35,786 km + 300 km)**: IADC supersynchronous disposal ring (~36,086 km). Atmospheric drag is virtually zero; salvage massive 4-ton communications platforms, kick stages, and RTG power modules.
+   - **Sector 08: Cascade Finale (Alt: 950 km)**: Critical Kessler syndrome (1978) runaway collision chain reaction. Survival and containment objective demanding 25 retrieved units amidst simultaneous multi-hazard barrage.
+
+3. **Verified NASA ODPO Sources & Explicit Labeling**:
+   - Every sector includes historical references verified via NASA Orbital Debris Program Office (ODPO) Quarterly News reports and technical studies.
+   - Explicit distinction maintained throughout: historical facts are tagged `[FACT - NASA ODPO]` and game scenario adaptations are tagged `[ESTIMATE]`.
+
+4. **Progressive Unlocking System**:
+   - Sector 1 is unlocked by default for all commanders.
+   - Sectors 2 through 7 unlock progressively upon completing previous missions or reaching required career levels.
+   - Sector 8 (Cascade Finale) requires a minimum of five (5) completed sectors (`completedSectorsCount >= 5`), displaying `[LOCKED - REQUIRES 5 COMPLETED SECTORS (X/5)]` until unlocked.
+
+5. **Dynamic Scripted Narrative & Tactical Events**:
+   - Real-time scripted events execute during flight:
+     - `telemetry`: Houston FDO conjunction alerts, orbital period advisories, and historical context.
+     - `spawn_wave`: localized cluster spawns expelling fresh debris near the player's vector.
+     - `spawn_hazard`: targeted kinetic projectile, toxic hypergolic burst, or nuclear RTG drift.
+     - `drag_surge`: active atmospheric drag modifier reducing craft propulsion during solar storm surges.
+   - HUD banner displays real-time tactical warnings and advisories for each event.
+
+6. **Sector-Specific Visual Palettes**:
+   - Dynamic space background colors, starfield palettes, and grid tints customized for every sector.
+   - Parallax Earth scaling based on altitude: larger closer to low LEO (1.30x at 280 km), medium at ISS/polar orbits (1.0x-1.15x), and distant small sphere in GEO (0.45x at 36,086 km).
+   - CONOPS Step 2 orbit diagram dynamically renders sector altitude, inclination, orbital period, and scaled orbit tracks.
+
+7. **Unified Gameplay Engine & Save Preservation**:
+   - All 8 sectors operate inside the same single Phaser `OrbitalGameScene`.
+   - Existing career saves and progression remain completely preserved with zero breaking changes.
