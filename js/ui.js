@@ -39,6 +39,7 @@ class UIController {
         // Screens
         this.screens = {
             mainMenu: document.getElementById('screen-main-menu'),
+            contracts: document.getElementById('screen-mission-board'),
             missionDesign: document.getElementById('screen-mission-design'),
             hangar: document.getElementById('screen-hangar'),
             howToPlay: document.getElementById('screen-how-to-play'),
@@ -112,6 +113,8 @@ class UIController {
         // Contextual updates
         if (targetScreenName === 'hangar') {
             this.renderHangarShop();
+        } else if (targetScreenName === 'contracts') {
+            this.renderMissionBoard();
         } else if (targetScreenName === 'missionDesign') {
             this.renderMissionDesignView();
         } else if (targetScreenName === 'leaderboard') {
@@ -248,6 +251,17 @@ class UIController {
                 return;
             }
 
+            // 8b. Accept Contract Button (Mission Board)
+            const acceptBtn = e.target.closest('.btn-accept-contract');
+            if (acceptBtn) {
+                e.preventDefault();
+                const contractId = acceptBtn.getAttribute('data-contract-id');
+                if (contractId) {
+                    this.acceptContractAndLaunch(contractId);
+                }
+                return;
+            }
+
             // 9. Modal Close Buttons
             const closeBtn = e.target.closest('.btn-close-modal');
             if (closeBtn) {
@@ -272,6 +286,10 @@ class UIController {
         });
 
         // Main Menu Direct Buttons
+        document.getElementById('btn-menu-contracts')?.addEventListener('click', () => {
+            this.renderMissionBoard();
+            this.switchScreen('contracts');
+        });
         document.getElementById('btn-menu-start')?.addEventListener('click', () => {
             this.switchScreen('missionDesign');
         });
@@ -378,6 +396,25 @@ class UIController {
         document.getElementById('btn-results-retry')?.addEventListener('click', () => {
             this.screens.resultsModal.classList.add('hidden');
             this.launchConfiguredMission();
+        });
+
+        document.getElementById('btn-results-board')?.addEventListener('click', () => {
+            this.screens.resultsModal?.classList.add('hidden');
+            this.renderMissionBoard();
+            this.switchScreen('contracts');
+        });
+
+        // Mission Board Action Buttons
+        document.getElementById('btn-board-return')?.addEventListener('click', () => {
+            this.switchScreen('mainMenu');
+        });
+
+        document.getElementById('btn-board-custom-design')?.addEventListener('click', () => {
+            this.switchScreen('missionDesign');
+        });
+
+        document.getElementById('btn-reroll-contracts')?.addEventListener('click', () => {
+            this.rerollContracts();
         });
 
         document.getElementById('btn-results-hangar')?.addEventListener('click', () => {
@@ -1375,6 +1412,181 @@ class UIController {
     }
 
     /**
+     * Render Persistent Campaign Mission Board (Phase 8a)
+     */
+    renderMissionBoard() {
+        this.save = OrbitalStorage.load();
+        if (!this.save.availableContracts || this.save.availableContracts.length === 0) {
+            if (typeof CampaignManager !== 'undefined') {
+                this.save.availableContracts = CampaignManager.generateContractPool(this.save);
+                OrbitalStorage.save(this.save);
+            }
+        }
+
+        // 1. Campaign Standing Bar
+        const seedEl = document.getElementById('board-campaign-seed');
+        if (seedEl) seedEl.innerText = `SEED-${this.save.campaignSeed || '000000'}`;
+
+        const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
+        const repAgencyBar = document.getElementById('board-rep-agency-bar');
+        const repAgencyVal = document.getElementById('board-rep-agency-val');
+        if (repAgencyBar) repAgencyBar.style.width = `${rep.agency}%`;
+        if (repAgencyVal) repAgencyVal.innerText = `${rep.agency}%`;
+
+        const repCommBar = document.getElementById('board-rep-commercial-bar');
+        const repCommVal = document.getElementById('board-rep-commercial-val');
+        if (repCommBar) repCommBar.style.width = `${rep.commercial}%`;
+        if (repCommVal) repCommVal.innerText = `${rep.commercial}%`;
+
+        const repPubBar = document.getElementById('board-rep-public-bar');
+        const repPubVal = document.getElementById('board-rep-public-val');
+        if (repPubBar) repPubBar.style.width = `${rep.public}%`;
+        if (repPubVal) repPubVal.innerText = `${rep.public}%`;
+
+        const creditsEl = document.getElementById('board-credits-val');
+        if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
+
+        // 2. Render Contract Cards
+        const grid = document.getElementById('contracts-card-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const contracts = this.save.availableContracts || [];
+        contracts.forEach(contract => {
+            const card = document.createElement('div');
+            card.className = 'contract-card';
+
+            const riskClass = `risk-${(contract.risk || 'moderate').toLowerCase()}`;
+            const sHealth = (this.save.sectorHealth && this.save.sectorHealth[contract.sectorKey] !== undefined)
+                ? this.save.sectorHealth[contract.sectorKey]
+                : (contract.sectorHealth || 70);
+            const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+            const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[contract.sectorKey]) || 0;
+
+            // Modifiers badges
+            let modsHtml = '';
+            if (contract.modifiers && contract.modifiers.length > 0) {
+                contract.modifiers.forEach(mKey => {
+                    const m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
+                    if (m) {
+                        modsHtml += `<span class="modifier-badge" title="${m.desc}">${m.icon} ${m.badge}</span>`;
+                    }
+                });
+            } else {
+                modsHtml = `<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>`;
+            }
+
+            // Objective badge
+            const obj = contract.objectiveData || ((typeof CONTRACT_OBJECTIVES !== 'undefined') ? CONTRACT_OBJECTIVES[contract.objective] : null) || { name: 'QUOTA', badge: 'QUOTA', icon: '🎯' };
+
+            // Material chips
+            let matsHtml = '';
+            if (contract.materialsReward) {
+                if (contract.materialsReward.metal) matsHtml += `<span class="mat-chip">🔩 +${contract.materialsReward.metal}</span>`;
+                if (contract.materialsReward.cells) matsHtml += `<span class="mat-chip">🔋 +${contract.materialsReward.cells}</span>`;
+                if (contract.materialsReward.chips) matsHtml += `<span class="mat-chip">💾 +${contract.materialsReward.chips}</span>`;
+            }
+
+            card.innerHTML = `
+                <div class="contract-card-header">
+                    <div>
+                        <div class="contract-client">${contract.client?.icon || '🌐'} ${contract.client?.name || 'Orbital Authority'}</div>
+                        <div class="contract-title">${contract.title}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="objective-badge ${contract.objective}">${obj.icon} ${obj.badge}</span>
+                        <div class="contract-risk-tag ${riskClass}">RISK: ${(contract.risk || 'Moderate').toUpperCase()}</div>
+                    </div>
+                </div>
+
+                <div class="contract-modifiers-row">
+                    ${modsHtml}
+                </div>
+
+                <p class="contract-desc">${contract.description}</p>
+
+                <div class="contract-sector-health">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 3px; font-family: var(--font-mono);">
+                        <span>ORBITAL SECTOR INTEGRITY:</span>
+                        <span style="color: ${healthColor};">${sHealth}% HEALTH</span>
+                    </div>
+                    <div class="campaign-health-bar">
+                        <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                    </div>
+                    ${carryover > 0 ? `<div style="font-size: 0.72rem; color: var(--danger); margin-top: 3px;">⚠️ ${carryover} residual fragments tracked in orbit.</div>` : ''}
+                </div>
+
+                <div class="contract-metrics-grid">
+                    <div class="metric-cell">
+                        <span class="metric-lbl">TARGET:</span>
+                        <span class="metric-v">${contract.targetQuota} ${contract.objective === 'passivate' ? 'Stages' : (contract.objective === 'recover' ? 'Core' : 'Items')}</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span class="metric-lbl">TIME WINDOW:</span>
+                        <span class="metric-v">${contract.timeLimit}s</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span class="metric-lbl">SUGGESTED BUS:</span>
+                        <span class="metric-v" style="text-transform: uppercase;">${contract.requirements?.suggestedBus || 'SCOUT'}</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span class="metric-lbl">PAYOUT:</span>
+                        <span class="metric-v" style="color: var(--salvage); font-weight: bold;">+${contract.scrapPayout} Scrap</span>
+                    </div>
+                </div>
+
+                <div class="contract-card-footer">
+                    <div class="contract-rewards-summary">
+                        ${matsHtml}
+                        <span style="font-size: 0.75rem; color: var(--accent-cyan);">+${contract.scoreBounty} Score</span>
+                    </div>
+                    <button type="button" class="btn-primary btn-accept-contract" data-contract-id="${contract.id}" style="padding: 8px 16px; font-size: 0.85rem;">
+                        ACCEPT CONTRACT 🚀
+                    </button>
+                </div>
+            `;
+
+            grid.appendChild(card);
+        });
+    }
+
+    /**
+     * Solicit / Refresh Mission Board contracts (-50 Scrap fee)
+     */
+    rerollContracts() {
+        this.save = OrbitalStorage.load();
+        if ((this.save.credits || 0) < 50) {
+            window.soundSystem?.playExplosion?.();
+            alert('INSUFFICIENT SCRAP FUNDS\n\nSoliciting a new roster of orbital contracts requires 50 Scrap.');
+            return;
+        }
+
+        this.save.credits -= 50;
+        if (typeof CampaignManager !== 'undefined') {
+            this.save.availableContracts = CampaignManager.generateContractPool(this.save);
+        }
+        OrbitalStorage.save(this.save);
+        window.soundSystem?.playUiClick?.();
+        this.renderMissionBoard();
+    }
+
+    /**
+     * Accept a contract and route to Mission Design
+     */
+    acceptContractAndLaunch(contractId) {
+        if (typeof CampaignManager === 'undefined') return;
+        const contract = CampaignManager.acceptContract(contractId);
+        if (!contract) return;
+
+        this.selectedLevelId = contract.sectorId;
+        this.save = OrbitalStorage.load();
+
+        if (window.soundSystem) window.soundSystem.playUiClick();
+        this.switchScreen('missionDesign');
+        this.switchDesignStep(1);
+    }
+
+    /**
      * Launch the Phaser Game with selected configuration
      */
     launchConfiguredMission() {
@@ -1564,7 +1776,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Score & Quota
         if (hud.scoreText) hud.scoreText.innerText = (scene.score || 0).toLocaleString();
-        if (hud.quotaText) hud.quotaText.innerText = `${scene.debrisDeliveredCount || 0} / ${scene.debrisTargetQuota || 0}`;
+        if (hud.quotaText) {
+            if (scene.contractObjective === 'passivate') {
+                hud.quotaText.innerText = `${scene.passivatedStagesCount || 0} / ${scene.debrisTargetQuota || 0} STAGES`;
+            } else if (scene.contractObjective === 'recover') {
+                hud.quotaText.innerText = scene.priorityCoreDelivered ? `1 / 1 CORE SECURED` : (scene.cargo && scene.cargo.some(c => c.isPriorityCore) ? `CORE IN CARGO` : `LOCATE CORE`);
+            } else if (scene.contractObjective === 'survive') {
+                hud.quotaText.innerText = `SURVIVE CLUSTER`;
+            } else {
+                hud.quotaText.innerText = `${scene.debrisDeliveredCount || 0} / ${scene.debrisTargetQuota || 0}`;
+            }
+        }
         if (hud.missionName) hud.missionName.innerText = scene.missionConfig ? scene.missionConfig.name : '';
 
         // Timer
@@ -1766,7 +1988,62 @@ window.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // 5. Design Code
+        // 5. Campaign Consequences & Persistent Orbital Impact (Phase 8a)
+        if (typeof CampaignManager !== 'undefined') {
+            const consequence = CampaignManager.applyMissionOutcome(
+                results.scene || {
+                    missionConfig: { id: results.levelId, name: `Sector 0${results.levelId}` },
+                    collisionsCount: results.collisions || 0,
+                    kesslerRisk: results.finalKesslerRisk || 0,
+                    debrisDeliveredCount: results.debrisCount || 0,
+                    debrisTargetQuota: results.targetQuota || 6,
+                    materialsSession: results.materialsSession,
+                    creditsEarned: results.creditsEarned || 200,
+                    creditsAlreadyAwarded: true
+                },
+                results.isVictory,
+                results.reason
+            );
+
+            const healthFill = document.getElementById('debrief-sector-health-fill');
+            const healthText = document.getElementById('debrief-sector-health-text');
+            const carryoverText = document.getElementById('debrief-carryover-text');
+            const repShiftsRow = document.getElementById('debrief-reputation-shifts');
+            const narrativeBox = document.getElementById('debrief-consequence-narrative');
+
+            if (healthFill) {
+                healthFill.style.width = `${consequence.newHealth}%`;
+                healthFill.style.background = consequence.newHealth >= 65 ? 'var(--clean)' : (consequence.newHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+            }
+            if (healthText) {
+                const deltaSign = consequence.healthDelta >= 0 ? '+' : '';
+                healthText.innerText = `${deltaSign}${consequence.healthDelta}% DELTA (CURRENT HEALTH: ${consequence.newHealth}%)`;
+            }
+            if (carryoverText) {
+                if (consequence.newDebris === 0) {
+                    carryoverText.className = 'campaign-stat-val val-green';
+                    carryoverText.innerText = '0 FRAGMENTS REMAINING [CLEAR]';
+                } else {
+                    carryoverText.className = 'campaign-stat-val val-red';
+                    carryoverText.innerText = `${consequence.newDebris} RESIDUAL FRAGMENTS IN ORBIT`;
+                }
+            }
+            if (repShiftsRow && consequence.repShifts) {
+                const aSign = consequence.repShifts.agency >= 0 ? '+' : '';
+                const cSign = consequence.repShifts.commercial >= 0 ? '+' : '';
+                const pSign = consequence.repShifts.public >= 0 ? '+' : '';
+                repShiftsRow.innerHTML = `
+                    <span class="rep-chip rep-agency">AGY ${aSign}${consequence.repShifts.agency}</span>
+                    <span class="rep-chip rep-commercial">COM ${cSign}${consequence.repShifts.commercial}</span>
+                    <span class="rep-chip rep-public">PUB ${pSign}${consequence.repShifts.public}</span>
+                `;
+            }
+            if (narrativeBox) {
+                narrativeBox.innerText = consequence.narrative;
+            }
+        }
+
+        // 6. Design Code
         if (shareCodeText) {
             shareCodeText.innerText = results.designCode || window.uiController.generateDesignCode();
         }

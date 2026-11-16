@@ -34,16 +34,77 @@
                 Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
             </p>
             <div class="menu-buttons">
-                <button id="btn-menu-start" class="btn-primary">START MISSION DESIGN</button>
-                <button id="btn-menu-hangar" class="btn-secondary">HANGAR & UPGRADES</button>
-                <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL & HOW TO PLAY</button>
-                <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS & LEADERBOARD</button>
-                <button id="btn-menu-sources" class="btn-secondary">DATA & AEROSPACE SOURCES</button>
+                <button id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;">MISSION BOARD &amp; CAMPAIGN</button>
+                <button id="btn-menu-start" class="btn-secondary">CUSTOM MISSION DESIGN</button>
+                <button id="btn-menu-hangar" class="btn-secondary">HANGAR &amp; UPGRADES</button>
+                <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL &amp; HOW TO PLAY</button>
+                <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS &amp; LEADERBOARD</button>
+                <button id="btn-menu-sources" class="btn-secondary">DATA &amp; AEROSPACE SOURCES</button>
                 <button id="btn-menu-credits" class="btn-secondary">MISSION CREDITS</button>
             </div>
             <div class="audio-controls">
                 <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
                 <button id="btn-toggle-music" class="btn-audio active">MUSIC: ON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         1B. MISSION BOARD & CAMPAIGN CONTRACTS SCREEN (PHASE 8a)
+         ==================================================================== -->
+    <div id="screen-mission-board" class="screen-layer hidden">
+        <div class="contracts-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">MISSION BOARD // CAMPAIGN CONTRACTS</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        TACTICAL SECTOR CLEARANCE // PERSISTENT ORBITAL REPUTATION &amp; HEALTH
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
+                    <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">RETURN TO MENU</button>
+                </div>
+            </div>
+
+            <!-- Campaign Standing & Telemetry Bar -->
+            <div class="campaign-standing-bar">
+                <div class="standing-group">
+                    <span class="standing-label">CAMPAIGN SEED:</span>
+                    <strong id="board-campaign-seed" style="font-family: var(--font-mono); color: var(--accent-cyan);">SEED-000000</strong>
+                </div>
+                <div class="standing-meters">
+                    <div class="standing-meter-box">
+                        <span class="rep-label">AGENCY:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-agency-bar" class="rep-fill fill-agency" style="width: 50%;"></div></div>
+                        <span id="board-rep-agency-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">COMMERCIAL:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-commercial-bar" class="rep-fill fill-commercial" style="width: 50%;"></div></div>
+                        <span id="board-rep-commercial-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">PUBLIC:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-public-bar" class="rep-fill fill-public" style="width: 50%;"></div></div>
+                        <span id="board-rep-public-val" class="rep-val">50%</span>
+                    </div>
+                </div>
+                <div class="standing-funds">
+                    <span>FUNDS: <strong id="board-credits-val" style="color: var(--salvage);">200 SCRAP</strong></span>
+                </div>
+            </div>
+
+            <!-- 3 Available Contracts Grid -->
+            <div id="contracts-card-grid" class="contracts-card-grid">
+                <!-- Dynamically populated contract cards -->
+            </div>
+
+            <div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-muted);">
+                    Select an operational contract above to launch with custom budget &amp; requirements, or design a custom flight.
+                </div>
+                <button type="button" id="btn-board-custom-design" class="btn-secondary" style="font-size: 0.85rem;">OPEN CUSTOM MISSION STUDIO</button>
             </div>
         </div>
     </div>
@@ -678,6 +739,35 @@
                 </div>
             </div>
 
+            <!-- 5. Campaign Consequences & Orbital Impact Audit (Phase 8a) -->
+            <div id="debrief-campaign-panel" class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">5. CAMPAIGN CONSEQUENCES &amp; ORBITAL IMPACT</div>
+                <div class="debrief-campaign-grid">
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">SECTOR ORBITAL HEALTH</span>
+                        <div class="campaign-health-bar">
+                            <div id="debrief-sector-health-fill" class="health-fill" style="width: 75%;"></div>
+                        </div>
+                        <span id="debrief-sector-health-text" class="campaign-stat-val">+15% CLEARED (HEALTH: 75%)</span>
+                    </div>
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">RESIDUAL CARRYOVER DEBRIS</span>
+                        <span id="debrief-carryover-text" class="campaign-stat-val val-green">0 FRAGMENTS REMAINING</span>
+                    </div>
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">REPUTATION SHIFTS</span>
+                        <div id="debrief-reputation-shifts" class="reputation-shifts-row">
+                            <span class="rep-chip rep-agency">AGY +6</span>
+                            <span class="rep-chip rep-commercial">COM +4</span>
+                            <span class="rep-chip rep-public">PUB +8</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="debrief-consequence-narrative" class="campaign-narrative-card">
+                    Clean orbital clearance in Sector 1 has stabilized ISS operations. Insurers have lowered contract liability premiums for your next flight.
+                </div>
+            </div>
+
             <!-- Redesign Recommendations & Architecture Rating -->
             <div id="debrief-recommendations-panel" class="debrief-recommendations-card"></div>
 
@@ -689,6 +779,7 @@
             </div>
 
             <div class="results-actions">
+                <button id="btn-results-board" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;">MISSION BOARD</button>
                 <button id="btn-results-next" class="btn-primary">NEXT MISSION</button>
                 <button id="btn-results-redesign" class="btn-secondary">REDESIGN IN STUDIO</button>
                 <button id="btn-results-retry" class="btn-secondary">REPLAY MISSION</button>
@@ -838,6 +929,7 @@
     <script src="data/parts.js"></script>
     <script src="data/missions.js"></script>
     <script src="data/donki-snapshot.js"></script>
+    <script src="js/campaign.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/data.js"></script>
     <script src="js/director.js"></script>

@@ -2130,3 +2130,328 @@ button,
     padding: 16px 20px !important;
     overflow-y: auto !important;
 }
+
+/* ==========================================================================
+   PHASE 8a: MISSION BOARD & CAMPAIGN CONTRACTS STYLES
+   ========================================================================== */
+#screen-mission-board {
+    justify-content: flex-start !important;
+    padding: 16px 20px !important;
+    overflow-y: auto !important;
+}
+
+.contracts-container {
+    max-width: 1140px;
+    width: 100%;
+    margin: 0 auto;
+    background: rgba(11, 15, 25, 0.94);
+    border: 2px solid var(--border);
+    padding: 18px 24px;
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.campaign-standing-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(17, 24, 39, 0.85);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    margin: 14px 0 18px 0;
+    border-radius: 3px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.standing-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.standing-label {
+    font-family: var(--font-mono);
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+}
+
+.standing-meters {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.standing-meter-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+}
+
+.rep-label {
+    color: var(--ink-muted);
+}
+
+.rep-mini-bar {
+    width: 60px;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.rep-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.fill-agency { background: #38bdf8; }
+.fill-commercial { background: #f59e0b; }
+.fill-public { background: #10b981; }
+
+.rep-val {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.standing-funds {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+/* Contracts 3-Card Grid */
+.contracts-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 960px) {
+    .contracts-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.contract-card {
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.6);
+}
+
+.contract-card:hover {
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+}
+
+.contract-card-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+
+.contract-sector-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.contract-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+}
+
+.contract-client-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+}
+
+.contract-objective-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+}
+
+.obj-quota { color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); }
+.obj-protect { color: #10b981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); }
+.obj-passivate { color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); }
+.obj-recover { color: #c084fc; background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.4); }
+.obj-survive { color: #ef4444; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); }
+
+.contract-desc {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    min-height: 48px;
+}
+
+.contract-modifiers-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.mod-badge {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid #f59e0b;
+    color: #fde047;
+    background: rgba(245, 158, 11, 0.15);
+    letter-spacing: 0.5px;
+}
+
+.contract-metrics-table {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    margin-bottom: 14px;
+    border-collapse: collapse;
+}
+
+.contract-metrics-table td {
+    padding: 3px 0;
+}
+
+.contract-metrics-table td.label {
+    color: var(--ink-muted);
+}
+
+.contract-metrics-table td.val {
+    text-align: right;
+    font-weight: 700;
+}
+
+.risk-tag {
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 2px;
+}
+.risk-low { color: #10b981; }
+.risk-moderate { color: #38bdf8; }
+.risk-severe { color: #f59e0b; }
+.risk-extreme { color: #ef4444; }
+
+.sector-health-mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    margin-top: 4px;
+}
+.health-track {
+    flex: 1;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.health-fill {
+    height: 100%;
+    background: #10b981;
+}
+
+.btn-accept-contract {
+    width: 100%;
+    padding: 10px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+/* Debrief Campaign Impact Section */
+.debrief-campaign-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+}
+@media (max-width: 768px) {
+    .debrief-campaign-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.campaign-stat-box {
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.campaign-stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    letter-spacing: 0.8px;
+}
+.campaign-stat-val {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.campaign-health-bar {
+    width: 100%;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.reputation-shifts-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.rep-chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+.rep-agency { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; }
+.rep-commercial { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+.rep-public { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+
+.campaign-narrative-card {
+    background: rgba(15, 23, 42, 0.85);
+    border-left: 3px solid var(--accent-cyan);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+    font-family: var(--font-mono);
+}

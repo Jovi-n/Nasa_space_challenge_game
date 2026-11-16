@@ -145,6 +145,39 @@ class OrbitalGameScene extends Phaser.Scene {
         this.activeAtmosphericDrag = 1.0;
         this.activeEventAlert = null;
         this.eventAlertTimer = 0;
+
+        // Phase 8a Persistent Campaign State & Active Contracts
+        const saveState = OrbitalStorage.load();
+        this.activeContract = saveState.activeContract || null;
+        this.contractObjective = this.activeContract ? this.activeContract.objective : 'quota';
+        this.contractModifiers = this.activeContract ? (this.activeContract.modifiers || []) : [];
+        this.passivatedStagesCount = 0;
+        this.priorityCoreDelivered = false;
+
+        if (this.activeContract) {
+            this.debrisTargetQuota = this.activeContract.targetQuota;
+            this.missionTime = this.activeContract.timeLimit;
+            this.timeLimitTotal = this.missionTime;
+            this.contractPayout = this.activeContract.scrapPayout;
+        }
+
+        const sectorKey = 'sector_0' + this.missionConfig.id;
+        this.carryoverDebrisCount = (saveState.carryoverDebris && saveState.carryoverDebris[sectorKey]) || 0;
+
+        // Apply contract modifiers to spacecraft systems
+        if (this.contractModifiers.includes('low_budget')) {
+            this.fuel = this.maxFuel * 0.65;
+            this.battery = this.maxBattery * 0.65;
+        }
+        if (this.contractModifiers.includes('blackout')) {
+            this.radarMultiplier = (this.radarMultiplier || 1.0) * 0.70;
+        }
+        if (this.contractModifiers.includes('dead_stick')) {
+            this.fuelDrainMultiplier = 1.35;
+        }
+        if (this.contractModifiers.includes('storm_season')) {
+            this.spaceWeatherInterval = 22000;
+        }
     }
 
     logFlightEvent(tag, message, status = 'info') {
@@ -218,6 +251,23 @@ class OrbitalGameScene extends Phaser.Scene {
 
         // Phase 5 AI Flight Director
         this.director = new MissionDirector(this);
+
+        // Phase 8a Contract Objective Spawns & Modifiers
+        if (this.contractModifiers && this.contractModifiers.includes('dead_stick') && this.player) {
+            this.player.setAngularDrag(110);
+        }
+        if (this.contractObjective === 'recover') {
+            this.spawnPriorityCore();
+        }
+        if (this.contractObjective === 'protect') {
+            this.spawnProtectedSatellites();
+        }
+        if (this.contractObjective === 'passivate') {
+            this.spawnSpecificHazard('venting_rocket');
+        }
+        if (this.contractModifiers && this.contractModifiers.includes('storm_season')) {
+            this.time.delayedCall(4000, () => this.triggerSpaceWeatherEvent());
+        }
 
         // 8. Collisions and Overlaps
         this.physics.add.collider(this.player, this.debrisGroup, this.handleShipDebrisBump, null, this);
@@ -541,14 +591,56 @@ class OrbitalGameScene extends Phaser.Scene {
     }
 
     spawnInitialDebris() {
-        const count = this.missionConfig.initialDebrisCount;
+        let count = this.missionConfig.initialDebrisCount;
+        if (this.contractModifiers && this.contractModifiers.includes('dense_cloud')) {
+            count = Math.round(count * 1.5);
+        }
+        count += (this.carryoverDebrisCount || 0);
         for (let i = 0; i < count; i++) {
             this.spawnDebrisItem();
         }
     }
 
+    spawnPriorityCore() {
+        const w = this.missionConfig.worldSize.width;
+        const h = this.missionConfig.worldSize.height;
+        const x = Phaser.Math.Between(w * 0.25, w * 0.75);
+        const y = Phaser.Math.Between(h * 0.25, h * 0.75);
+        const core = this.debrisGroup.create(x, y, 'debris_satellite');
+        core.setDepth(7);
+        core.isPriorityCore = true;
+        core.debrisType = { id: 'priority_core', name: 'Priority Instrument Core', mass: 120, size: 28, score: 500, materials: { metal: 3, cells: 3, chips: 2 } };
+        core.setTint(0xffd700);
+        core.setBounce(0.85);
+        core.setVelocity(Phaser.Math.Between(-30, 30), Phaser.Math.Between(-30, 30));
+        core.body.setCircle(14, core.width / 2 - 14, core.height / 2 - 14);
+        this.priorityCore = core;
+        this.logFlightEvent('CONTRACT', 'Priority instrument core located on orbital radar.', 'info');
+    }
+
+    spawnProtectedSatellites() {
+        this.protectedSatellitesGroup = this.physics.add.group();
+        const w = this.missionConfig.worldSize.width;
+        const h = this.missionConfig.worldSize.height;
+        for (let i = 0; i < 2; i++) {
+            const x = (w * 0.35) + (i * 650);
+            const y = (h * 0.5) + (i === 0 ? -180 : 180);
+            const sat = this.protectedSatellitesGroup.create(x, y, 'debris_satellite');
+            sat.setDepth(7);
+            sat.isProtectedSat = true;
+            sat.satHull = 100;
+            sat.setTint(0x38bdf8);
+            sat.setVelocity(35, 0); // Lane 2 co-orbital speed
+            sat.body.setCircle(14, sat.width / 2 - 14, sat.height / 2 - 14);
+        }
+        this.logFlightEvent('PROTECT', 'Active commercial satellites deployed. Maintain defensive perimeter.', 'info');
+    }
+
     spawnDebrisItem() {
-        if (this.debrisGroup.countActive(true) >= this.missionConfig.initialDebrisCount + 10) return;
+        const maxLimit = (this.contractModifiers && this.contractModifiers.includes('dense_cloud'))
+            ? Math.round((this.missionConfig.initialDebrisCount + 10) * 1.5)
+            : (this.missionConfig.initialDebrisCount + 10);
+        if (this.debrisGroup.countActive(true) >= maxLimit) return;
 
         const w = this.missionConfig.worldSize.width;
         const h = this.missionConfig.worldSize.height;
@@ -674,8 +766,28 @@ class OrbitalGameScene extends Phaser.Scene {
 
         // 1. Check Win / Loss Time limits
         if (this.missionTime <= 0) {
-            this.handleMissionEnd(false, 'TIME LIMIT EXCEEDED - ORBITAL WINDOW LOST');
+            if (this.contractObjective === 'survive') {
+                this.handleMissionEnd(true, 'EXTRACTION WINDOW REACHED: CASCADE CLUSTER SURVIVED');
+            } else {
+                this.handleMissionEnd(false, 'TIME LIMIT EXCEEDED - ORBITAL WINDOW LOST');
+            }
             return;
+        }
+
+        // 1b. Protected Satellites Boundary Wrap & Loss Verification
+        if (this.protectedSatellitesGroup) {
+            const w = this.missionConfig.worldSize.width;
+            let activeProtectedCount = 0;
+            this.protectedSatellitesGroup.getChildren().forEach(sat => {
+                if (!sat || !sat.active) return;
+                activeProtectedCount++;
+                if (sat.x > w + 50) sat.x = -50;
+                if (sat.x < -50) sat.x = w + 50;
+            });
+            if (this.contractObjective === 'protect' && activeProtectedCount === 0) {
+                this.handleMissionEnd(false, 'MISSION FAILED: PROTECTED ASSET DESTROYED BY ORBITAL IMPACT');
+                return;
+            }
         }
 
         // 2. Handle Player Spaceflight Controls
@@ -1506,12 +1618,37 @@ class OrbitalGameScene extends Phaser.Scene {
             this.showFloatingText(this.station.x, this.station.y - 40, 'SYSTEMS REFUELED // DEPOT DOCKED', '#38bdf8');
         }
 
+        if (this.cargo.some(c => c.isPriorityCore)) {
+            this.priorityCoreDelivered = true;
+            this.logFlightEvent('CONTRACT', 'High-value priority core delivered to Aegis Depot.', 'success');
+        }
+
         this.cargo = []; // Empty cargo hold
 
-        // Check if Mission Victory Quota is achieved!
-        if (this.debrisDeliveredCount >= this.debrisTargetQuota) {
+        // Check if Mission Victory Quota or Objective is achieved!
+        let objectiveComplete = false;
+        let winMessage = 'ORBITAL ZONE SUCCESSFULLY CLEANSED';
+
+        if (this.contractObjective === 'recover') {
+            if (this.priorityCoreDelivered) {
+                objectiveComplete = true;
+                winMessage = 'PRIORITY INSTRUMENT CORE RECOVERED & SECURED';
+            }
+        } else if (this.contractObjective === 'passivate') {
+            if (this.passivatedStagesCount >= this.debrisTargetQuota) {
+                objectiveComplete = true;
+                winMessage = 'ALL TARGETED STAGES SAFELY PASSIVATED';
+            }
+        } else {
+            if (this.debrisDeliveredCount >= this.debrisTargetQuota) {
+                objectiveComplete = true;
+                winMessage = this.contractObjective === 'protect' ? 'ASSET PROTECTION SUCCESSFUL: CONSTELLATION SECURED' : 'ORBITAL ZONE SUCCESSFULLY CLEANSED';
+            }
+        }
+
+        if (objectiveComplete) {
             this.time.delayedCall(1200, () => {
-                this.handleMissionEnd(true, 'ORBITAL ZONE SUCCESSFULLY CLEANSED');
+                this.handleMissionEnd(true, winMessage);
             });
         } else {
             this.time.delayedCall(1000, () => {
@@ -1524,6 +1661,10 @@ class OrbitalGameScene extends Phaser.Scene {
         if (!this.hazardGroup) return;
         this.hazardGroup.getChildren().forEach(h => {
             if (!h || !h.active) return;
+            if (h.isPassivated) {
+                h.isVenting = false;
+                return;
+            }
             const meta = h.hazardMeta || GAME_DATA.HAZARD_TYPES[h.hazardKey];
             if (meta?.id !== 'venting_rocket') return;
 
@@ -1853,6 +1994,22 @@ class OrbitalGameScene extends Phaser.Scene {
         const targetName = bestTarget.hazardMeta?.name || bestTarget.debrisType?.name || 'Debris';
         this.logFlightEvent('NUDGE', `Laser impulse deflected ${targetName}. Trajectory altered (-3% Kessler Risk).`, 'info');
         this.showFloatingText(bestTarget.x, bestTarget.y - 25, '+60 NUDGE DEFLECTED', '#00f3ff');
+
+        // Phase 8a: Passivate upper-stage venting hazards
+        if (this.contractObjective === 'passivate' && (bestTarget.hazardMeta?.id === 'venting_rocket' || bestTarget.hazardKey === 'venting_rocket')) {
+            if (!bestTarget.isPassivated) {
+                bestTarget.isPassivated = true;
+                bestTarget.setTint(0x10b981);
+                this.passivatedStagesCount = (this.passivatedStagesCount || 0) + 1;
+                this.showFloatingText(bestTarget.x, bestTarget.y - 35, `PASSIVATED (${this.passivatedStagesCount}/${this.debrisTargetQuota})`, '#10b981');
+                this.logFlightEvent('PASSIVATE', `Pressurized upper stage neutralized (${this.passivatedStagesCount}/${this.debrisTargetQuota}).`, 'success');
+                if (this.passivatedStagesCount >= this.debrisTargetQuota) {
+                    this.time.delayedCall(1200, () => {
+                        this.handleMissionEnd(true, 'ALL TARGETED STAGES SAFELY PASSIVATED');
+                    });
+                }
+            }
+        }
     }
 
     handleDebrisDebrisCollision(d1, d2) {
@@ -2268,7 +2425,7 @@ class OrbitalGameScene extends Phaser.Scene {
         const timeBonus = isVictory ? Math.max(0, Math.floor(this.missionTime * 15)) : 0;
         const healthPercent = this.hull / this.maxHull;
         const healthBonus = isVictory ? Math.floor(healthPercent * 500) : 0;
-        const basePayout = isVictory ? this.missionConfig.basePayout : 100;
+        const basePayout = isVictory ? (this.contractPayout || this.missionConfig.basePayout) : 100;
 
         // 1. Requirements Audit Table
         const minTargetMass = this.debrisTargetQuota * 45;
@@ -2437,11 +2594,13 @@ class OrbitalGameScene extends Phaser.Scene {
         }
 
         // Save ONCE with the unified save object
+        this.creditsAlreadyAwarded = true;
         OrbitalStorage.save(save);
 
         // Show Debrief v2 Modal in DOM UI
         if (window.showMissionResultsModal) {
             window.showMissionResultsModal({
+                scene: this,
                 isVictory,
                 reason,
                 debrisCount: this.debrisDeliveredCount,

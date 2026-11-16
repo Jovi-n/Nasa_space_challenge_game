@@ -427,20 +427,52 @@ const GAME_DATA = {
  */
 class OrbitalStorage {
     static STORAGE_KEY = 'orbital_cleanup_mission_zero_save';
+    static CURRENT_SAVE_VERSION = 2;
 
     static getDefaultSave() {
         return {
+            saveVersion: 2,
+            campaignSeed: Math.floor(Math.random() * 900000) + 100000,
             credits: 200,
             materials: {
                 metal: 0,
                 cells: 0,
                 chips: 0
             },
+            reputation: {
+                agency: 50,
+                commercial: 50,
+                public: 50
+            },
+            sectorHealth: {
+                sector_01: 85,
+                sector_02: 60,
+                sector_03: 45,
+                sector_04: 55,
+                sector_05: 70,
+                sector_06: 40,
+                sector_07: 75,
+                sector_08: 30
+            },
+            carryoverDebris: {
+                sector_01: 0,
+                sector_02: 0,
+                sector_03: 0,
+                sector_04: 0,
+                sector_05: 0,
+                sector_06: 0,
+                sector_07: 0,
+                sector_08: 0
+            },
+            campaignFlags: {},
+            availableContracts: [],
+            activeContract: null,
+            consequencesHistory: [],
             totalDebrisRecycled: 0,
             totalMassDeorbitedKg: 0,
             missionsCompleted: 0,
-            highScores: { 1: 0, 2: 0, 3: 0, 4: 0 },
-            stars: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            highScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
+            stars: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
             unlockedLevels: 1,
             upgrades: {
                 engine: 0,
@@ -467,22 +499,84 @@ class OrbitalStorage {
         };
     }
 
+    static migrateToV2(data, defaultSave) {
+        console.log('[OrbitalStorage] Migrating legacy save to Save Version 2 (Campaign & Contracts)...');
+        data.saveVersion = 2;
+        if (!data.campaignSeed) {
+            data.campaignSeed = Math.floor(Math.random() * 900000) + 100000;
+        }
+        if (!data.reputation || typeof data.reputation !== 'object') {
+            data.reputation = Object.assign({}, defaultSave.reputation);
+        }
+        if (!data.sectorHealth || typeof data.sectorHealth !== 'object') {
+            data.sectorHealth = Object.assign({}, defaultSave.sectorHealth);
+        }
+        if (!data.carryoverDebris || typeof data.carryoverDebris !== 'object') {
+            data.carryoverDebris = Object.assign({}, defaultSave.carryoverDebris);
+        }
+        if (!data.campaignFlags || typeof data.campaignFlags !== 'object') {
+            data.campaignFlags = {};
+        }
+        if (!Array.isArray(data.consequencesHistory)) {
+            data.consequencesHistory = [];
+        }
+        if (!Array.isArray(data.availableContracts) || data.availableContracts.length === 0) {
+            if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.generateContractPool === 'function') {
+                data.availableContracts = CampaignManager.generateContractPool(data);
+            } else {
+                data.availableContracts = [];
+            }
+        }
+        if (data.activeContract === undefined) {
+            data.activeContract = null;
+        }
+        this.save(data);
+        return data;
+    }
+
     static load() {
         try {
             const raw = localStorage.getItem(this.STORAGE_KEY);
             const defaultSave = this.getDefaultSave();
-            if (!raw) return defaultSave;
+            if (!raw) {
+                if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.generateContractPool === 'function') {
+                    defaultSave.availableContracts = CampaignManager.generateContractPool(defaultSave);
+                }
+                this.save(defaultSave);
+                return defaultSave;
+            }
+
             const data = JSON.parse(raw);
+
+            // Safe Migration to Save Version 2
+            if (!data.saveVersion || data.saveVersion < 2) {
+                return this.migrateToV2(data, defaultSave);
+            }
+
             const merged = Object.assign({}, defaultSave, data);
             if (!merged.materials || typeof merged.materials !== 'object') {
                 merged.materials = { metal: 0, cells: 0, chips: 0 };
             } else {
                 merged.materials = Object.assign({ metal: 0, cells: 0, chips: 0 }, merged.materials);
             }
+            if (!merged.reputation || typeof merged.reputation !== 'object') {
+                merged.reputation = Object.assign({}, defaultSave.reputation);
+            }
+            if (!merged.sectorHealth || typeof merged.sectorHealth !== 'object') {
+                merged.sectorHealth = Object.assign({}, defaultSave.sectorHealth);
+            }
+            if (!merged.carryoverDebris || typeof merged.carryoverDebris !== 'object') {
+                merged.carryoverDebris = Object.assign({}, defaultSave.carryoverDebris);
+            }
             if (!merged.commanderName) merged.commanderName = 'Commander';
             if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';
             if (!Array.isArray(merged.leaderboard) || merged.leaderboard.length === 0) {
                 merged.leaderboard = defaultSave.leaderboard;
+            }
+            if (!Array.isArray(merged.availableContracts) || merged.availableContracts.length === 0) {
+                if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.generateContractPool === 'function') {
+                    merged.availableContracts = CampaignManager.generateContractPool(merged);
+                }
             }
             return merged;
         } catch (e) {

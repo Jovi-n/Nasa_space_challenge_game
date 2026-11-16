@@ -518,3 +518,79 @@
   - Offline snapshot resilience and real vs simulated event partitioning.
   - Shielding absorption and power/radar/comms effect scaling.
   - Resilience against missing `DONKI_SNAPSHOT` (`undefined`) and malformed data (`{ events: null }`, `{ events: [] }`) without runtime exceptions.
+
+---
+
+## [Phase 8a — Contract Generation & Persistent Campaign System] - 2026-11-16
+### Status: Completed & Verified
+
+### 1. Procedural Contract Generation Formula (SECTOR × OBJECTIVE × MODIFIERS)
+- Implemented `CampaignManager` in `js/campaign.js` for procedural, deterministic contract pool generation using the campaign seed, completed missions, reputation, and sector health.
+- **Five Contract Objectives**:
+  - `quota` (**Orbital Quota**): Standard kinetic debris clearance and recycling to ensure safe transit.
+  - `protect` (**Asset Protection**): Defensive escort and perimeter protection for high-value commercial megaconstellation satellites.
+  - `passivate` (**Stage Passivation**): Tactical neutralization and venting of pressurized upper-stage rocket hazards using kinetic nudges `[Q]`.
+  - `recover` (**Core Recovery**): Locating, capturing, and delivering intact high-value priority instrument cores to the Aegis Depot.
+  - `survive` (**Cascade Survival**): Enduring high-density hypervelocity debris bombardment until the emergency orbital extraction window opens.
+- **Six Operational Modifiers**:
+  - `storm_season`: High-frequency space-weather disturbances and solar radiation events.
+  - `dense_cloud`: $+50\%$ initial debris density and elevated fragmentation multiplier on impacts.
+  - `low_budget`: $-35\%$ starting propellant and battery reserve margins.
+  - `rush`: $-30\%$ time limit deadline with $+50\%$ scrap bounty reward.
+  - `dead_stick`: $+35\%$ thruster propellant consumption and sluggish reaction wheel damping.
+  - `blackout`: $-50\%$ solar panel recharge rate and $-30\%$ radar collision warning radius.
+
+### 2. Tactical Mission Board (`#screen-mission-board`)
+- **Standing & Telemetry Bar**:
+  - Displays campaign seed (`SEED-XXXXXX`), triple reputation meters (Agency, Commercial, Public), and available scrap reserves.
+- **Three Available Contracts Grid (`#contracts-card-grid`)**:
+  - Card 1: Familiar quota clearance mission.
+  - Card 2: Tactical challenge (`passivate` or `protect`).
+  - Card 3: High-stakes survival run (`survive` or `recover`) with active hazard modifiers.
+  - Each card details: Affiliated client, contract title, objective badge, risk tag (`Low`, `Moderate`, `Severe`, `Extreme`), active modifier chips, description, target quota/metric, time window, suggested spacecraft bus, scrap payout, budget advance, score bounty, and material rewards.
+- **Solicitation / Reroll Action (`#btn-reroll-contracts`)**:
+  - Allows soliciting a fresh roster of 3 contracts for a 50 Scrap service fee.
+- **Accept Contract Action (`.btn-accept-contract`)**:
+  - Sets active contract in persistent storage and routes to Mission Design Studio with pre-configured sector and target requirements.
+
+### 3. Save Version 2 & Safe Migration (`OrbitalStorage`)
+- Upgraded `CURRENT_SAVE_VERSION = 2` in `js/data.js`.
+- **Safe Non-Destructive Migration (`OrbitalStorage.migrateToV2`)**:
+  - Seamlessly detects legacy v1 saves (`!saveVersion || saveVersion < 2`).
+  - Preserves 100% of historical player progress: credits, high scores, stars, unlocked sectors, upgrade tiers, harvested materials, selected spacecraft/equipment, and leaderboard records.
+  - Automatically initializes new campaign fields: `campaignSeed`, `reputation` (`{ agency: 50, commercial: 50, public: 50 }`), `sectorHealth` (per-sector 85% to 30%), `carryoverDebris` (per-sector 0), `campaignFlags`, `consequencesHistory`, and `availableContracts`.
+- Fresh save initialization guarantees complete Save v2 state out-of-the-box.
+
+### 4. Persistent Campaign Consequences & Feedback Loop
+- Implemented `CampaignManager.applyMissionOutcome(scene, victory, reason)`:
+  - **Successful Mission**:
+    - Improves sector orbital health by $+12\%$ to $+25\%$.
+    - Reduces residual carryover debris by up to $80\%$ of delivered mass.
+    - Shifts Agency, Commercial, and Public reputations positively.
+    - Awards scrap payout and material bounties (Metal, Cells, Chips).
+    - Generates positive narrative debrief noting collision-free performance or controlled contact.
+  - **Failed Mission / Incident**:
+    - Degrades sector orbital health by $-15\%$ to $-30\%$.
+    - Generates 3 to 10 uncatalogued residual kinetic fragments (`carryoverDebris`) left in orbital drift.
+    - Shifts reputation negatively based on collision severity and Kessler risk.
+    - Generates incident narrative warning that future operations in that sector will suffer Dense Cloud conditions.
+  - **Carryover Debris In-Game Mechanics**:
+    - `spawnInitialDebris()` queries `save.carryoverDebris[sectorKey]` and injects residual fragments into future flights in that sector.
+
+### 5. Flight Debrief Section 5: Campaign Consequences Audit (`#debrief-campaign-panel`)
+- Integrated into the post-mission results modal (`#modal-results`):
+  - Dynamic Sector Orbital Health bar with color-coded health percentage and delta.
+  - Residual Carryover Debris readout tracking uncleaned fragments remaining in drift.
+  - Triple Reputation Shifts chips (`AGY ±X`, `COM ±Y`, `PUB ±Z`).
+  - Consequence narrative report detailing the broader campaign ramifications of the flight.
+  - Dedicated `#btn-results-board` button returning directly to the Mission Board.
+
+### 6. Automated Test Suite (`tests/test_phase8a.js`)
+- Tested and verified:
+  - Safe migration of legacy v1 saves with complete preservation of credits, levels, and upgrades.
+  - Fresh save initialization with Save v2 schema.
+  - Procedural generation of 3 diverse contracts matching `SECTOR × OBJECTIVE × MODIFIERS`.
+  - Contract acceptance and active contract recording in storage.
+  - Positive consequences on clean victory (health increase, carryover debris reduction, reputation gains).
+  - Negative consequences on failure (health drop, fragment generation, reputation penalties).
+  - Solicit / reroll contracts deducting 50 Scrap and replenishing pool.
