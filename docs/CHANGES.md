@@ -641,3 +641,28 @@
 3. **Automated Verification**:
    - Expanded `tests/test_menu_and_f3.js` with Test 9 verifying CSS positioning rules (`left: 18px`, `top: 168px`, `top: 208px`) and dynamic `.hud-mode` class toggling across screen transitions.
    - All 9 test cases in `tests/test_menu_and_f3.js` and all existing test suites (`test_phase6.js`, `test_phase7.js`, `test_phase8a.js`) pass with 100% success rate.
+
+---
+
+## [Phase 8a Feature — Space Weather & Storm Hazard Physical Mechanics] - 2026-11-16
+### Status: Completed & Verified
+
+### Features & Hazardous Mechanics Introduced:
+1. **Solar Wind & Thermospheric Drag Surge (Kinetic Hazard Force)**:
+   - When a geomagnetic or solar radiation storm is active (or in contract missions with the `storm_season` modifier), high-speed solar wind (>600 km/s) and thermospheric expansion exert continuous physical drag on the player's spacecraft body (`velocity += windAngle * windSpeed * dt`).
+   - Adrift debris across the orbital sector is simultaneously accelerated by the solar wind, creating dynamic, unpredictable kinetic drift patterns.
+2. **Periodic Geomagnetic Plasma EMP Surges (Active Storm Hazard Pulse)**:
+   - Every 10–14 seconds during active space weather (and every 8–11 seconds in `storm_season`), an expanding coronal plasma shockwave sweeps across the sector with camera shake, warning sirens, and particle discharges (`particle_shockwave`, `particle_spark`).
+   - **Tactical Faraday Haven**: If the player is within the Aegis Depot perimeter (`dist <= stationDockingRadius + 50`), the station's magnetic shield grounds the EMP surge with zero damage (`DEPOT FARADAY SHIELD: SURGE GROUNDED`).
+   - **Open Space Strike**: If caught in open space, the craft takes an electrostatic shock (-14 HP base, -18 Battery base) scaled by Whipple shielding and Titan bus absorption (`spaceWeatherShieldDamping`), and triggers an Avionics Single-Event Upset (SEU) causing 1.6 seconds of thruster jitter and control instability.
+3. **Electrostatic Charged Debris Hazard**:
+   - Adrift debris builds up electrostatic charge during storms. Direct ungrounded collision releases a static discharge (-6 HP, -10 Bat).
+   - Locking the tractor beam onto charged debris safely grounds the charge through the ship's collection apparatus, rewarding the player with bonus score (`+25 STATIC GROUNDED`).
+4. **Storm Atmosphere & Visual Ionization**:
+   - Viewport-edge auroral ionization ribbons rendered dynamically at the top and bottom of the screen.
+   - Electric cyan/magenta solar wind streaks and branching electrostatic lightning arcs flashing across space.
+   - HUD banner actively highlights hazard state: `⚡ HAZARD: [EVENT] // DRAG SURGE & CORONAL EMP // SHELTER IN DEPOT`.
+5. **Contract Modifier: `storm_season`**:
+   - `storm_season` contracts now maintain continuous active space-weather storm conditions with uninterrupted solar drag and rapid coronal EMP surge cycles.
+6. **Automated Verification**:
+   - Created `tests/test_storm_hazard.js` validating kinetic solar wind drag, open space surge damage, Aegis Depot Faraday haven grounding, Whipple shield mitigation, and storm season continuous retriggering. All 5/5 tests passing 100%. All existing suites (`test_phase6.js`, `test_phase7.js`, `test_phase8a.js`, `test_menu_and_f3.js`) pass with 100% success rate.

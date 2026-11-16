@@ -2075,21 +2075,26 @@ window.updateGameHUD = (scene) => {
             }
         }
 
-        // Phase 7 Space Weather Banner (NASA/CCMC DONKI)
+        // Phase 7 Space Weather Banner (NASA/CCMC DONKI & Storm Season Hazard)
         if (hud.weatherBanner) {
             const weatherFeature = typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.spaceWeather;
-            if (weatherFeature && scene.activeSpaceWeather) {
-                const sw = scene.activeSpaceWeather;
+            const isStormActive = weatherFeature && Boolean(scene.activeSpaceWeather || scene.isStormSeason);
+            if (isStormActive) {
+                const sw = scene.activeSpaceWeather || {
+                    eventID: 'STORM-SEASON-ACTIVE',
+                    severity: 'G4 - Severe Geomagnetic Storm',
+                    description: 'High-speed solar wind & coronal plasma EMP surges active across orbital sector.',
+                    source: 'NOAA SWPC / NASA DONKI'
+                };
                 hud.weatherBanner.classList.remove('hidden');
-                if (hud.weatherId) hud.weatherId.textContent = sw.eventID || 'DONKI-EVENT';
+                if (hud.weatherId) hud.weatherId.textContent = sw.eventID || 'DONKI-STORM';
                 if (hud.weatherDate) {
-                    const dStr = sw.eventTime ? sw.eventTime.slice(0, 10) : '2024-05-10';
+                    const dStr = sw.eventTime ? sw.eventTime.slice(0, 10) : 'LIVE-ORBIT';
                     hud.weatherDate.textContent = `(${dStr})`;
                 }
                 if (hud.weatherDesc) {
-                    const sev = sw.severity || 'ACTIVE';
-                    const desc = sw.description ? sw.description.slice(0, 90) : '';
-                    hud.weatherDesc.textContent = `${sev} // ${desc}`;
+                    const sev = sw.severity || 'ACTIVE STORM HAZARD';
+                    hud.weatherDesc.innerHTML = `<strong style="color: #ef4444;">⚡ HAZARD:</strong> ${sev} // DRAG SURGE & CORONAL EMP // SHELTER IN DEPOT`;
                 }
                 if (hud.weatherSource) {
                     hud.weatherSource.textContent = `Source: ${sw.source || 'NASA/CCMC DONKI'}`;

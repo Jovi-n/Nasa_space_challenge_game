@@ -292,13 +292,23 @@ class OrbitalGameScene extends Phaser.Scene {
         this.currentLane = 2;
         this.activeSpaceWeather = null;
         this.spaceWeatherTimer = 0;
-        this.spaceWeatherCooldown = Phaser.Math.Between(15, 28);
+        this.spaceWeatherCooldown = (typeof Phaser !== 'undefined' && Phaser.Math && Phaser.Math.Between) ? Phaser.Math.Between(15, 28) : 20;
         this.spaceWeatherShieldDamping = 1.0;
         this.effectiveSolarMod = 1.0;
         this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
 
+        // Storm Season Contract Modifier & Space Weather Hazard Dynamics
+        this.isStormSeason = (this.contractModifiers && this.contractModifiers.includes('storm_season'));
+        this.stormPulseTimer = this.isStormSeason ? 8.0 : 12.0;
+        this.stormWindAngle = Math.PI * 0.18; // Directional solar wind vector
+        this.stormAvionicsJitterTimer = 0;
+
         if (typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.spaceWeather) {
-            if (this.missionConfig.id === 'low_altitude_breakup' || this.missionConfig.id === 'cascade_finale') {
+            if (this.isStormSeason) {
+                this.time.delayedCall(1500, () => {
+                    this.triggerSpaceWeatherEvent();
+                });
+            } else if (this.missionConfig.id === 'low_altitude_breakup' || this.missionConfig.id === 'cascade_finale') {
                 this.time.delayedCall(3500, () => {
                     this.triggerSpaceWeatherEvent();
                 });
@@ -876,15 +886,18 @@ class OrbitalGameScene extends Phaser.Scene {
         }
 
         // Atmospheric Drag & Solar Storm Ionization Streaks
-        if (this.activeAtmosphericDrag < 1.0 || (this.director && this.director.stage === 'Climax' && this.kesslerRisk > 70)) {
+        const hasStorm = Boolean(this.activeSpaceWeather || this.isStormSeason);
+        if (this.activeAtmosphericDrag < 1.0 || hasStorm || (this.director && this.director.stage === 'Climax' && this.kesslerRisk > 70)) {
             const cam = this.cameras.main;
-            const streakCount = 10;
-            this.fxGraphics.lineStyle(1.5, 0xf97316, 0.45);
+            const streakCount = hasStorm ? 16 : 10;
+            const color = hasStorm ? 0x00f3ff : 0xf97316;
+            const alpha = hasStorm ? 0.60 : 0.45;
+            this.fxGraphics.lineStyle(1.5, color, alpha);
             for (let i = 0; i < streakCount; i++) {
                 const seed = (time * 0.7 + i * 149.3) % 1000;
                 const sx = cam.scrollX + ((seed * 13) % (cam.width + 200)) - 100;
                 const sy = cam.scrollY + ((seed * 19) % (cam.height + 200)) - 100;
-                const len = 30 + (seed % 40);
+                const len = 35 + (seed % 50);
                 this.fxGraphics.lineBetween(sx, sy, sx - len, sy + len * 0.35);
             }
         }
@@ -966,6 +979,17 @@ class OrbitalGameScene extends Phaser.Scene {
         const turnDamping = targetTurnRate === 0 ? 3.5 : 8.5;
         const curAngVel = this.player.body ? this.player.body.angularVelocity : 0;
         this.player.setAngularVelocity(Phaser.Math.Linear(curAngVel, targetTurnRate, dt * turnDamping));
+
+        // Storm Surge Avionics Disruption (Single-Event Upset / RCS thruster jitter)
+        if (this.stormAvionicsJitterTimer > 0) {
+            this.stormAvionicsJitterTimer -= dt;
+            if (this.player && this.player.body) {
+                this.player.body.angularVelocity += (Math.random() - 0.5) * 85;
+                if (Math.random() < 0.25 && this.thrusterParticles) {
+                    this.thrusterParticles.emitParticleAt(this.player.x, this.player.y, 1);
+                }
+            }
+        }
 
         // RCS thruster pixel puffs during turning
         if (isTurning && this.thrusterParticles && Math.random() < 0.35) {
@@ -1358,6 +1382,13 @@ class OrbitalGameScene extends Phaser.Scene {
                     // Mark as actively tractor-pulled with timestamp to avoid collision damage
                     d.isBeingPulledByTractor = true;
                     d.tractorPullTime = this.time.now;
+
+                    // Ground electrostatic charge if active storm
+                    if (Boolean(this.activeSpaceWeather || this.isStormSeason) && !d._stormGrounded) {
+                        d._stormGrounded = true;
+                        this.score += 25;
+                        this.showFloatingText(d.x, d.y - 20, '⚡ STATIC GROUNDED (+25)', '#10b981');
+                    }
 
                     // Draw pixel targeting reticle around pulled debris
                     this.fxGraphics.lineStyle(1.5, 0x38bdf8, 0.8);
@@ -1833,9 +1864,9 @@ class OrbitalGameScene extends Phaser.Scene {
             // 2. Radar Noise Simulation (Electrostatic scanlines across HUD)
             if (effects.radarNoise && effects.radarNoise > 0) {
                 const noiseLevel = effects.radarNoise * damping;
-                if (this.hudGraphics && Math.random() < 0.60) {
+                if (this.hudGraphics && Math.random() < 0.60 && this.cameras && this.cameras.main) {
                     const cam = this.cameras.main;
-                    const lineY = Phaser.Math.Between(0, cam.height);
+                    const lineY = (typeof Phaser !== 'undefined' && Phaser.Math && Phaser.Math.Between) ? Phaser.Math.Between(0, cam.height) : Math.floor(Math.random() * cam.height);
                     this.hudGraphics.lineStyle(1, 0x00f3ff, 0.15 * noiseLevel);
                     this.hudGraphics.lineBetween(0, lineY, cam.width, lineY);
                 }
@@ -1850,12 +1881,57 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
             }
 
+            // 4. Kinetic Solar Wind & Thermospheric Drag Hazard Force
+            if (this.player && this.player.body && this.player.body.velocity) {
+                const stormWindSpeed = (this.isStormSeason ? 65 : 45) * damping;
+                const windAngle = this.stormWindAngle || (Math.PI * 0.18);
+                this.player.body.velocity.x += Math.cos(windAngle) * stormWindSpeed * dt;
+                this.player.body.velocity.y += Math.sin(windAngle) * stormWindSpeed * dt;
+            }
+
+            // Solar Wind drift applied to drifting space debris
+            if (this.debrisGroup && typeof this.debrisGroup.getChildren === 'function') {
+                const windAngle = this.stormWindAngle || (Math.PI * 0.18);
+                const debrisList = this.debrisGroup.getChildren();
+                for (let i = 0; i < debrisList.length; i++) {
+                    const d = debrisList[i];
+                    if (d && d.active && d.body && d.body.velocity && !d.isPendingCollection) {
+                        d.body.velocity.x += Math.cos(windAngle) * 22 * dt;
+                        d.body.velocity.y += Math.sin(windAngle) * 22 * dt;
+                    }
+                }
+            }
+
+            // 5. Periodic Geomagnetic Plasma EMP Surges (Physical Storm Hazard Pulse)
+            this.stormPulseTimer = (this.stormPulseTimer !== undefined ? this.stormPulseTimer : 10) - dt;
+            if (this.stormPulseTimer <= 0) {
+                this.stormPulseTimer = this.isStormSeason ? 10.0 : 14.0;
+                if (typeof this.triggerStormPlasmaSurge === 'function') {
+                    this.triggerStormPlasmaSurge();
+                }
+            }
+
+            // 6. Visual Auroral Ionization & Electrostatic Arcs
+            if (this.fxGraphics && Math.random() < 0.35 && this.player) {
+                const randOff = () => (Math.random() - 0.5) * 350;
+                const sx = this.player.x + randOff();
+                const sy = this.player.y + randOff();
+                const ex = sx + (Math.random() - 0.5) * 90;
+                const ey = sy + (Math.random() - 0.5) * 90;
+                this.fxGraphics.lineStyle(1.5, 0x00f3ff, 0.7);
+                this.fxGraphics.lineBetween(sx, sy, ex, ey);
+            }
+
             if (this.spaceWeatherTimer <= 0) {
                 this.logFlightEvent('WEATHER_CLEAR', `Space weather disturbance ${this.activeSpaceWeather.eventID} cleared. Systems recovered to nominal.`, 'info');
                 this.activeSpaceWeather = null;
                 this.effectiveSolarMod = 1.0;
                 this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
-                this.spaceWeatherCooldown = Phaser.Math.Between(35, 60);
+                this.spaceWeatherCooldown = this.isStormSeason ? 3.0 : ((typeof Phaser !== 'undefined' && Phaser.Math && Phaser.Math.Between) ? Phaser.Math.Between(35, 60) : 40);
+
+                if (this.isStormSeason) {
+                    this.triggerSpaceWeatherEvent();
+                }
             }
         } else {
             this.effectiveSolarMod = 1.0;
@@ -2009,6 +2085,61 @@ class OrbitalGameScene extends Phaser.Scene {
                     });
                 }
             }
+        }
+    }
+
+    /**
+     * Trigger a physical Coronal Plasma EMP Hazard Surge across the orbital sector
+     */
+    triggerStormPlasmaSurge() {
+        if (!this.player || !this.player.active) return;
+
+        // Check if player is safely docked or within Aegis Depot Faraday shield haven
+        const distToDepot = (this.station && typeof Phaser !== 'undefined' && Phaser.Math)
+            ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.station.x, this.station.y)
+            : 9999;
+        const depotShieldRadius = (this.stationDockingRadius || 180) + 50;
+        const isSafeInDepot = distToDepot <= depotShieldRadius;
+
+        if (this.cameras && this.cameras.main) {
+            this.cameras.main.shake(320, 0.008);
+        }
+        window.soundSystem?.playWarning?.(true);
+
+        if (isSafeInDepot) {
+            if (typeof this.showFloatingText === 'function') {
+                this.showFloatingText(this.player.x, this.player.y - 25, 'DEPOT FARADAY SHIELD: SURGE GROUNDED', '#10b981');
+            }
+            this.logFlightEvent('STORM_SHIELD', 'Aegis Depot magnetic perimeter absorbed coronal plasma surge. Craft unharmed.', 'success');
+            return;
+        }
+
+        // Caught in open space: Electrostatic plasma shock
+        const damping = this.spaceWeatherShieldDamping || 1.0;
+        const baseDamage = 14;
+        const actualDamage = Math.max(3, Math.round(baseDamage * damping));
+        const batDrain = Math.round(18 * damping);
+
+        this.hull = Math.max(0, this.hull - actualDamage);
+        this.battery = Math.max(0, this.battery - batDrain);
+        this.stormAvionicsJitterTimer = 1.6; // Momentary control instability
+
+        if (this.particleEmitterSpark && typeof this.particleEmitterSpark.explode === 'function') {
+            this.particleEmitterSpark.explode(16, this.player.x, this.player.y);
+        }
+        if (this.particleEmitterShockwave && typeof this.particleEmitterShockwave.explode === 'function') {
+            this.particleEmitterShockwave.explode(1, this.player.x, this.player.y);
+        }
+
+        window.soundSystem?.playExplosion?.();
+
+        if (typeof this.showFloatingText === 'function') {
+            this.showFloatingText(this.player.x, this.player.y - 30, `⚡ CORONAL SURGE! -${actualDamage} HP -${batDrain} BAT`, '#ef4444');
+        }
+        this.logFlightEvent('STORM_HAZARD', `Coronal plasma EMP surge hit craft! Hull -${actualDamage} HP, Battery -${batDrain}, Avionics jittered.`, 'crit');
+
+        if (this.hull <= 0 && typeof this.handleMissionEnd === 'function') {
+            this.handleMissionEnd(false, 'HULL BREACH - DESTROYED BY CORONAL PLASMA STORM');
         }
     }
 
@@ -2284,6 +2415,19 @@ class OrbitalGameScene extends Phaser.Scene {
         player.body.velocity.y += Math.sin(bumpAngle) * knockbackImpulse;
         debris.body.velocity.x -= Math.cos(bumpAngle) * knockbackImpulse * 0.7;
         debris.body.velocity.y -= Math.sin(bumpAngle) * knockbackImpulse * 0.7;
+
+        // Storm Electrostatic Hazard Discharge on Debris Collision
+        if (Boolean(this.activeSpaceWeather || this.isStormSeason) && !isTractorPull) {
+            const zapDmg = Math.max(2, Math.round(6 * (this.spaceWeatherShieldDamping || 1.0)));
+            this.hull = Math.max(0, this.hull - zapDmg);
+            this.battery = Math.max(0, this.battery - 10);
+            if (this.sparkParticles && typeof this.sparkParticles.emitParticleAt === 'function') {
+                this.sparkParticles.emitParticleAt(debris.x, debris.y, 8);
+            }
+            this.showFloatingText(debris.x, debris.y - 35, `⚡ STATIC DISCHARGE -${zapDmg} HP`, '#00f3ff');
+            this.logFlightEvent('ELECTROSTATIC', `Charged debris static discharge (-${zapDmg} Hull, -10 Bat). Use tractor to ground.`, 'warn');
+            window.soundSystem?.playWarning?.();
+        }
 
         // Low-speed contact (< 60 px/s) -> negligible damage; continuous contact does NOT drain health
         if (impactSpeed < 60) {
