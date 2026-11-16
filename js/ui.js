@@ -74,7 +74,14 @@ class UIController {
             matMetal: document.getElementById('hud-mat-metal'),
             matCells: document.getElementById('hud-mat-cells'),
             matChips: document.getElementById('hud-mat-chips'),
-            missionStage: document.getElementById('hud-mission-stage')
+            missionStage: document.getElementById('hud-mission-stage'),
+            laneIndicator: document.getElementById('hud-lane-indicator'),
+            weatherBanner: document.getElementById('hud-weather-banner'),
+            weatherId: document.getElementById('hud-weather-id'),
+            weatherDate: document.getElementById('hud-weather-date'),
+            weatherDesc: document.getElementById('hud-weather-desc'),
+            weatherSource: document.getElementById('hud-weather-source'),
+            weatherSimLabel: document.getElementById('hud-weather-sim-label')
         };
 
         // Mission Design Wizard Elements
@@ -1583,6 +1590,54 @@ window.addEventListener('DOMContentLoaded', () => {
             const stg = scene.director.currentStage || 'CALM';
             hud.missionStage.textContent = stg;
             hud.missionStage.className = `hud-stage-badge stage-${stg.toLowerCase()}`;
+        }
+
+        // Phase 7 Orbital Lane Indicator (Behind GAME_DATA.features.orbitalLanes flag)
+        if (hud.laneIndicator) {
+            const lanesFeature = typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.orbitalLanes;
+            if (lanesFeature && scene.player) {
+                hud.laneIndicator.style.display = 'inline-block';
+                const py = scene.player.y;
+                if (py >= 2100) {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-low';
+                    hud.laneIndicator.textContent = 'LANE 1: LOW PERIGEE [+35 KM/H REL]';
+                } else if (py <= 1100) {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-high';
+                    hud.laneIndicator.textContent = 'LANE 3: HIGH APOGEE [-35 KM/H REL]';
+                } else {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-mid';
+                    hud.laneIndicator.textContent = 'LANE 2: CO-ORBITAL [STATION SYNC]';
+                }
+            } else {
+                hud.laneIndicator.style.display = 'none';
+            }
+        }
+
+        // Phase 7 Space Weather Banner (NASA/CCMC DONKI)
+        if (hud.weatherBanner) {
+            const weatherFeature = typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.spaceWeather;
+            if (weatherFeature && scene.activeSpaceWeather) {
+                const sw = scene.activeSpaceWeather;
+                hud.weatherBanner.classList.remove('hidden');
+                if (hud.weatherId) hud.weatherId.textContent = sw.eventID || 'DONKI-EVENT';
+                if (hud.weatherDate) {
+                    const dStr = sw.eventTime ? sw.eventTime.slice(0, 10) : '2024-05-10';
+                    hud.weatherDate.textContent = `(${dStr})`;
+                }
+                if (hud.weatherDesc) {
+                    const sev = sw.severity || 'ACTIVE';
+                    const desc = sw.description ? sw.description.slice(0, 90) : '';
+                    hud.weatherDesc.textContent = `${sev} // ${desc}`;
+                }
+                if (hud.weatherSource) {
+                    hud.weatherSource.textContent = `Source: ${sw.source || 'NASA/CCMC DONKI'}`;
+                }
+                if (hud.weatherSimLabel) {
+                    hud.weatherSimLabel.classList.toggle('hidden', !sw.isSimulated);
+                }
+            } else {
+                hud.weatherBanner.classList.add('hidden');
+            }
         }
 
         // Salvage Materials session counters

@@ -237,6 +237,24 @@ class OrbitalGameScene extends Phaser.Scene {
         this.launchAnnounced = false;
         this.shieldTimer = 0;
 
+        // Phase 7 Orbital Lanes & Space Weather States
+        this.laneDriftSpeed = 35;
+        this.currentLane = 2;
+        this.activeSpaceWeather = null;
+        this.spaceWeatherTimer = 0;
+        this.spaceWeatherCooldown = Phaser.Math.Between(15, 28);
+        this.spaceWeatherShieldDamping = 1.0;
+        this.effectiveSolarMod = 1.0;
+        this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
+
+        if (typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.spaceWeather) {
+            if (this.missionConfig.id === 'low_altitude_breakup' || this.missionConfig.id === 'cascade_finale') {
+                this.time.delayedCall(3500, () => {
+                    this.triggerSpaceWeatherEvent();
+                });
+            }
+        }
+
         // Initial Mission Flight Telemetry Log
         this.logFlightEvent('INSERTION', `Orbital injection complete. Sector ${this.missionConfig.name.split(':')[0]} nominal.`, 'success');
 
@@ -263,6 +281,20 @@ class OrbitalGameScene extends Phaser.Scene {
             // Dashed pixel orbital inclination lines
             for (let x = 0; x < w; x += 32) {
                 starGraphics.lineBetween(x, y, x + 16, y);
+            }
+        }
+
+        // Phase 7 Orbital Lane Boundaries (Behind GAME_DATA.features.orbitalLanes flag)
+        if (typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.orbitalLanes) {
+            // Lane 3 / Lane 2 Boundary (High Apogee vs Co-Orbital Harbor)
+            starGraphics.lineStyle(1.5, 0xa855f7, 0.35);
+            for (let x = 0; x < w; x += 40) {
+                starGraphics.lineBetween(x, 1100, x + 24, 1100);
+            }
+            // Lane 2 / Lane 1 Boundary (Co-Orbital Harbor vs Low Perigee)
+            starGraphics.lineStyle(1.5, 0x10b981, 0.35);
+            for (let x = 0; x < w; x += 40) {
+                starGraphics.lineBetween(x, 2100, x + 24, 2100);
             }
         }
 
@@ -661,7 +693,13 @@ class OrbitalGameScene extends Phaser.Scene {
         // 6. Update Venting Rocket Upper-Stage Plumes & Dynamics
         this.updateVentingRockets(dt);
 
-        // 7. Check Q-Key Laser Nudge Deflection Input
+        // 7. Phase 7 Orbital Lanes (Differential Altitude Movement)
+        this.updateOrbitalLanes(dt);
+
+        // 8. Phase 7 Space Weather Simulation (NASA/CCMC DONKI)
+        this.updateSpaceWeather(dt);
+
+        // 9. Check Q-Key Laser Nudge Deflection Input
         if (Phaser.Input.Keyboard.JustDown(this.keyQ)) {
             this.executeLaserNudge();
         }
@@ -746,9 +784,10 @@ class OrbitalGameScene extends Phaser.Scene {
             (activeDebris * 1.4) + (activeFrags * 2.0) + (this.collisionsCount * 4) - (this.debrisDeliveredCount * 3) - (this.nudgesCount * 2)
         ), 0, 100);
 
-        // 9. Passive Solar Battery Recharge
+        // 9. Passive Solar Battery Recharge (Modified by Space Weather solar flux)
         if (this.battery < this.maxBattery) {
-            this.battery = Math.min(this.maxBattery, this.battery + this.batteryRechargeRate * dt);
+            const solarMod = this.effectiveSolarMod !== undefined ? this.effectiveSolarMod : 1.0;
+            this.battery = Math.min(this.maxBattery, this.battery + (this.batteryRechargeRate * solarMod) * dt);
         }
 
         // Low Fuel & Battery Telemetry Alerts
@@ -1566,6 +1605,177 @@ class OrbitalGameScene extends Phaser.Scene {
         });
     }
 
+    /**
+     * Phase 7: Three Altitude Orbital Lanes with Differential Relative Movement
+     * Behind GAME_DATA.features.orbitalLanes flag
+     */
+    updateOrbitalLanes(dt) {
+        if (typeof GAME_DATA === 'undefined' || !GAME_DATA.features || !GAME_DATA.features.orbitalLanes) {
+            return;
+        }
+
+        const worldW = this.physics.world.bounds.width;
+        const driftSpeed = this.laneDriftSpeed || 35;
+
+        // Determine player's active orbital lane based on altitude
+        if (this.player && this.player.active) {
+            const py = this.player.y;
+            this.currentLane = py >= 2100 ? 1 : (py <= 1100 ? 3 : 2);
+        }
+
+        // Keep the Aegis Depot stationary in player's co-moving reference frame!
+        if (this.station && this.station.body) {
+            this.station.setVelocity(0, 0);
+        }
+
+        // Differential orbital movement of Debris based on altitude lane
+        if (this.debrisGroup) {
+            this.debrisGroup.getChildren().forEach(d => {
+                if (!d || !d.active) return;
+                let laneDrift = 0;
+                if (d.y >= 2100) laneDrift = driftSpeed; // Lane 1: Low Perigee -> fast eastward (+X)
+                else if (d.y <= 1100) laneDrift = -driftSpeed; // Lane 3: High Apogee -> slow westward (-X)
+
+                if (laneDrift !== 0) {
+                    d.x += laneDrift * dt;
+                    if (d.x < 30) d.x = worldW - 40;
+                    else if (d.x > worldW - 30) d.x = 40;
+                }
+            });
+        }
+
+        // Differential orbital movement of Hazards based on altitude lane
+        if (this.hazardGroup) {
+            this.hazardGroup.getChildren().forEach(h => {
+                if (!h || !h.active) return;
+                let laneDrift = 0;
+                if (h.y >= 2100) laneDrift = driftSpeed;
+                else if (h.y <= 1100) laneDrift = -driftSpeed;
+
+                if (laneDrift !== 0) {
+                    h.x += laneDrift * dt;
+                    if (h.x < 30) h.x = worldW - 40;
+                    else if (h.x > worldW - 30) h.x = 40;
+                }
+            });
+        }
+    }
+
+    /**
+     * Phase 7: NASA/CCMC DONKI Space Weather Simulation
+     * Behind GAME_DATA.features.spaceWeather flag
+     */
+    updateSpaceWeather(dt) {
+        if (typeof GAME_DATA === 'undefined' || !GAME_DATA.features || !GAME_DATA.features.spaceWeather) {
+            this.activeSpaceWeather = null;
+            return;
+        }
+
+        if (this.activeSpaceWeather) {
+            this.spaceWeatherTimer -= dt;
+            const effects = this.activeSpaceWeather.effects || {};
+            const damping = this.spaceWeatherShieldDamping || 1.0;
+
+            // 1. Power Effects (Solar flux opacity and battery radiation leakage)
+            if (effects.powerDrainModifier && effects.powerDrainModifier < 1.0) {
+                const penalty = (1.0 - effects.powerDrainModifier) * damping;
+                this.effectiveSolarMod = Math.max(0.25, 1.0 - penalty);
+            } else {
+                this.effectiveSolarMod = 1.0;
+            }
+
+            if (effects.batteryDrainPerSec && effects.batteryDrainPerSec > 0) {
+                const drain = effects.batteryDrainPerSec * damping * dt;
+                this.battery = Math.max(0, this.battery - drain);
+            }
+
+            // 2. Radar Noise Simulation (Electrostatic scanlines across HUD)
+            if (effects.radarNoise && effects.radarNoise > 0) {
+                const noiseLevel = effects.radarNoise * damping;
+                if (this.hudGraphics && Math.random() < 0.60) {
+                    const cam = this.cameras.main;
+                    const lineY = Phaser.Math.Between(0, cam.height);
+                    this.hudGraphics.lineStyle(1, 0x00f3ff, 0.15 * noiseLevel);
+                    this.hudGraphics.lineBetween(0, lineY, cam.width, lineY);
+                }
+            }
+
+            // 3. Comms Disruption Simulation (Sensor warning range contraction)
+            if (effects.commsDisruption && effects.commsDisruption > 0) {
+                const hasRelay = this.hasTdrssRelay;
+                const commsPenalty = effects.commsDisruption * (hasRelay ? 0.45 : 1.0) * damping;
+                this.effectiveRadarMultiplier = (this.radarMultiplier || 1.0) * (1.0 - (commsPenalty * 0.28));
+            } else {
+                this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
+            }
+
+            if (this.spaceWeatherTimer <= 0) {
+                this.logFlightEvent('WEATHER_CLEAR', `Space weather disturbance ${this.activeSpaceWeather.eventID} cleared. Systems recovered to nominal.`, 'info');
+                this.activeSpaceWeather = null;
+                this.effectiveSolarMod = 1.0;
+                this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
+                this.spaceWeatherCooldown = Phaser.Math.Between(35, 60);
+            }
+        } else {
+            this.effectiveSolarMod = 1.0;
+            this.effectiveRadarMultiplier = this.radarMultiplier || 1.0;
+
+            // Periodic space weather triggering
+            this.spaceWeatherCooldown -= dt;
+            if (this.spaceWeatherCooldown <= 0) {
+                this.triggerSpaceWeatherEvent();
+            }
+        }
+    }
+
+    /**
+     * Trigger a NASA/CCMC DONKI space weather alert
+     */
+    triggerSpaceWeatherEvent(eventId = null) {
+        if (typeof GAME_DATA === 'undefined' || !GAME_DATA.features || !GAME_DATA.features.spaceWeather) {
+            return;
+        }
+
+        // Offline Resilience: Validate that DONKI_SNAPSHOT exists and has events
+        if (typeof DONKI_SNAPSHOT === 'undefined' || !DONKI_SNAPSHOT || !Array.isArray(DONKI_SNAPSHOT.events) || DONKI_SNAPSHOT.events.length === 0) {
+            return;
+        }
+
+        let event = null;
+        if (eventId && typeof DONKI_SNAPSHOT.getEventById === 'function') {
+            event = DONKI_SNAPSHOT.getEventById(eventId);
+        }
+        if (!event) {
+            if (this.missionConfig.id === 'low_altitude_breakup') {
+                event = DONKI_SNAPSHOT.events.find(e => e.eventType === 'GST') || DONKI_SNAPSHOT.getRandomEvent();
+            } else {
+                event = DONKI_SNAPSHOT.getRandomEvent();
+            }
+        }
+        if (!event) return;
+
+        this.activeSpaceWeather = event;
+        this.spaceWeatherTimer = event.effects?.durationSec || 28;
+
+        // Calculate Shielding Mitigation Factor
+        const hullLvl = this.hullUpgradeLevel || 0;
+        const isArmored = this.payloadConfig?.id === 'armored';
+        const isTitan = this.spacecraftBus?.id === 'titan';
+        const shieldAbsorption = Math.min(0.70, (hullLvl * 0.15) + (isArmored ? 0.20 : 0) + (isTitan ? 0.25 : 0));
+        this.spaceWeatherShieldDamping = Math.max(0.30, 1.0 - shieldAbsorption);
+
+        const dateStr = event.eventTime ? event.eventTime.slice(0, 10) : '2024-05-10';
+        const shieldPct = Math.round(shieldAbsorption * 100);
+
+        if (event.isSimulated) {
+            this.logFlightEvent('WEATHER_ALERT', `[SIMULATED] ${event.eventID} (${dateStr}): ${event.severity}. Source: ${event.source}. Shielding absorbed ${shieldPct}% of flux.`, 'warn');
+        } else {
+            this.logFlightEvent('WEATHER_ALERT', `REAL EVENT ${event.eventID} (${dateStr}): ${event.severity}. Source: ${event.source}. Shielding absorbed ${shieldPct}% of flux.`, 'crit');
+        }
+
+        window.soundSystem?.playWarning?.(true);
+    }
+
     executeLaserNudge() {
         if (this.battery < 12) {
             this.showFloatingText(this.player.x, this.player.y - 30, 'BATTERY LOW (12 REQUIRED)', '#ef4444');
@@ -1728,15 +1938,24 @@ class OrbitalGameScene extends Phaser.Scene {
         if (!this.hazardGroup || !this.player) return;
 
         // Check all hazards for proximity & reveal hidden small debris
+        const currentRadarMult = this.effectiveRadarMultiplier !== undefined ? this.effectiveRadarMultiplier : (this.radarMultiplier || 1.0);
+
         this.hazardGroup.getChildren().forEach(h => {
             if (!h || !h.active) return;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, h.x, h.y);
             const meta = h.hazardMeta || (h.hazardKey ? GAME_DATA.HAZARD_TYPES[h.hazardKey] : null) || GAME_DATA.HAZARD_TYPES.hidden_debris;
 
+            // Apply space-weather electromagnetic radar noise jitter if active
+            let effectiveDist = dist;
+            if (this.activeSpaceWeather && this.activeSpaceWeather.effects?.radarNoise) {
+                const noise = this.activeSpaceWeather.effects.radarNoise * (this.spaceWeatherShieldDamping || 1.0);
+                effectiveDist += (Math.random() - 0.5) * 40 * noise;
+            }
+
             // Hidden debris radar cross section mechanic: dimmed until within radar detection range
             if (meta?.id === 'hidden_debris') {
-                const detectionDist = 280 * (this.radarMultiplier || 1.0);
-                if (dist < detectionDist) {
+                const detectionDist = 280 * currentRadarMult;
+                if (effectiveDist < detectionDist) {
                     h.alpha = 1.0;
                     // Stepped pixel detection brackets around detected hidden debris
                     const bx = Math.floor(h.x);
@@ -1757,10 +1976,10 @@ class OrbitalGameScene extends Phaser.Scene {
             }
 
             // Dynamic warning radius based on hazard metadata and sensor upgrade
-            const hazardWarningDist = (meta?.warningRadius || 320) * (this.radarMultiplier || 1.0);
+            const hazardWarningDist = (meta?.warningRadius || 320) * currentRadarMult;
 
             // Proximity warning trigger
-            if (dist < hazardWarningDist) {
+            if (effectiveDist < hazardWarningDist) {
                 imminentDanger = true;
             }
 

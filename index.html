@@ -499,7 +499,10 @@
             <div class="hud-panel hud-mission-status">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
-                    <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <div id="hud-lane-indicator" class="hud-lane-badge lane-mid">LANE 2: CO-ORBITAL [SYNC]</div>
+                        <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
+                    </div>
                 </div>
                 <div class="hud-counters">
                     <div class="hud-counter-item">
@@ -543,6 +546,22 @@
         <!-- Dynamic Collision Warning Banner -->
         <div id="hud-warning-banner" class="hud-warning-banner">
             [ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED
+        </div>
+
+        <!-- Space Weather Alert Banner (NASA/CCMC DONKI) -->
+        <div id="hud-weather-banner" class="hud-weather-banner hidden">
+            <div class="weather-alert-head">
+                <span class="weather-alert-tag">[SPACE WEATHER ALERT]</span>
+                <span id="hud-weather-id">2024-05-10T17:00:00-GST-001</span>
+                <span id="hud-weather-date">(2024-05-10)</span>
+            </div>
+            <div class="weather-alert-body">
+                <span id="hud-weather-desc">G5 EXTREME GEOMAGNETIC STORM</span> // 
+                <span id="hud-weather-source">Source: NASA/CCMC DONKI</span>
+            </div>
+            <div id="hud-weather-sim-label" class="weather-sim-label hidden">
+                [SIMULATED DATA - AEROSPACE TRAINING MODEL]
+            </div>
         </div>
 
         <!-- Docking Station Notification (Recycle vs Strip & Material Repairs) -->
@@ -818,6 +837,7 @@
     <!-- Core Game Scripts -->
     <script src="data/parts.js"></script>
     <script src="data/missions.js"></script>
+    <script src="data/donki-snapshot.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/data.js"></script>
     <script src="js/director.js"></script>

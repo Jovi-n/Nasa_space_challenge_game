@@ -457,3 +457,64 @@
 - Syntax validated across all 8 JS files with zero syntax errors.
 - Phase 1 UI style, terminal aesthetic, Silkscreen/Rajdhani typography, and local storage saves are 100% preserved.
 - Zero runtime build dependencies or external asset download requirements.
+
+---
+
+## [Phase 7 — Orbital Lanes & Space-Weather Effects] - 2026-11-16
+### Status: Completed & Verified
+
+### 1. Three Altitude Orbital Lanes with Differential Relative Movement
+- Implemented three altitude orbital lanes adhering to orbital mechanics ($v \propto 1/\sqrt{r}$):
+  - **Lane 1: Low Perigee ($Y \ge 2100$)**: Closer to Earth with faster orbital velocity $\implies$ relative eastward drift ($+35\text{ px/s}$).
+  - **Lane 2: Co-Orbital Harbor ($1100 < Y < 2100$)**: Depot station orbital altitude $\implies$ zero baseline drift ($0\text{ px/s}$).
+  - **Lane 3: High Apogee ($Y \le 1100$)**: Higher orbital altitude with slower orbital velocity $\implies$ relative westward drift ($-35\text{ px/s}$).
+- **Stationary Depot**: The Aegis Space Station remains centered at $(W/2, H/2)$ in Lane 2 with $(0, 0)$ physics velocity, perfectly stationary in the player's co-moving reference frame.
+- **Visual Demarcation Boundaries**: Dashed pixel orbital lane boundary chords drawn at $Y = 1100$ (purple) and $Y = 2100$ (green).
+- **HUD Lane Indicator (`#hud-lane-indicator`)**: Real-time tactical HUD badge displaying active altitude lane, relative speed offset, and visual color coding (`.lane-low`, `.lane-mid`, `.lane-high`).
+
+### 2. Feature Flags Architecture (`GAME_DATA.features`)
+- Introduced centralized feature flags in `js/data.js`:
+  ```javascript
+  features: {
+      orbitalLanes: true,
+      spaceWeather: true
+  }
+  ```
+- Gracefully disables lane drift calculations, boundary markings, lane HUD indicators, and space-weather effects when toggled off.
+
+### 3. NASA/CCMC DONKI Fetcher & Local Snapshot
+- **Node 18+ Fetcher Script (`scripts/fetch-donki.mjs`)**:
+  - Leverages native `fetch` to query NASA DONKI APIs (`https://api.nasa.gov/DONKI/`) for Geomagnetic Storms (GST), Solar Flares (FLR), Solar Energetic Particles (SEP), and Coronal Mass Ejections (CME).
+  - Resilient offline fallback: When network access is restricted or offline, generates snapshot using verified real NASA historical data and curated simulated scenarios.
+- **Local Snapshot (`data/donki-snapshot.js`)**:
+  - Offline-first architecture enables 100% offline gameplay without external network dependencies.
+  - Contains verified historical NASA/CCMC events:
+    - `2024-05-10T17:00:00-GST-001`: Historic G5 Extreme Geomagnetic Storm (May 2024 solar storm).
+    - `2024-05-11T01:23:00-FLR-001`: Major X5.8 Solar Flare from AR3664.
+    - `2024-05-11T04:15:00-SEP-001`: High-energy solar proton event ($>10\text{ MeV}$).
+    - `2024-03-24T14:30:00-GST-001` & `2023-04-23T17:37:00-GST-001`: G4 Severe Geomagnetic Storms.
+  - Curated simulated sample data explicitly labeled with `isSimulated: true` and `[SIMULATED DATA - AEROSPACE TRAINING MODEL]` (e.g. `SIM-2026-X12-FLR-991`, `SIM-2026-G5-GST-992`, `SIM-2026-S4-SEP-993`).
+
+### 4. Space-Weather Simulation Mechanics & Shielding Reduction
+- **Radar Noise Simulation**:
+  - Geomagnetic storms induce electromagnetic turbulence, introducing distance jitter in proximity detection and drawing electrostatic scanlines across HUD radar.
+- **Communication Disruption**:
+  - Solar flares cause radio ionization blackouts, contracting sensor warning range by up to 28% and degrading telemetry.
+  - TDRSS Geostationary Relay ground comms upgrade provides 50% mitigation against comms disruption.
+- **Power Effects**:
+  - Solar proton flux induces solar array opacity, reducing solar recharge efficiency by up to 40%.
+  - Radiation storms induce battery charge leakage.
+- **Shielding Mitigation**:
+  - Upgraded hull armor tiers (-15% per tier), Armored payload (-20%), and Titan Hauler bus (-25%) actively absorb up to 70% of space-weather electromagnetic flux, dampening radar noise, comms disruption, and battery radiation drain.
+- **Event Telemetry & Labels**:
+  - Real events display Event ID, Date, Severity, and Source (`NASA/CCMC DONKI`).
+  - Simulated events display explicit training model label (`[SIMULATED DATA - AEROSPACE TRAINING MODEL]`).
+
+### 5. Automated Verification & Resilience Testing (`tests/test_phase7.js`)
+- Tested and verified:
+  - Three altitude lanes differential velocity movement (+35 px/s in Lane 1, 0 px/s in Lane 2, -35 px/s in Lane 3).
+  - Aegis Depot stationary in co-moving frame.
+  - Feature flag toggle safety (`orbitalLanes = false`, `spaceWeather = false`).
+  - Offline snapshot resilience and real vs simulated event partitioning.
+  - Shielding absorption and power/radar/comms effect scaling.
+  - Resilience against missing `DONKI_SNAPSHOT` (`undefined`) and malformed data (`{ events: null }`, `{ events: [] }`) without runtime exceptions.

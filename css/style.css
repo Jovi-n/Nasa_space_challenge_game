@@ -1051,6 +1051,88 @@ body, html {
 .hud-stage-badge.stage-crisis { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.12); }
 .hud-stage-badge.stage-climax { color: #ef4444; border-color: rgba(239, 68, 68, 0.6); background: rgba(239, 68, 68, 0.2); animation: pulseDanger 1s infinite alternate; }
 
+/* Phase 7 Orbital Lane Indicator */
+.hud-lane-badge {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    letter-spacing: 0.8px;
+    display: inline-block;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+.hud-lane-badge.lane-low {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.12);
+}
+.hud-lane-badge.lane-mid {
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.45);
+    background: rgba(56, 189, 248, 0.12);
+}
+.hud-lane-badge.lane-high {
+    color: #a855f7;
+    border-color: rgba(168, 85, 247, 0.45);
+    background: rgba(168, 85, 247, 0.12);
+}
+
+/* Phase 7 Space Weather Banner */
+.hud-weather-banner {
+    position: absolute;
+    top: 96px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.94);
+    border: 2px solid #f59e0b;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+    padding: 7px 18px;
+    font-family: var(--font-mono);
+    text-align: center;
+    border-radius: 3px;
+    z-index: 105;
+    pointer-events: none;
+    max-width: 640px;
+    animation: weatherBannerPulse 2s infinite alternate;
+}
+@keyframes weatherBannerPulse {
+    0% { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+    100% { border-color: rgba(245, 158, 11, 1.0); box-shadow: 0 0 18px rgba(245, 158, 11, 0.5); }
+}
+.weather-alert-head {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #f59e0b;
+    margin-bottom: 2px;
+}
+.weather-alert-tag {
+    color: #fde047;
+    letter-spacing: 1px;
+}
+.weather-alert-body {
+    font-size: 0.74rem;
+    color: #cbd5e1;
+    letter-spacing: 0.5px;
+}
+.weather-sim-label {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.15);
+    padding: 1px 6px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+}
+
 /* Phase 5 Difficulty Selector Cards */
 .difficulty-cards-row {
     display: grid;

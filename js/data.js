@@ -4,6 +4,12 @@
  */
 
 const GAME_DATA = {
+    // Phase 7 Feature Flags
+    features: {
+        orbitalLanes: true,
+        spaceWeather: true
+    },
+
     // Mission Flight Difficulty Profiles
     DIFFICULTIES: {
         cadet: {
