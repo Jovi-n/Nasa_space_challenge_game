@@ -1565,8 +1565,8 @@ class UIController {
         const sCredits = document.getElementById('stat-total-credits');
         if (sCredits) sCredits.innerText = (this.save.credits || 0).toLocaleString();
 
-        const pilotPill = document.getElementById('leaderboard-current-pilot');
         const activeName = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || this.save.commanderName || 'Cadet';
+        const pilotPill = document.getElementById('leaderboard-current-pilot');
         if (pilotPill) pilotPill.innerText = activeName.toUpperCase();
 
         const tbody = document.getElementById('leaderboard-tbody');
@@ -1588,6 +1588,63 @@ class UIController {
         // Fallback to local save if service returned empty or not available
         if (records.length === 0 && Array.isArray(this.save.leaderboard)) {
             records = this.save.leaderboard.filter(e => e && e.date !== 'Archive Record' && e.name !== 'Cmdr. Shepard' && e.name !== 'Dr. Ryan Stone' && e.name !== 'Capt. Cooper' && e.name !== 'Aegis Vanguard');
+        }
+
+        // Retroactively attribute runs logged as 'Commander' or 'Cadet' to the real active commander
+        if (activeName && activeName !== 'Cadet' && activeName !== 'Commander') {
+            let updated = false;
+            records.forEach(entry => {
+                if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                    entry.name = activeName;
+                    updated = true;
+                }
+            });
+            if (updated && Array.isArray(this.save.leaderboard)) {
+                this.save.leaderboard.forEach(entry => {
+                    if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                        entry.name = activeName;
+                    }
+                });
+                OrbitalStorage.save(this.save);
+            }
+        }
+
+        // Apply sorting (Score vs Debris)
+        this.leaderboardSortKey = this.leaderboardSortKey || 'score';
+        if (this.leaderboardSortKey === 'debris') {
+            records.sort((a, b) => (b.debris || 0) - (a.debris || 0));
+        } else {
+            records.sort((a, b) => (b.score || 0) - (a.score || 0));
+        }
+
+        // Update Sort UI indicators
+        const iconScore = document.getElementById('sort-icon-score');
+        const iconDebris = document.getElementById('sort-icon-debris');
+        const btnScore = document.getElementById('btn-sort-score');
+        const btnDebris = document.getElementById('btn-sort-debris');
+
+        if (iconScore) iconScore.innerText = this.leaderboardSortKey === 'score' ? '▼' : '↕';
+        if (iconDebris) iconDebris.innerText = this.leaderboardSortKey === 'debris' ? '▼' : '↕';
+        if (btnScore) {
+            btnScore.style.color = this.leaderboardSortKey === 'score' ? 'var(--accent-cyan)' : '#94a3b8';
+            btnScore.innerText = `SCORE ${this.leaderboardSortKey === 'score' ? '▼' : '↕'}`;
+        }
+        if (btnDebris) {
+            btnDebris.style.color = this.leaderboardSortKey === 'debris' ? 'var(--accent-cyan)' : '#94a3b8';
+            btnDebris.innerText = `DEBRIS ${this.leaderboardSortKey === 'debris' ? '▼' : '↕'}`;
+        }
+
+        // Update Pilot Career Best pill
+        const bestPill = document.getElementById('leaderboard-pilot-best');
+        if (bestPill) {
+            const myRuns = records.filter(r => r.name && activeName && r.name.toLowerCase() === activeName.toLowerCase());
+            if (myRuns.length > 0) {
+                const maxScore = Math.max(...myRuns.map(r => r.score || 0));
+                const maxDebris = Math.max(...myRuns.map(r => r.debris || 0));
+                bestPill.innerText = `// BEST: ${maxScore.toLocaleString()} PTS (${maxDebris} DEBRIS)`;
+            } else {
+                bestPill.innerText = '';
+            }
         }
 
         const netStatus = document.getElementById('leaderboard-network-status');
@@ -1623,8 +1680,8 @@ class UIController {
                 <td>#${idx < 9 ? '0' : ''}${idx + 1}</td>
                 <td><strong style="color: ${isMe ? 'var(--accent-cyan)' : '#fff'};">${entry.name || 'Commander'}</strong>${isMe ? ' <span style="font-size: 0.7rem; color: var(--salvage); margin-left: 4px;">[YOU]</span>' : ''}</td>
                 <td>${(entry.mission || 'LEO Corridor').trim()}${statusTag}</td>
-                <td>${entry.debris || 0}</td>
-                <td class="score-cell">${(entry.score || 0).toLocaleString()} PTS</td>
+                <td style="font-weight: ${this.leaderboardSortKey === 'debris' ? 'bold; color: var(--salvage)' : 'normal'};">${entry.debris || 0}</td>
+                <td class="score-cell" style="font-weight: ${this.leaderboardSortKey === 'score' ? 'bold' : 'normal'};">${(entry.score || 0).toLocaleString()} PTS</td>
                 <td>${entry.date || 'Recent'}</td>
             `;
             tbody.appendChild(row);
@@ -1636,6 +1693,7 @@ class UIController {
      */
     initAuthUi() {
         this.authMode = 'login';
+        this.leaderboardSortKey = 'score';
         this.updateAuthDisplay();
 
         // Listen for global auth changes
@@ -1653,6 +1711,45 @@ class UIController {
         document.getElementById('btn-leaderboard-auth')?.addEventListener('click', () => {
             this.openAuthModal();
         });
+
+        // Claim previous local runs as active commander
+        document.getElementById('btn-leaderboard-claim')?.addEventListener('click', () => {
+            const currentCallsign = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || this.save.commanderName || 'Cadet';
+            if (currentCallsign === 'Cadet' || currentCallsign === 'Commander') {
+                alert('Please ENLIST or LOGIN with your custom Commander Callsign first before claiming runs!');
+                this.openAuthModal();
+                return;
+            }
+            if (window.LeaderboardService) {
+                const count = window.LeaderboardService.claimLocalRuns(currentCallsign);
+                window.soundSystem?.playCollect?.();
+                alert(`✓ Successfully claimed ${count} flight record(s) under Commander ${currentCallsign}!`);
+                this.renderLeaderboard();
+            }
+        });
+
+        // Clear local runs button
+        document.getElementById('btn-leaderboard-clear')?.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear your local leaderboard flight records?')) {
+                if (window.LeaderboardService) {
+                    window.LeaderboardService.clearLocalRuns();
+                }
+                window.soundSystem?.playExplosion?.();
+                this.renderLeaderboard();
+            }
+        });
+
+        // Sorting buttons & column headers
+        const setSort = (key) => {
+            this.leaderboardSortKey = key;
+            window.soundSystem?.playUiClick?.();
+            this.renderLeaderboard();
+        };
+
+        document.getElementById('btn-sort-score')?.addEventListener('click', () => setSort('score'));
+        document.getElementById('btn-sort-debris')?.addEventListener('click', () => setSort('debris'));
+        document.getElementById('th-sort-score')?.addEventListener('click', () => setSort('score'));
+        document.getElementById('th-sort-debris')?.addEventListener('click', () => setSort('debris'));
 
         // Refresh Leaderboard button
         document.getElementById('btn-refresh-leaderboard')?.addEventListener('click', () => {

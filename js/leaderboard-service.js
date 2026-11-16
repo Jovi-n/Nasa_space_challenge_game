@@ -52,6 +52,15 @@
                 try {
                     const save = OrbitalStorage.load();
                     save.commanderName = user.callsign;
+                    if (user.callsign && user.callsign !== 'Cadet' && user.callsign !== 'Commander') {
+                        if (Array.isArray(save.leaderboard)) {
+                            save.leaderboard.forEach(entry => {
+                                if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                                    entry.name = user.callsign;
+                                }
+                            });
+                        }
+                    }
                     OrbitalStorage.save(save);
                 } catch (e) {
                     console.warn('[OrbitalAuth] Could not sync commander name to save:', e);
@@ -258,18 +267,66 @@
 
         /**
          * Filter out any mock/archive records so ONLY real users appear
+         * Retroactively maps generic runs ('Commander', 'Cadet') to the authenticated callsign
          */
         cleanRealRecords(records) {
             if (!Array.isArray(records)) return [];
-            return records.filter(entry => {
-                if (!entry || !entry.name || typeof entry.score !== 'number') return false;
-                // Exclude legacy mock placeholders
-                if (entry.date === 'Archive Record') return false;
-                if (entry.name === 'Cmdr. Shepard' || entry.name === 'Dr. Ryan Stone' || entry.name === 'Capt. Cooper' || entry.name === 'Aegis Vanguard') {
-                    return false;
+            const activeUser = (typeof window !== 'undefined' && window.OrbitalAuth) ? window.OrbitalAuth.getCurrentUser() : null;
+            const activeCallsign = (activeUser && activeUser.callsign && activeUser.callsign !== 'Cadet' && activeUser.callsign !== 'Commander')
+                ? activeUser.callsign
+                : null;
+
+            return records
+                .filter(entry => {
+                    if (!entry || typeof entry.score !== 'number') return false;
+                    // Exclude legacy mock placeholders
+                    if (entry.date === 'Archive Record') return false;
+                    if (entry.name === 'Cmdr. Shepard' || entry.name === 'Dr. Ryan Stone' || entry.name === 'Capt. Cooper' || entry.name === 'Aegis Vanguard') {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(entry => {
+                    // Claim generic runs played prior to enlisting/authenticating
+                    if (activeCallsign && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                        return Object.assign({}, entry, { name: activeCallsign });
+                    }
+                    return entry;
+                });
+        }
+
+        /**
+         * Explicitly claim all local runs under the active callsign
+         */
+        claimLocalRuns(callsign) {
+            if (!callsign || typeof OrbitalStorage === 'undefined') return 0;
+            const save = OrbitalStorage.load();
+            if (!Array.isArray(save.leaderboard)) return 0;
+            let claimed = 0;
+            save.leaderboard.forEach(entry => {
+                if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name || entry.name !== callsign)) {
+                    entry.name = callsign;
+                    claimed++;
                 }
-                return true;
             });
+            OrbitalStorage.save(save);
+            this.cachedRecords = save.leaderboard;
+            // Also sync to server API if available
+            save.leaderboard.forEach(e => {
+                this.submitScore(e).catch(() => {});
+            });
+            return claimed;
+        }
+
+        /**
+         * Clear all local leaderboard records
+         */
+        clearLocalRuns() {
+            if (typeof OrbitalStorage === 'undefined') return;
+            const save = OrbitalStorage.load();
+            save.leaderboard = [];
+            OrbitalStorage.save(save);
+            this.cachedRecords = [];
         }
 
         /**

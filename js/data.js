@@ -629,13 +629,39 @@ class OrbitalStorage {
                 merged.survivalRecords = [];
             }
             if (!merged.commanderName) merged.commanderName = 'Commander';
-            if (typeof window !== 'undefined' && window.OrbitalAuth && window.OrbitalAuth.isAuthenticated()) {
-                merged.commanderName = window.OrbitalAuth.getCurrentUser().callsign;
+            if (typeof window !== 'undefined') {
+                if (window.OrbitalAuth && window.OrbitalAuth.isAuthenticated()) {
+                    merged.commanderName = window.OrbitalAuth.getCurrentUser().callsign;
+                } else {
+                    try {
+                        const rawSession = localStorage.getItem('orbital_user_session');
+                        if (rawSession) {
+                            const parsed = JSON.parse(rawSession);
+                            if (parsed && parsed.callsign && parsed.callsign !== 'Cadet' && parsed.callsign !== 'Commander') {
+                                merged.commanderName = parsed.callsign;
+                            }
+                        }
+                    } catch (e) {}
+                }
             }
             if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';
             if (Array.isArray(merged.leaderboard)) {
                 // Ensure leaderboard consists ONLY of real users (filter out mock/archive records)
                 merged.leaderboard = merged.leaderboard.filter(e => e && e.date !== 'Archive Record' && e.name !== 'Cmdr. Shepard' && e.name !== 'Dr. Ryan Stone' && e.name !== 'Capt. Cooper' && e.name !== 'Aegis Vanguard');
+
+                // If a real pilot callsign is active, attribute any unassigned or generic runs to them
+                if (merged.commanderName && merged.commanderName !== 'Commander' && merged.commanderName !== 'Cadet') {
+                    let needsSave = false;
+                    merged.leaderboard.forEach(entry => {
+                        if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                            entry.name = merged.commanderName;
+                            needsSave = true;
+                        }
+                    });
+                    if (needsSave) {
+                        this.save(merged);
+                    }
+                }
             } else {
                 merged.leaderboard = [];
             }

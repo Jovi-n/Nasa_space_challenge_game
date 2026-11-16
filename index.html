@@ -919,10 +919,22 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;">
-                <div class="section-label" style="margin: 0;">TOP FLIGHT RECORDS (REAL PLAYERS ONLY)</div>
-                <div id="leaderboard-network-status" style="font-family: var(--font-mono); font-size: 0.75rem;">
-                    🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <div class="section-label" style="margin: 0;">TOP FLIGHT RECORDS (REAL PLAYERS ONLY)</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                        Individual mission sorties. Career totals (Debris, Mass, Scrap) tracked in top telemetry cards.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #94a3b8;">
+                        SORT BY: 
+                        <button type="button" id="btn-sort-score" style="background: none; border: none; color: var(--accent-cyan); cursor: pointer; font-family: var(--font-mono); font-weight: bold; text-decoration: underline;">SCORE ▼</button> | 
+                        <button type="button" id="btn-sort-debris" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-family: var(--font-mono); text-decoration: underline;">DEBRIS ↕</button>
+                    </div>
+                    <div id="leaderboard-network-status" style="font-family: var(--font-mono); font-size: 0.75rem;">
+                        🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>
+                    </div>
                 </div>
             </div>
             <table class="leaderboard-table">
@@ -931,8 +943,12 @@
                         <th>RANK</th>
                         <th>COMMANDER</th>
                         <th>SECTOR</th>
-                        <th>DEBRIS</th>
-                        <th>SCORE</th>
+                        <th id="th-sort-debris" style="cursor: pointer; user-select: none;" title="Click to sort by Debris">
+                            DEBRIS <span id="sort-icon-debris">↕</span>
+                        </th>
+                        <th id="th-sort-score" style="cursor: pointer; user-select: none;" title="Click to sort by Score">
+                            SCORE <span id="sort-icon-score">▼</span>
+                        </th>
                         <th>DATE</th>
                     </tr>
                 </thead>
@@ -942,10 +958,19 @@
             <div style="margin-top: 14px; padding: 10px 14px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                 <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #cbd5e1;">
                     👨‍🚀 LOGGED IN AS: <strong id="leaderboard-current-pilot" style="color: var(--accent-cyan);">CADET</strong>
+                    <span id="leaderboard-pilot-best" style="margin-left: 8px; color: var(--salvage); font-weight: bold;"></span>
                 </div>
-                <button type="button" id="btn-leaderboard-auth" class="btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; border-color: var(--salvage); color: var(--salvage);">
-                    ENLIST / SWITCH CALLSIGN
-                </button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-leaderboard-claim" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--accent-cyan); color: var(--accent-cyan);" title="Attribute all previous local runs to your active callsign">
+                        ⚡ CLAIM RUNS AS PILOT
+                    </button>
+                    <button type="button" id="btn-leaderboard-auth" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--salvage); color: var(--salvage);">
+                        ENLIST / SWITCH CALLSIGN
+                    </button>
+                    <button type="button" id="btn-leaderboard-clear" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--danger); color: var(--danger);" title="Clear local leaderboard records">
+                        CLEAR RUNS
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1502,17 +1527,17 @@
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
     <!-- Core Game Scripts (Cache-Busting Enabled) -->
-    <script src="data/parts.js?v=8c.1"></script>
-    <script src="data/missions.js?v=8c.1"></script>
-    <script src="data/donki-snapshot.js?v=8c.1"></script>
-    <script src="data/storylets.js?v=8c.1"></script>
-    <script src="js/campaign.js?v=8c.1"></script>
-    <script src="js/audio.js?v=8c.1"></script>
-    <script src="js/data.js?v=8c.1"></script>
-    <script src="js/leaderboard-service.js?v=8c.1"></script>
-    <script src="js/director.js?v=8c.1"></script>
-    <script src="js/graphics.js?v=8c.1"></script>
-    <script src="js/game.js?v=8c.1"></script>
-    <script src="js/ui.js?v=8c.1"></script>
+    <script src="data/parts.js?v=9.1"></script>
+    <script src="data/missions.js?v=9.1"></script>
+    <script src="data/donki-snapshot.js?v=9.1"></script>
+    <script src="data/storylets.js?v=9.1"></script>
+    <script src="js/campaign.js?v=9.1"></script>
+    <script src="js/audio.js?v=9.1"></script>
+    <script src="js/data.js?v=9.1"></script>
+    <script src="js/leaderboard-service.js?v=9.1"></script>
+    <script src="js/director.js?v=9.1"></script>
+    <script src="js/graphics.js?v=9.1"></script>
+    <script src="js/game.js?v=9.1"></script>
+    <script src="js/ui.js?v=9.1"></script>
 </body>
 </html>
