@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
 
 :root {
     /* Required Semantic Colour Tokens */
@@ -18,10 +18,11 @@
     --accent-cyan: #38bdf8;    /* Precision avionics cyan */
     --accent-violet: #8b5cf6;  /* Battery / power telemetry violet */
 
-    /* Typography Tokens */
-    --font-pixel: 'Silkscreen', monospace;
-    --font-mono: 'Share Tech Mono', monospace;
-    --font-body: 'Rajdhani', sans-serif;
+    /* Typography Tokens - Clean, Highly Legible Sci-Fi & Aerospace Typography */
+    --font-pixel: 'Chakra Petch', 'Rajdhani', -apple-system, sans-serif;
+    --font-heading: 'Chakra Petch', 'Rajdhani', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Share Tech Mono', 'Consolas', monospace;
+    --font-body: 'Inter', 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 * {
@@ -39,7 +40,14 @@ body, html {
     background-color: var(--night);
     font-family: var(--font-body);
     color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+#game-container canvas {
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 /* Background Game Canvas Container */
@@ -115,10 +123,10 @@ body, html {
 }
 
 .game-title {
-    font-family: var(--font-pixel);
-    font-size: 2.1rem;
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     color: var(--ink);
     margin-bottom: 8px;
     margin-top: 10px;
@@ -127,14 +135,14 @@ body, html {
 
 .game-subtitle {
     font-family: var(--font-mono);
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--salvage);
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     margin-bottom: 24px;
     text-transform: uppercase;
     background: var(--panel-inset);
     display: inline-block;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border: 1px solid var(--border);
 }
 
@@ -158,13 +166,13 @@ body, html {
     margin-bottom: 24px;
 }
 
-/* Hard-Border Pixel Action Buttons */
+/* Hard-Border Action Buttons */
 .btn-primary {
-    font-family: var(--font-pixel);
-    font-size: 1rem;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
     font-weight: 700;
-    letter-spacing: 1px;
-    padding: 16px 24px;
+    letter-spacing: 0.5px;
+    padding: 14px 22px;
     background: var(--salvage);
     color: var(--night);
     border: 2px solid #000;
@@ -187,10 +195,10 @@ body, html {
 }
 
 .btn-secondary {
-    font-family: var(--font-mono);
-    font-size: 1rem;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
     font-weight: 700;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.5px;
     padding: 12px 20px;
     background: var(--panel-card);
     border: 2px solid var(--border-bright);
@@ -2326,17 +2334,18 @@ button,
 
 .contract-title {
     font-family: var(--font-heading);
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--ink);
     margin-bottom: 6px;
+    letter-spacing: 0.5px;
 }
 
 .contract-client-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--ink-muted);
 }
 
@@ -2344,12 +2353,12 @@ button,
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 4px 9px;
     border-radius: 2px;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
     margin-bottom: 8px;
 }
 
@@ -2360,9 +2369,10 @@ button,
 .obj-survive { color: #ef4444; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); }
 
 .contract-desc {
-    font-size: 0.82rem;
-    color: #94a3b8;
-    line-height: 1.4;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    color: #cbd5e1;
+    line-height: 1.5;
     margin-bottom: 12px;
     min-height: 48px;
 }
@@ -2376,8 +2386,8 @@ button,
 
 .mod-badge {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    padding: 2px 6px;
+    font-size: 0.78rem;
+    padding: 3px 8px;
     border-radius: 2px;
     border: 1px solid #f59e0b;
     color: #fde047;
@@ -2388,7 +2398,7 @@ button,
 .contract-metrics-table {
     width: 100%;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: 0.85rem;
     margin-bottom: 14px;
     border-collapse: collapse;
 }
@@ -2534,34 +2544,37 @@ button,
 }
 
 .dilemma-badge {
-    font-family: var(--font-pixel);
-    font-size: 0.7rem;
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    font-weight: 700;
     color: var(--accent-cyan);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
 .dilemma-asset-badge {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-bright);
-    padding: 2px 8px;
-    border-radius: 2px;
+    padding: 3px 10px;
+    border-radius: 3px;
     color: #e2e8f0;
 }
 
 .dilemma-title {
-    font-family: var(--font-pixel);
-    font-size: 1.05rem;
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     color: #fff;
     margin-bottom: 8px;
 }
 
 .dilemma-dossier {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
     color: #cbd5e1;
-    line-height: 1.45;
+    line-height: 1.55;
     margin-bottom: 14px;
 }
 
@@ -2600,24 +2613,30 @@ button,
 }
 
 .dilemma-choice-title {
-    font-family: var(--font-pixel);
-    font-size: 0.72rem;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     color: var(--accent-cyan);
 }
 
 .dilemma-choice-desc {
-    font-size: 0.78rem;
-    color: var(--ink-muted);
-    line-height: 1.35;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: #94a3b8;
+    line-height: 1.45;
 }
 
 .dilemma-choice-stakes {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: #fde047;
     background: rgba(0, 0, 0, 0.4);
-    padding: 4px 6px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    border-left: 2px solid #fde047;
+}
     border-radius: 2px;
     border-left: 2px solid #fde047;
 }
@@ -2738,13 +2757,14 @@ button,
     align-items: center;
 }
 .sector-node-name {
-    font-family: var(--font-pixel);
-    font-size: 0.8rem;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--ink);
 }
 .sector-node-alt {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     color: var(--accent-cyan);
 }
 
@@ -2753,7 +2773,7 @@ button,
     justify-content: space-between;
     align-items: center;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.82rem;
 }
 
 .sector-inspector-panel {
@@ -2767,14 +2787,15 @@ button,
 }
 
 .inspector-title {
-    font-family: var(--font-pixel);
-    font-size: 0.95rem;
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
     color: var(--salvage);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 .inspector-subtitle {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     color: var(--accent-cyan);
 }
 
@@ -2817,8 +2838,11 @@ button,
     align-items: center;
 }
 .tech-name {
-    font-family: var(--font-pixel);
-    font-size: 0.78rem;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink);
+}
     color: var(--ink);
 }
 .tech-tier-badge {
