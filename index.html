@@ -34,7 +34,7 @@
                 Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
             </p>
             <div class="menu-buttons">
-                <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;">MISSION BOARD &amp; CAMPAIGN</button>
+                <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;" onclick="window.openMissionBoard();">MISSION BOARD &amp; CAMPAIGN</button>
                 <button id="btn-menu-start" class="btn-secondary">CUSTOM MISSION DESIGN</button>
                 <button id="btn-menu-hangar" class="btn-secondary">HANGAR &amp; UPGRADES</button>
                 <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL &amp; HOW TO PLAY</button>
@@ -561,6 +561,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
                     <div style="display: flex; gap: 6px; align-items: center;">
+                        <button type="button" id="btn-toggle-f3-hud" class="hud-f3-btn" title="Toggle Flight Telemetry [F3]" onclick="window.toggleTelemetryOverlay();">📡 F3</button>
                         <div id="hud-lane-indicator" class="hud-lane-badge lane-mid">LANE 2: CO-ORBITAL [SYNC]</div>
                         <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
                     </div>
@@ -637,19 +638,16 @@
             </div>
         </div>
 
-        <!-- F3 Flight Director Telemetry Overlay -->
-        <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
-
         <!-- Bottom Bar: Controls & Minimap -->
         <div class="hud-bottom-bar">
             <div class="hud-controls-hint">
-                <span class="kbd">W/A/S/D</span> Thrust & Yaw &nbsp;|&nbsp; 
+                <span class="kbd">W/A/S/D</span> Thrust &amp; Yaw &nbsp;|&nbsp; 
                 <span class="kbd">SPACE</span> Collect &nbsp;|&nbsp; 
                 <span class="kbd">Q</span> Nudge &nbsp;|&nbsp; 
                 <span class="kbd">E</span> Recycle &nbsp;|&nbsp; 
                 <span class="kbd">R</span> Strip &nbsp;|&nbsp; 
                 <span class="kbd">H</span> Repair &nbsp;|&nbsp; 
-                <span class="kbd">F3</span> Telemetry &nbsp;|&nbsp; 
+                <span class="kbd-btn" id="btn-f3-hint" title="Toggle Telemetry" onclick="window.toggleTelemetryOverlay();" style="cursor: pointer;"><span class="kbd">F3</span> Telemetry</span> &nbsp;|&nbsp; 
                 <span class="kbd">P</span> Pause
             </div>
 
@@ -924,6 +922,9 @@
             </div>
         </div>
     </div>
+
+    <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
+    <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
     <!-- Core Game Scripts -->
     <script src="data/parts.js"></script>

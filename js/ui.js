@@ -93,6 +93,7 @@ class UIController {
     }
 
     switchScreen(targetScreenName) {
+        this.currentScreenName = targetScreenName;
         if (window.soundSystem) {
             window.soundSystem.playUiClick();
             window.soundSystem.resume();
@@ -107,10 +108,8 @@ class UIController {
         }
 
         // Hide all screens & modals
-        Object.values(this.screens).forEach(scr => {
-            if (scr && scr.classList) {
-                scr.classList.add('hidden');
-            }
+        document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(scr => {
+            scr.classList.add('hidden');
         });
 
         // Show target screen
@@ -346,6 +345,16 @@ class UIController {
                 e.preventDefault();
                 this.screens.resultsModal?.classList.add('hidden');
                 this.switchScreen('contracts');
+                return;
+            }
+
+            // 8d. F3 Telemetry HUD Button & Controls Hint
+            const f3Btn = e.target.closest('#btn-toggle-f3-hud, #btn-f3-hint');
+            if (f3Btn) {
+                e.preventDefault();
+                if (typeof window.toggleTelemetryOverlay === 'function') {
+                    window.toggleTelemetryOverlay();
+                }
                 return;
             }
 
@@ -1471,10 +1480,14 @@ class UIController {
     renderLeaderboard() {
         this.save = OrbitalStorage.load();
 
-        document.getElementById('stat-total-debris').innerText = this.save.totalDebrisRecycled.toLocaleString();
-        document.getElementById('stat-total-mass').innerText = (this.save.totalMassDeorbitedKg / 1000).toFixed(1) + ' t';
-        document.getElementById('stat-total-missions').innerText = this.save.missionsCompleted;
-        document.getElementById('stat-total-credits').innerText = this.save.credits.toLocaleString();
+        const sDebris = document.getElementById('stat-total-debris');
+        if (sDebris) sDebris.innerText = (this.save.totalDebrisRecycled || 0).toLocaleString();
+        const sMass = document.getElementById('stat-total-mass');
+        if (sMass) sMass.innerText = ((this.save.totalMassDeorbitedKg || 0) / 1000).toFixed(1) + ' t';
+        const sMissions = document.getElementById('stat-total-missions');
+        if (sMissions) sMissions.innerText = this.save.missionsCompleted || 0;
+        const sCredits = document.getElementById('stat-total-credits');
+        if (sCredits) sCredits.innerText = (this.save.credits || 0).toLocaleString();
 
         const tbody = document.getElementById('leaderboard-tbody');
         if (!tbody) return;
@@ -1841,17 +1854,106 @@ class UIController {
     }
 }
 
-// Global UI Hook
-window.addEventListener('DOMContentLoaded', () => {
-    window.uiController = new UIController();
+// ============================================================================
+// GLOBAL UI INITIALIZATION & TELEMETRY HOOKS
+// ============================================================================
 
-    // Scene ready callback
-    window.onGameSceneReady = (scene) => {
+function initUIController() {
+    if (window.uiController) return window.uiController;
+    try {
+        window.uiController = new UIController();
+    } catch (e) {
+        console.error('[UIController] Failed to initialize UIController:', e);
+    }
+    return window.uiController;
+}
+window.initUI = initUIController;
+window.initUIController = initUIController;
+
+/**
+ * Universal safe helper to navigate to the Mission Board
+ */
+window.openMissionBoard = function() {
+    if (!window.uiController && typeof initUIController === 'function') {
+        initUIController();
+    }
+    if (window.uiController) {
+        window.uiController.switchScreen('contracts');
+    } else {
+        document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(s => s.classList.add('hidden'));
+        const mb = document.getElementById('screen-mission-board');
+        if (mb) mb.classList.remove('hidden');
+    }
+};
+
+/**
+ * Global F3 Tactical & System Telemetry Overlay Toggle
+ */
+window.toggleTelemetryOverlay = function() {
+    const el = document.getElementById('hud-f3-debug');
+    if (!el) return;
+
+    if (window.uiController && window.uiController.currentScene && window.uiController.currentScene.director) {
+        window.uiController.currentScene.director.toggleDebugOverlay();
+        return;
+    }
+
+    // Out-of-mission / Menu telemetry
+    const isHidden = el.classList.toggle('hidden');
+    if (!isHidden) {
+        const save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+        const diff = save?.selectedDifficulty || 'standard';
+        const seed = save?.campaignSeed || 'N/A';
+        const agencyRep = save?.reputation?.agency ?? 50;
+        const commRep = save?.reputation?.commercial ?? 50;
+        const pubRep = save?.reputation?.public ?? 50;
+        const credits = (save?.credits || 0).toLocaleString();
+        const activeScr = window.uiController?.currentScreenName || 'MENU';
+
+        el.innerHTML = `
+            <div class="f3-title" style="display: flex; justify-content: space-between;">
+                <span>SYSTEM &amp; ENGINE TELEMETRY</span>
+                <span style="color: var(--ink-muted); font-size: 0.65rem;">[F3 CLOSE]</span>
+            </div>
+            <div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>
+            <div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">${activeScr.toUpperCase()}</strong></div>
+            <div class="f3-row"><span>DIFFICULTY:</span> <strong style="color: #f59e0b;">${diff.toUpperCase()}</strong></div>
+            <div class="f3-row"><span>CAMPAIGN SEED:</span> <strong>SEED-${seed}</strong></div>
+            <div class="f3-row"><span>REPUTATION:</span> <strong>AGY ${agencyRep}% | COM ${commRep}% | PUB ${pubRep}%</strong></div>
+            <div class="f3-row"><span>CREDITS:</span> <strong>${credits} SCRAP</strong></div>
+            <div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>
+        `;
+    }
+};
+
+// Global key listener for F3 (prevents Chrome browser Find bar interception)
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.toggleTelemetryOverlay();
+    }
+}, true);
+
+// Execute UIController initialization immediately if document ready, or on DOMContentLoaded
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUIController);
+        window.addEventListener('DOMContentLoaded', initUIController);
+    } else {
+        initUIController();
+    }
+}
+
+// Scene ready callback
+window.onGameSceneReady = (scene) => {
+    if (window.uiController) {
         window.uiController.currentScene = scene;
-    };
+    }
+};
 
-    // Live HUD update loop
-    window.updateGameHUD = (scene) => {
+// Live HUD update loop
+window.updateGameHUD = (scene) => {
         if (!window.uiController || !window.uiController.hud) return;
         const hud = window.uiController.hud;
 
@@ -2171,4 +2273,3 @@ window.addEventListener('DOMContentLoaded', () => {
 
         modal.classList.remove('hidden');
     };
-});

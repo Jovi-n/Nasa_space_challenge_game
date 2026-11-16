@@ -97,9 +97,11 @@ class MissionDirector {
         // 6. Near-Miss Hazard Detection
         this.checkNearMisses();
 
-        // 7. Check F3 Debug Key
+        // 7. Check F3 Debug Key (fallback if not handled by window key listener)
         if (this.keyF3 && Phaser.Input.Keyboard.JustDown(this.keyF3)) {
-            this.toggleDebugOverlay();
+            if (!this._lastF3ToggleTime || (Date.now() - this._lastF3ToggleTime > 250)) {
+                this.toggleDebugOverlay();
+            }
         }
 
         // 8. Render Debug Overlay if active
@@ -432,10 +434,14 @@ class MissionDirector {
      * Toggles F3 tactical debug overlay
      */
     toggleDebugOverlay() {
+        this._lastF3ToggleTime = Date.now();
         this.debugVisible = !this.debugVisible;
         const el = document.getElementById('hud-f3-debug');
         if (el) {
             el.classList.toggle('hidden', !this.debugVisible);
+            if (this.debugVisible) {
+                this.renderDebugOverlay();
+            }
         }
     }
 

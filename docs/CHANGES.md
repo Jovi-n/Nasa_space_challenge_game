@@ -594,3 +594,31 @@
   - Positive consequences on clean victory (health increase, carryover debris reduction, reputation gains).
   - Negative consequences on failure (health drop, fragment generation, reputation penalties).
   - Solicit / reroll contracts deducting 50 Scrap and replenishing pool.
+
+---
+
+## [Phase 8a Fix — Main Menu Mission Board Transition & Global F3 Telemetry Overlay] - 2026-11-16
+### Status: Completed & Verified
+
+### Root Causes & Resolved Issues:
+1. **DOMContentLoaded Script Timing Race Condition**:
+   - `UIController` instantiation was previously wrapped exclusively in `window.addEventListener('DOMContentLoaded', ...)`.
+   - In environments where scripts execute when `document.readyState` is already `'interactive'` or `'complete'`, the event listener never triggered, causing `window.uiController` to remain uninstantiated.
+   - Additionally, `renderLeaderboard()` lacked null guards for DOM elements when switching screens before elements were populated.
+   - **Fix**:
+     - Refactored `initUIController()` to check `document.readyState !== 'loading'` and instantiate immediately or attach listener if still loading.
+     - Added global helper `window.openMissionBoard()` directly attached to `#btn-menu-contracts` `onclick` as a fail-safe fallback.
+     - Hardened `renderLeaderboard()` and all UIController initialization sub-methods with defensive null-checks.
+
+2. **F3 Key Browser Interception & HUD Telemetry**:
+   - Pressing `F3` in Chromium/WebKit browsers natively invokes the browser "Find on page" search bar (`Ctrl+F`), preventing the canvas and game loop from receiving the keypress.
+   - Furthermore, laptop function keys often require `Fn` + `F3` or default to media/brightness keys.
+   - `#hud-f3-debug` was also nested inside `#hud-overlay` which is hidden when navigating the Main Menu or Mission Board.
+   - **Fix**:
+     - Moved `#hud-f3-debug` to top-level layer with `position: fixed; z-index: 2000;`, allowing telemetry inspection at any time.
+     - Added a capturing global `window.addEventListener('keydown', e => { if (e.key === 'F3' || e.keyCode === 114) { e.preventDefault(); e.stopPropagation(); window.toggleTelemetryOverlay(); } }, true)` to suppress browser find bars and guarantee instant response.
+     - Created `window.toggleTelemetryOverlay()` supporting both live Flight Director telemetry during flight and system/engine/save telemetry in menu mode.
+     - Added an interactive on-screen HUD button `<button id="btn-toggle-f3-hud" class="hud-f3-btn">📡 F3</button>` in the top status bar and wired the bottom controls hint `<span id="btn-f3-hint">F3 Telemetry</span>`.
+
+3. **Automated Verification**:
+   - Created `tests/test_menu_and_f3.js` verifying UIController lifecycle, `#btn-menu-contracts` navigation, 3 contract card rendering, return to menu, `window.openMissionBoard()`, F3 key down capturing, HUD button toggle, and in-flight Flight Director telemetry. All 8 tests passing 100%.
