@@ -29,10 +29,10 @@ class UIController {
 
         this.initDOMElements();
         this.attachEventListeners();
-        this.renderHangarShop();
-        this.renderMissionDesignView();
-        this.renderLeaderboard();
-        this.initMinimap();
+        try { this.renderHangarShop(); } catch (e) { console.warn('[UI] Hangar render deferred:', e); }
+        try { this.renderMissionDesignView(); } catch (e) { console.warn('[UI] Mission Design render deferred:', e); }
+        try { this.renderLeaderboard(); } catch (e) { console.warn('[UI] Leaderboard render deferred:', e); }
+        try { this.initMinimap(); } catch (e) { console.warn('[UI] Minimap init deferred:', e); }
     }
 
     initDOMElements() {

@@ -17,6 +17,167 @@
         }
     </script>
     <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Bulletproof Global Navigation & F3 Handlers (Zero Cache & Zero Latency Dependency)
+        window.openMissionBoard = function() {
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('contracts');
+                return;
+            }
+            if (typeof window.initUI === 'function') {
+                try { window.initUI(); } catch (e) {}
+            }
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('contracts');
+                return;
+            }
+            // Direct DOM Fallback
+            document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(function(s) { s.classList.add('hidden'); });
+            var mb = document.getElementById('screen-mission-board');
+            if (mb) {
+                mb.classList.remove('hidden');
+                if (typeof window.renderMissionBoardFallback === 'function') {
+                    window.renderMissionBoardFallback();
+                }
+            }
+        };
+
+        window.returnToMainMenu = function() {
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('mainMenu');
+                return;
+            }
+            document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(function(s) { s.classList.add('hidden'); });
+            var mm = document.getElementById('screen-main-menu');
+            if (mm) mm.classList.remove('hidden');
+        };
+
+        window.toggleTelemetryOverlay = function() {
+            var el = document.getElementById('hud-f3-debug');
+            if (!el) return;
+            if (window.uiController && window.uiController.currentScene && window.uiController.currentScene.director) {
+                window.uiController.currentScene.director.toggleDebugOverlay();
+                return;
+            }
+            var isHidden = el.classList.toggle('hidden');
+            if (!isHidden) {
+                var save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+                var diff = save && save.selectedDifficulty ? save.selectedDifficulty : 'standard';
+                var seed = save && save.campaignSeed ? save.campaignSeed : 'N/A';
+                var rep = (save && save.reputation) ? save.reputation : { agency: 50, commercial: 50, public: 50 };
+                var credits = (save && save.credits ? save.credits : 0).toLocaleString();
+                var activeScr = (window.uiController && window.uiController.currentScreenName) ? window.uiController.currentScreenName : 'MENU';
+
+                el.innerHTML = [
+                    '<div class="f3-title" style="display: flex; justify-content: space-between;">',
+                    '  <span>SYSTEM &amp; ENGINE TELEMETRY</span>',
+                    '  <span style="color: var(--ink-muted); font-size: 0.65rem;">[F3 CLOSE]</span>',
+                    '</div>',
+                    '<div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>',
+                    '<div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">' + activeScr.toUpperCase() + '</strong></div>',
+                    '<div class="f3-row"><span>DIFFICULTY:</span> <strong style="color: #f59e0b;">' + diff.toUpperCase() + '</strong></div>',
+                    '<div class="f3-row"><span>CAMPAIGN SEED:</span> <strong>SEED-' + seed + '</strong></div>',
+                    '<div class="f3-row"><span>REPUTATION:</span> <strong>AGY ' + (rep.agency || 50) + '% | COM ' + (rep.commercial || 50) + '% | PUB ' + (rep.public || 50) + '%</strong></div>',
+                    '<div class="f3-row"><span>CREDITS:</span> <strong>' + credits + ' SCRAP</strong></div>',
+                    '<div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>'
+                ].join('');
+            }
+        };
+
+        window.renderMissionBoardFallback = function() {
+            try {
+                if (window.uiController && typeof window.uiController.renderMissionBoard === 'function') {
+                    window.uiController.renderMissionBoard();
+                    return;
+                }
+                var save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+                if (!save) return;
+                var seedEl = document.getElementById('board-campaign-seed');
+                if (seedEl) seedEl.innerText = 'SEED-' + (save.campaignSeed || '000000');
+                var rep = save.reputation || { agency: 50, commercial: 50, public: 50 };
+                var aBar = document.getElementById('board-rep-agency-bar');
+                var aVal = document.getElementById('board-rep-agency-val');
+                if (aBar) aBar.style.width = (rep.agency || 50) + '%';
+                if (aVal) aVal.innerText = (rep.agency || 50) + '%';
+                var cBar = document.getElementById('board-rep-commercial-bar');
+                var cVal = document.getElementById('board-rep-commercial-val');
+                if (cBar) cBar.style.width = (rep.commercial || 50) + '%';
+                if (cVal) cVal.innerText = (rep.commercial || 50) + '%';
+                var pBar = document.getElementById('board-rep-public-bar');
+                var pVal = document.getElementById('board-rep-public-val');
+                if (pBar) pBar.style.width = (rep.public || 50) + '%';
+                if (pVal) pVal.innerText = (rep.public || 50) + '%';
+                var credEl = document.getElementById('board-credits-val');
+                if (credEl) credEl.innerText = (save.credits || 0).toLocaleString() + ' SCRAP';
+
+                var grid = document.getElementById('contracts-card-grid');
+                if (!grid) return;
+                var contracts = save.availableContracts;
+                if ((!contracts || contracts.length === 0) && typeof CampaignManager !== 'undefined') {
+                    contracts = CampaignManager.generateContractPool(save);
+                    save.availableContracts = contracts;
+                    OrbitalStorage.save(save);
+                }
+                if (contracts && contracts.length > 0) {
+                    grid.innerHTML = '';
+                    contracts.forEach(function(contract) {
+                        var card = document.createElement('div');
+                        card.className = 'contract-card';
+                        var risk = contract.risk || 'Moderate';
+                        var sKey = contract.sectorKey || ('sector_0' + (contract.sectorId || 1));
+                        var sHealth = (save.sectorHealth && save.sectorHealth[sKey] !== undefined) ? save.sectorHealth[sKey] : 70;
+                        var healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+                        var carryover = (save.carryoverDebris && save.carryoverDebris[sKey]) || 0;
+
+                        var modsHtml = '';
+                        if (contract.modifiers && Array.isArray(contract.modifiers)) {
+                            contract.modifiers.forEach(function(mKey) {
+                                var m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
+                                if (m) modsHtml += '<span class="modifier-badge" title="' + m.desc + '">' + m.icon + ' ' + m.badge + '</span>';
+                            });
+                        }
+
+                        card.innerHTML = [
+                            '<div class="contract-card-header">',
+                            '  <div>',
+                            '    <div class="contract-client-tag">' + contract.clientAgency + ' // ' + contract.clientName + '</div>',
+                            '    <div class="contract-title">' + contract.title + '</div>',
+                            '  </div>',
+                            '  <span class="contract-risk-tag risk-' + risk.toLowerCase() + '">' + risk.toUpperCase() + ' RISK</span>',
+                            '</div>',
+                            '<div class="contract-sector-badge">' + contract.sectorName + ' (Alt: ' + contract.altitudeKm + ' km)</div>',
+                            '<div class="contract-modifiers-row">' + (modsHtml || '<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>') + '</div>',
+                            '<div class="contract-desc">' + contract.description + '</div>',
+                            '<div class="contract-reqs-box">',
+                            '  <div class="contract-req-row"><span>Objective:</span> <strong>' + (contract.objective || 'Quota').toUpperCase() + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Target:</span> <strong>' + contract.targetDesc + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Sector Health:</span> <strong style="color: ' + healthColor + ';">' + sHealth + '%' + (carryover > 0 ? ' (' + carryover + ' residual fragments)' : '') + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Time Window:</span> <strong>' + contract.timeLimit + 's</strong></div>',
+                            '</div>',
+                            '<div class="contract-payout-box">',
+                            '  <div>',
+                            '    <div class="payout-amount">+' + contract.payoutScrap + ' SCRAP</div>',
+                            '    <div class="payout-advance">Advance Budget: ' + contract.budgetScrap + ' Scrap</div>',
+                            '  </div>',
+                            '  <button type="button" class="btn-primary btn-accept-contract" data-contract-id="' + contract.id + '" onclick="if(window.uiController){window.uiController.acceptContractAndLaunch(\'' + contract.id + '\');}">ACCEPT &amp; LAUNCH</button>',
+                            '</div>'
+                        ].join('');
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (e) {
+                console.error('Fallback render error:', e);
+            }
+        };
+
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.toggleTelemetryOverlay();
+            }
+        }, true);
+    </script>
 </head>
 <body>
 
@@ -62,8 +223,8 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
-                    <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">RETURN TO MENU</button>
+                    <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="if(window.uiController){window.uiController.rerollContracts();}else{window.renderMissionBoardFallback();}">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
+                    <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
                 </div>
             </div>
 
@@ -926,16 +1087,16 @@
     <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
-    <!-- Core Game Scripts -->
-    <script src="data/parts.js"></script>
-    <script src="data/missions.js"></script>
-    <script src="data/donki-snapshot.js"></script>
-    <script src="js/campaign.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/director.js"></script>
-    <script src="js/graphics.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/ui.js"></script>
+    <!-- Core Game Scripts (Cache-Busting Enabled) -->
+    <script src="data/parts.js?v=8a.2"></script>
+    <script src="data/missions.js?v=8a.2"></script>
+    <script src="data/donki-snapshot.js?v=8a.2"></script>
+    <script src="js/campaign.js?v=8a.2"></script>
+    <script src="js/audio.js?v=8a.2"></script>
+    <script src="js/data.js?v=8a.2"></script>
+    <script src="js/director.js?v=8a.2"></script>
+    <script src="js/graphics.js?v=8a.2"></script>
+    <script src="js/game.js?v=8a.2"></script>
+    <script src="js/ui.js?v=8a.2"></script>
 </body>
 </html>
