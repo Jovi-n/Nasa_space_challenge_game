@@ -2279,6 +2279,8 @@ class OrbitalGameScene extends Phaser.Scene {
 
     handleProximityRadar(dt) {
         let imminentDanger = false;
+        let closestThreat = null;
+        let minThreatDist = Infinity;
         const frameDt = (typeof dt === 'number' && dt > 0) ? dt : (1 / 60);
 
         if (!this.hazardGroup || !this.player) return;
@@ -2327,6 +2329,10 @@ class OrbitalGameScene extends Phaser.Scene {
             // Proximity warning trigger
             if (effectiveDist < hazardWarningDist) {
                 imminentDanger = true;
+                if (effectiveDist < minThreatDist) {
+                    minThreatDist = effectiveDist;
+                    closestThreat = h;
+                }
             }
 
             // If hazard is a nuclear satellite, emit continuous radiation drain per second (Stepped pixel ring)
@@ -2357,20 +2363,48 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.warningActive = true;
                 window.soundSystem?.playWarning?.(true);
             }
-            // Pixel caution alert indicator above spacecraft
-            const px = Math.floor(this.player.x);
-            const py = Math.floor(this.player.y) - 40;
-            const blink = Math.floor(this.time.now / 160) % 2 === 0;
-            if (blink) {
-                this.fxGraphics.fillStyle(0xef4444, 0.9);
-                this.fxGraphics.fillRect(px - 1, py - 6, 2, 2);
-                this.fxGraphics.fillRect(px - 3, py - 4, 6, 2);
-                this.fxGraphics.fillRect(px - 5, py - 2, 10, 2);
-                this.fxGraphics.fillRect(px - 7, py, 14, 2);
-                this.fxGraphics.fillRect(px - 9, py + 2, 18, 2);
-                this.fxGraphics.fillStyle(0x070a13, 1.0);
-                this.fxGraphics.fillRect(px - 1, py - 2, 2, 3);
-                this.fxGraphics.fillRect(px - 1, py + 2, 2, 1);
+            // Dynamic directional hazard indicator arrow pointing directly towards incoming meteor/hazard
+            const blink = Math.floor(this.time.now / 150) % 2 === 0;
+            if (blink && closestThreat) {
+                const threatAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, closestThreat.x, closestThreat.y);
+                const indicatorRadius = 40;
+                const ax = this.player.x + Math.cos(threatAngle) * indicatorRadius;
+                const ay = this.player.y + Math.sin(threatAngle) * indicatorRadius;
+
+                const cosA = Math.cos(threatAngle);
+                const sinA = Math.sin(threatAngle);
+                const tipX = ax + cosA * 16;
+                const tipY = ay + sinA * 16;
+                const leftX = ax + Math.cos(threatAngle + 2.45) * 12;
+                const leftY = ay + Math.sin(threatAngle + 2.45) * 12;
+                const rightX = ax + Math.cos(threatAngle - 2.45) * 12;
+                const rightY = ay + Math.sin(threatAngle - 2.45) * 12;
+                const notchX = ax + cosA * 3;
+                const notchY = ay + sinA * 3;
+
+                // Outer red tactical directional arrow
+                this.fxGraphics.fillStyle(0xef4444, 0.95);
+                this.fxGraphics.beginPath();
+                this.fxGraphics.moveTo(tipX, tipY);
+                this.fxGraphics.lineTo(leftX, leftY);
+                this.fxGraphics.lineTo(notchX, notchY);
+                this.fxGraphics.lineTo(rightX, rightY);
+                this.fxGraphics.closePath();
+                this.fxGraphics.fillPath();
+
+                // Inner high-contrast warning accent
+                this.fxGraphics.fillStyle(0xffffff, 0.95);
+                this.fxGraphics.beginPath();
+                this.fxGraphics.moveTo(tipX - cosA * 4, tipY - sinA * 4);
+                this.fxGraphics.lineTo(ax + Math.cos(threatAngle + 2.45) * 6, ay + Math.sin(threatAngle + 2.45) * 6);
+                this.fxGraphics.lineTo(notchX, notchY);
+                this.fxGraphics.lineTo(ax + Math.cos(threatAngle - 2.45) * 6, ay + Math.sin(threatAngle - 2.45) * 6);
+                this.fxGraphics.closePath();
+                this.fxGraphics.fillPath();
+
+                // Directional threat vector line toward the incoming hazard
+                this.fxGraphics.lineStyle(1.5, 0xef4444, 0.6);
+                this.fxGraphics.lineBetween(tipX, tipY, ax + cosA * 26, ay + sinA * 26);
             }
         } else {
             if (this.warningActive) {
@@ -2420,10 +2454,20 @@ class OrbitalGameScene extends Phaser.Scene {
                 this.hudGraphics.fillStyle(0xffffff, 1.0);
                 this.hudGraphics.fillRect(ex, ey, 1, 1);
             } else {
-                // Pixel Warning Square for Hazard
-                this.hudGraphics.fillRect(ex - 3, ey - 3, 7, 7);
-                this.hudGraphics.fillStyle(0x070a13, 1.0);
-                this.hudGraphics.fillRect(ex - 1, ey - 1, 3, 3);
+                // Pixel Directional Warning Arrow for Hazard
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                this.hudGraphics.fillStyle(0xef4444, 0.95);
+                this.hudGraphics.beginPath();
+                this.hudGraphics.moveTo(ex + cosA * 8, ey + sinA * 8);
+                this.hudGraphics.lineTo(ex + Math.cos(angle + 2.4) * 8, ey + Math.sin(angle + 2.4) * 8);
+                this.hudGraphics.lineTo(ex + cosA * 2, ey + sinA * 2);
+                this.hudGraphics.lineTo(ex + Math.cos(angle - 2.4) * 8, ey + Math.sin(angle - 2.4) * 8);
+                this.hudGraphics.closePath();
+                this.hudGraphics.fillPath();
+                // Core dot
+                this.hudGraphics.fillStyle(0xffffff, 0.9);
+                this.hudGraphics.fillRect(ex - 1, ey - 1, 2, 2);
             }
         };
 
