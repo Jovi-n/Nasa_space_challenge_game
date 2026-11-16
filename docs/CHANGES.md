@@ -622,3 +622,22 @@
 
 3. **Automated Verification**:
    - Created `tests/test_menu_and_f3.js` verifying UIController lifecycle, `#btn-menu-contracts` navigation, 3 contract card rendering, return to menu, `window.openMissionBoard()`, F3 key down capturing, HUD button toggle, and in-flight Flight Director telemetry. All 8 tests passing 100%.
+
+---
+
+## [Phase 8a UX Fix — Reposition Telemetry Button & Overlay to Clear Salvage Bar] - 2026-11-16
+### Status: Completed & Verified
+
+### Issues Addressed & Solutions:
+1. **Telemetry Button Overlay Collision with In-Flight Cargo & Salvage Bar**:
+   - *Problem:* The global floating telemetry button (`#btn-global-telemetry`) was positioned at `fixed; top: 14px; right: 18px;`. When flying in a mission, this placed the button directly on top of the in-flight HUD Cargo Hold and Salvage Materials panel (`.hud-cargo-panel`, containing `CARGO (0/3)` and `SALVAGE: 🔩 0 🔋 0 💾 0`), obscuring vital resource feedback.
+   - *Solution:*
+     - Repositioned `.global-telemetry-btn` to the top-left (`left: 18px; top: 14px;`).
+     - Added `.hud-mode` styling (`top: 112px; left: 18px;`) dynamically applied during in-game flight (`targetScreenName === 'gameHud'`), placing the button neatly underneath the left gauges panel and completely vacating the top-right corner.
+     - Repositioned the telemetry overlay window (`.hud-f3-debug`) to `left: 18px; top: 52px;` on menus and `left: 18px; top: 148px;` in `.hud-mode`, keeping all telemetry cleanly grouped on the left side of the screen.
+     - The top-right corner (`.hud-cargo-panel`) and bottom-right corner (`.minimap-container`) are now 100% visible and unblocked at all times.
+2. **Added Direct Interactive Close Button in Flight**:
+   - Added an explicit `[✕ CLOSE]` button directly inside the Flight Director Telemetry overlay header in `js/director.js`, ensuring players can close telemetry with a single click in any flight or menu state.
+3. **Automated Verification**:
+   - Expanded `tests/test_menu_and_f3.js` with Test 9 verifying CSS positioning rules (`left: 18px`, `top: 112px`, `top: 148px`) and dynamic `.hud-mode` class toggling across screen transitions.
+   - All 9 test cases in `tests/test_menu_and_f3.js` and all existing test suites (`test_phase6.js`, `test_phase7.js`, `test_phase8a.js`) pass with 100% success rate.

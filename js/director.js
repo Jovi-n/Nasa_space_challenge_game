@@ -468,7 +468,10 @@ class MissionDirector {
         else if (this.tension >= 50) tensionClass = 'tension-elevated';
 
         el.innerHTML = `
-            <div class="f3-title">FLIGHT DIRECTOR TELEMETRY [F3]</div>
+            <div class="f3-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>FLIGHT DIRECTOR TELEMETRY</span>
+                <button type="button" class="btn-close-telemetry" style="background: none; border: 1px solid var(--border-bright); color: var(--accent-cyan); font-size: 0.65rem; padding: 1px 6px; cursor: pointer;" onclick="window.toggleTelemetryOverlay();">✕ CLOSE</button>
+            </div>
             <div class="f3-row"><span>DIFFICULTY:</span> <strong style="color: var(--accent-cyan);">${this.difficulty.name}</strong></div>
             <div class="f3-row"><span>MISSION STAGE:</span> <strong style="color: #f59e0b;">${this.currentStage}</strong></div>
             <div class="f3-row"><span>TENSION SCORE:</span> <strong class="${tensionClass}">${this.tension}% (${this.getTensionLabel()})</strong></div>

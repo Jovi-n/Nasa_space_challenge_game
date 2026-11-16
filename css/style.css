@@ -1172,8 +1172,8 @@ body, html {
 /* Phase 5 F3 Tactical Debug Telemetry Overlay */
 .hud-f3-debug {
     position: fixed;
-    top: 96px;
-    right: 20px;
+    top: 52px;
+    left: 18px;
     width: 290px;
     background: rgba(8, 12, 20, 0.96);
     border: 1px solid var(--border-bright);
@@ -1185,6 +1185,10 @@ body, html {
     z-index: 2000;
     pointer-events: auto;
     border-radius: 2px;
+}
+.hud-f3-debug.hud-mode {
+    top: 148px;
+    left: 18px;
 }
 .hud-f3-btn {
     background: rgba(8, 16, 28, 0.9);
@@ -1209,7 +1213,7 @@ body, html {
 .global-telemetry-btn {
     position: fixed;
     top: 14px;
-    right: 18px;
+    left: 18px;
     background: rgba(10, 16, 26, 0.88);
     border: 1px solid var(--accent-cyan);
     color: var(--accent-cyan);
@@ -1225,6 +1229,10 @@ body, html {
     align-items: center;
     gap: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.global-telemetry-btn.hud-mode {
+    top: 112px;
+    left: 18px;
 }
 .global-telemetry-btn:hover {
     background: var(--accent-cyan);

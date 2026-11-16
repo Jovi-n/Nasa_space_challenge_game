@@ -127,6 +127,17 @@ class UIController {
             targetScreen.classList.remove('hidden');
         }
 
+        // Align telemetry overlay and floating button cleanly away from gauges and salvage panels
+        const globalBtn = document.getElementById('btn-global-telemetry');
+        const f3DebugEl = document.getElementById('hud-f3-debug');
+        if (targetScreenName === 'gameHud') {
+            if (globalBtn) globalBtn.classList.add('hud-mode');
+            if (f3DebugEl) f3DebugEl.classList.add('hud-mode');
+        } else {
+            if (globalBtn) globalBtn.classList.remove('hud-mode');
+            if (f3DebugEl) f3DebugEl.classList.remove('hud-mode');
+        }
+
         // Contextual updates (safe with try-catch so screen transition never fails)
         try {
             if (targetScreenName === 'hangar') {
@@ -1911,9 +1922,9 @@ window.toggleTelemetryOverlay = function() {
         const activeScr = window.uiController?.currentScreenName || 'MENU';
 
         el.innerHTML = `
-            <div class="f3-title" style="display: flex; justify-content: space-between;">
+            <div class="f3-title" style="display: flex; justify-content: space-between; align-items: center;">
                 <span>SYSTEM &amp; ENGINE TELEMETRY</span>
-                <span style="color: var(--ink-muted); font-size: 0.65rem;">[F3 CLOSE]</span>
+                <button type="button" class="btn-close-telemetry" style="background: none; border: 1px solid var(--border-bright); color: var(--accent-cyan); font-size: 0.65rem; padding: 1px 6px; cursor: pointer;" onclick="window.toggleTelemetryOverlay();">✕ CLOSE</button>
             </div>
             <div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>
             <div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">${activeScr.toUpperCase()}</strong></div>

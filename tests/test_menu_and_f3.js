@@ -113,6 +113,7 @@ function createMockDOM() {
     const hudF3Debug = createElement('div', 'hud-f3-debug', 'hud-f3-debug hidden');
     const btnToggleF3Hud = createElement('button', 'btn-toggle-f3-hud', 'hud-f3-btn');
     const btnF3Hint = createElement('span', 'btn-f3-hint', 'kbd-btn');
+    const btnGlobalTelemetry = createElement('button', 'btn-global-telemetry', 'global-telemetry-btn');
 
     const documentMock = {
         readyState: 'complete',
@@ -283,7 +284,26 @@ async function runTests() {
     assert(elements['hud-f3-debug'].classList.contains('hidden'), 'F3 overlay should close on second toggle');
     console.log('[PASS] Test 8: F3 Telemetry works with active Flight Director in-flight');
 
-    console.log('\n>>> ALL 8 MENU & F3 TESTS PASSED PERFECTLY! <<<');
+    // Test 9: Telemetry Button & Window Position Repositioning away from Salvage Bar
+    // 9a: Verify CSS places telemetry button and overlay on the left side (left: 18px), not top-right over salvage bar
+    const cssContent = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
+    assert(cssContent.includes('.global-telemetry-btn {\n    position: fixed;\n    top: 14px;\n    left: 18px;'), 'global-telemetry-btn must be positioned at left: 18px to clear salvage bar');
+    assert(cssContent.includes('.global-telemetry-btn.hud-mode {\n    top: 112px;\n    left: 18px;\n}'), 'global-telemetry-btn.hud-mode must be positioned below gauges at top: 112px; left: 18px');
+    assert(cssContent.includes('.hud-f3-debug {\n    position: fixed;\n    top: 52px;\n    left: 18px;'), 'hud-f3-debug must be positioned at left: 18px');
+    assert(cssContent.includes('.hud-f3-debug.hud-mode {\n    top: 148px;\n    left: 18px;\n}'), 'hud-f3-debug.hud-mode must be positioned at top: 148px; left: 18px');
+
+    // 9b: Verify hud-mode class dynamically toggles on switchScreen
+    global.window.uiController.switchScreen('gameHud');
+    assert(elements['btn-global-telemetry'].classList.contains('hud-mode'), 'btn-global-telemetry must have hud-mode in gameHud');
+    assert(elements['hud-f3-debug'].classList.contains('hud-mode'), 'hud-f3-debug must have hud-mode in gameHud');
+
+    global.window.uiController.switchScreen('contracts');
+    assert(!elements['btn-global-telemetry'].classList.contains('hud-mode'), 'btn-global-telemetry must not have hud-mode in contracts');
+    assert(!elements['hud-f3-debug'].classList.contains('hud-mode'), 'hud-f3-debug must not have hud-mode in contracts');
+
+    console.log('[PASS] Test 9: Telemetry button & overlay repositioned to top-left to clear Salvage bar completely');
+
+    console.log('\n>>> ALL 9 MENU & F3 TESTS PASSED PERFECTLY! <<<');
 }
 
 runTests().catch(err => {
