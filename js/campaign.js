@@ -549,7 +549,7 @@ class CampaignManager {
                 timeLimit: timeLimit,
                 risk: riskLabel,
                 requirements: reqs,
-                description: `${client.briefTemplate} Cleanse orbital hazard cluster in ${sector.name}. ${selectedMods.length > 0 ? 'Hazard advisory: Active operational modifiers in effect.' : 'Standard operational window.'}`
+                description: `Cleanse orbital hazard cluster in ${sector.name}.${selectedMods.length > 0 ? ' Active operational modifiers in effect.' : ''}`
             };
 
             contracts.push(contract);

@@ -2025,13 +2025,13 @@ class UIController {
         if (sectorContract) {
             actionBtnHtml = `
                 <button type="button" class="btn-primary" id="btn-inspector-launch-contract" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold; background: var(--salvage); border-color: #d97706; color: #000;">
-                    ACCEPT &amp; LAUNCH CONTRACT: ${sectorContract.title} 🚀
+                    🚀 LAUNCH CONTRACT: ${sectorContract.title}
                 </button>
             `;
         } else {
             actionBtnHtml = `
                 <button type="button" class="btn-primary" id="btn-inspector-launch-patrol" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold;">
-                    LAUNCH RECON &amp; CLEANUP PATROL IN SECTOR 0${sector.id} 🚀
+                    🚀 LAUNCH PATROL (SECTOR 0${sector.id})
                 </button>
             `;
         }

@@ -190,7 +190,7 @@ const STORYLETS = [
         tag: 'ORBITAL TELEMETRY INTERCEPT',
         sectorId: 1,
         assetId: 'tiangong_cargo_hulk',
-        dossier: 'While conducting sweep operations, sensors detect an intact cryptographic flight recorder inside a tumbling derelict. The telemetry contains proprietary commercial collision avoidance logs and classified sensor tracks.',
+        dossier: 'An intact flight recorder discovered in a drifting derelict holds proprietary commercial collision avoidance logs.',
         conditions: (save) => {
             const rep = save.reputation || { agency: 50, commercial: 50, public: 50 };
             return (rep.agency >= 40 || rep.commercial >= 40);
@@ -199,7 +199,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'SELL TO COMMERCIAL TELECOM',
-                desc: 'AeroSat Telecom offers an immediate bounty for exclusive access to the collision logs to defend against liability suits.',
+                desc: 'Sell exclusive collision logs to AeroSat Telecom to shield them from liability.',
                 stakes: '+350 Scrap, +1 Chips, +12 Commercial Rep, -6 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -218,7 +218,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'RELEASE TO OPEN CIVIL REGISTRY',
-                desc: 'Upload the unredacted collision data directly to UN-OOSA open public science repositories for global satellite safety.',
+                desc: 'Publish raw collision telemetry to UN-OOSA open public science repositories.',
                 stakes: '+100 Scrap, +15 Public Rep, +8 Agency Rep, -10 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -237,7 +237,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'STRIP RECORDER FOR RAW MATERIALS',
-                desc: 'Wipe the memory banks and recycle the gold and silicon into high-grade engineering components.',
+                desc: 'Smelt down memory core and microcircuits for workshop alloys and chips.',
                 stakes: '+3 Metal, +2 Chips, +150 Scrap',
                 canAfford: () => true,
                 effect: (save) => {
@@ -261,7 +261,7 @@ const STORYLETS = [
         tag: 'HIGH-MASS COLLISION EMERGENCY',
         sectorId: 3,
         assetId: 'envisat_derelict',
-        dossier: 'The European Space Agency warns that the 8.2-ton Envisat derelict has an intersecting track with a swarm of ASAT fragments. If struck, Envisat will trigger an immediate Kessler cascade across Sun-Synchronous orbit.',
+        dossier: 'The 8.2-ton Envisat hulk is on an intersecting trajectory with a hypervelocity ASAT debris stream.',
         conditions: (save) => {
             return (save.unlockedLevels >= 3 || (save.sectorHealth && save.sectorHealth.sector_03 <= 65));
         },
@@ -269,7 +269,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'DIVERT FUEL FOR EMERGENCY NUDGE',
-                desc: 'Burn 100 scrap worth of fuel reserves to execute a coordinated laser nudge, pushing Envisat onto a safe phasing trajectory.',
+                desc: 'Fire a precision laser pulse to nudge Envisat onto a safe clearance path.',
                 stakes: '-100 Scrap, +18 Agency Rep, +10 Public Rep, +15 Sector 03 Health',
                 canAfford: (save) => (save.credits || 0) >= 100,
                 effect: (save) => {
@@ -291,7 +291,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'STRIP ASAR RADAR ARRAY FOR PROFIT',
-                desc: 'Envisat’s synthetic aperture radar array is packed with high-value gallium-arsenide cells and platinum wave-guides. Strip it before it is hit.',
+                desc: 'Strip high-value gallium cells and platinum wave-guides before impact.',
                 stakes: '+500 Scrap, +3 Chips, +4 Metal, -20 Agency Rep, +10 Commercial Rep, +4 Carryover Debris',
                 canAfford: () => true,
                 effect: (save) => {
@@ -315,7 +315,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'REFUSE MISSION: EXCESSIVE RISK',
-                desc: 'Declare the 8-ton giant too massive and dangerous for your current spacecraft bus.',
+                desc: 'Stand down; 8-ton giant exceeds current airframe structural rating.',
                 stakes: '-8 Public Rep, -5 Agency Rep, 0 Cost',
                 canAfford: () => true,
                 effect: (save) => {
@@ -338,7 +338,7 @@ const STORYLETS = [
         tag: 'COMMERCIAL CORRIDOR CONTROVERSY',
         sectorId: 2,
         assetId: 'starlink_cluster_74',
-        dossier: 'AeroSat Telecom requests your vanguard vessel prioritize clearing micro-debris tracks surrounding their commercial constellation train, proposing to lock out civil research launches from the lane.',
+        dossier: 'AeroSat Telecom requests exclusive escort for their constellation, locking out civilian research craft.',
         conditions: (save) => {
             const rep = save.reputation || { commercial: 50 };
             return (rep.commercial >= 45);
@@ -347,7 +347,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'ACCEPT EXCLUSIVE COMMERCIAL CONTRACT',
-                desc: 'Dedicate all sweeping assets to safeguarding corporate satellites in exchange for a substantial payout.',
+                desc: 'Dedicate all sweepers to protect corporate satellites for maximum profit.',
                 stakes: '+400 Scrap, +16 Commercial Rep, -14 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -365,7 +365,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'ENFORCE EQUAL PUBLIC SHIPPING ACCESS',
-                desc: 'Refuse corporate exclusivity and clear the open civilian corridor so small scientific satellites can launch safely.',
+                desc: 'Keep civilian corridors open so scientific payloads can launch safely.',
                 stakes: '+180 Scrap, +14 Public Rep, +10 Agency Rep, -15 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -384,7 +384,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'DEMAND EMERGENCY SURCHARGE',
-                desc: 'Extort commercial operators by demanding double hazard pay to touch their corridor.',
+                desc: 'Charge commercial operators double hazard rates to touch their corridor.',
                 stakes: 'Requires 60% Commercial Rep. If met: +650 Scrap, -5 Commercial Rep.',
                 canAfford: (save) => ((save.reputation && save.reputation.commercial >= 60) || false),
                 effect: (save) => {
@@ -407,7 +407,7 @@ const STORYLETS = [
         tag: 'AEROSPACE ARCHAEOLOGY CRISIS',
         sectorId: 1,
         assetId: 'vanguard_1_probe',
-        dossier: 'The Smithsonian and NASA issue an urgent alert: Vanguard 1, launched in 1958 and the oldest artifact in space, is drifting into an active debris cluster in Sector 1. A collision would pulverize 70 years of space history.',
+        dossier: 'Vanguard 1 (launched 1958, the oldest satellite in space) is drifting directly into an active debris cluster.',
         conditions: (save) => {
             return (save.sectorHealth && save.sectorHealth.sector_01 <= 90);
         },
@@ -415,7 +415,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'PRECISION GRAVEYARD INSERTION',
-                desc: 'Spend 80 scrap and 1 metal to carefully tractor and nudge Vanguard 1 into a protected super-synchronous memorial orbit.',
+                desc: 'Tractor Vanguard 1 into a protected memorial orbit to preserve space history.',
                 stakes: '-80 Scrap, -1 Metal, +20 Public Rep, +15 Agency Rep',
                 canAfford: (save) => (save.credits || 0) >= 80 && (save.materials?.metal || 0) >= 1,
                 effect: (save) => {
@@ -437,7 +437,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'TRACTOR AND RECYCLE FOR SCRAP',
-                desc: 'Treat the 1.5 kg sphere as standard space scrap, harvesting its antique solar cells and mercury batteries.',
+                desc: 'Recycle the historic 1.5 kg probe for antique solar cells and mercury batteries.',
                 stakes: '+300 Scrap, -25 Public Rep, -15 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -458,7 +458,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'BROADCAST CIVILIAN AMATEUR TRACKING',
-                desc: 'Transmit high-precision coordinates to amateur radio operators to track and calculate passive avoidance burns.',
+                desc: 'Transmit telemetry to amateur trackers to calculate passive avoidance burns.',
                 stakes: '+6 Public Rep, -4 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -481,7 +481,7 @@ const STORYLETS = [
         tag: 'PRESSURIZED EXPLOSION THREAT',
         sectorId: 2,
         assetId: 'tiangong_cargo_hulk',
-        dossier: 'A spent rocket upper-stage is venting pressurized toxic hypergolic hydrazine in Sector 2. Solar radiation heating threatens to rupture the main tank into hundreds of high-velocity fragments.',
+        dossier: 'A spent rocket upper-stage is venting pressurized toxic hydrazine, threatening explosive fragmentation.',
         conditions: (save) => {
             return (save.unlockedLevels >= 2);
         },
@@ -489,7 +489,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'DEPLOY CRYOGENIC METAL SEAL',
-                desc: 'Spend 2 metal materials to construct an emergency seal over the relief valve before detonation.',
+                desc: 'Spend 2 metal to cap the venting relief valve before pressure ruptures the tank.',
                 stakes: '-2 Metal, +150 Scrap, +18 Sector 02 Health, +12 Public Rep, +10 Agency Rep',
                 canAfford: (save) => (save.materials?.metal || 0) >= 2,
                 effect: (save) => {
@@ -509,7 +509,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'CONTROLLED LASER DETONATION',
-                desc: 'Rupture the tank now with a laser pulse from safe range. Solves the explosion threat, but peppers the sector with shrapnel.',
+                desc: 'Vaporize the tank with laser pulse; removes blast hazard but leaves debris cloud.',
                 stakes: '+250 Scrap, -15 Sector 02 Health, +6 Carryover Debris, -12 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -528,7 +528,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'DECLARE ORBITAL EXCLUSION ZONE',
-                desc: 'Issue navigation notices and divert commercial launch trajectories around the danger sector.',
+                desc: 'Divert commercial trajectories around the venting booster zone.',
                 stakes: '-8 Commercial Rep, +4 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -551,7 +551,7 @@ const STORYLETS = [
         tag: 'RADIOACTIVE HAZARD CONTAINMENT',
         sectorId: 6,
         assetId: 'cosmos_2251_hull_core',
-        dossier: 'Radiation sensors on Aegis Depot detect gamma and neutron flux from a tumbling Cold War reconnaissance satellite in Sector 6. Its Strontium-90 thermal generator is leaking through cracked shielding.',
+        dossier: 'Radiation sensors detect gamma leakage from an aging Cold War nuclear satellite in Sector 6.',
         conditions: (save) => {
             return (save.unlockedLevels >= 5 || (save.sectorHealth && save.sectorHealth.sector_06 <= 50));
         },
@@ -559,7 +559,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'FABRICATE TUNGSTEN RADIATION SHROUD',
-                desc: 'Sacrifice 2 metal units to fashion a containment shroud and nudge the radioactive core into a thousand-year disposal orbit.',
+                desc: 'Spend 2 metal to encase the reactor core and boost it to safe disposal orbit.',
                 stakes: '-2 Metal, +20 Agency Rep, +16 Public Rep, +20 Sector 06 Health',
                 canAfford: (save) => (save.materials?.metal || 0) >= 2,
                 effect: (save) => {
@@ -581,7 +581,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'HARVEST HIGH-ENERGY THERMOCOUPLE CELLS',
-                desc: 'Strip the intact radioisotope thermoelectric generator elements to supercharge your spacecraft workshop batteries.',
+                desc: 'Extract intact radioisotope elements to supercharge workshop battery reserves.',
                 stakes: '+4 Cells, +200 Scrap, -18 Public Rep, -10 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -603,7 +603,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'LOG FLIGHT RECORD AND EVADE',
-                desc: 'Keep spacecraft well outside the 200-meter radiation exclusion bubble and let orbital decay take its course.',
+                desc: 'Maintain safe distance outside the 200m radiation bubble and let orbit decay.',
                 stakes: '-8 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -625,7 +625,7 @@ const STORYLETS = [
         tag: 'SPACE WEATHER EMERGENCY',
         sectorId: 4,
         assetId: 'starlink_38_debris_field',
-        dossier: 'A severe NASA DONKI G5 geomagnetic storm has heated and expanded the thermosphere. Decaying satellites in Sector 4 are decelerating rapidly and will re-enter within orbital hours unless assisted.',
+        dossier: 'A severe geomagnetic storm has inflated thermospheric drag, pulling dozens of satellites toward re-entry.',
         conditions: (save) => {
             return (save.unlockedLevels >= 4 || (save.activeContract && save.activeContract.modifiers && save.activeContract.modifiers.includes('storm_season')));
         },
@@ -633,7 +633,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'EMERGENCY RE-BOOST MISSION',
-                desc: 'Burn extra propellant to nudge as many satellites as possible above the thermospheric drag line.',
+                desc: 'Burn extra propellant to boost endangered satellites above the drag envelope.',
                 stakes: '-150 Scrap, +25 Commercial Rep, +15 Public Rep, +22 Sector 04 Health',
                 canAfford: (save) => (save.credits || 0) >= 150,
                 effect: (save) => {
@@ -655,7 +655,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'SCAVENGE FALLING SATELLITE HARDWARE',
-                desc: 'Follow the decaying satellites down to perigee and salvage their titanium reaction wheels and xenon tanks.',
+                desc: 'Salvage titanium reaction wheels and xenon tanks right before atmospheric re-entry.',
                 stakes: '+450 Scrap, +3 Metal, +2 Chips, -22 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -674,7 +674,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'HUNKER IN AEGIS DEPOT FARADAY HAVEN',
-                desc: 'Conserve fuel and hull integrity inside the depot’s magnetic shield until the solar storm clears.',
+                desc: 'Conserve fuel inside depot magnetic shield and conduct structural repairs.',
                 stakes: '0 Cost, +15 Spacecraft Hull Repair, -5 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -696,7 +696,7 @@ const STORYLETS = [
         tag: 'GEOPOLITICAL ORBITAL ESPIONAGE',
         sectorId: 7,
         assetId: 'classified_quantum_satellite',
-        dossier: 'You intercept an uncatalogued stealth reconnaissance platform in the GEO Graveyard. Its hard drives contain evidence of illegal kinetic orbital weapons disguised as communications research.',
+        dossier: 'You intercept an uncatalogued stealth platform in the GEO Graveyard holding illicit orbital weapon data.',
         conditions: (save) => {
             const rep = save.reputation || { agency: 50 };
             return (save.unlockedLevels >= 6 || rep.agency >= 60);
@@ -705,7 +705,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'TRANSMIT LEAK TO UN SPACE WATCH',
-                desc: 'Broadcast unredacted telemetry logs to civil transparency organizations to expose illegal orbital militarization.',
+                desc: 'Publish unredacted telemetry to global civil bodies to expose militarization.',
                 stakes: '+100 Scrap, +30 Public Rep, -25 Agency Rep, -10 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -724,7 +724,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'RETURN DISCREETLY TO DEFENSE COMMAND',
-                desc: 'Hand the encrypted core back to Defense Command in exchange for classified black-budget defense funding.',
+                desc: 'Hand the encrypted core back to Defense Command for a black-budget bounty.',
                 stakes: '+800 Scrap, +25 Agency Rep, -20 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -742,7 +742,7 @@ const STORYLETS = [
             {
                 id: 'choice_c',
                 label: 'AUCTION SCHEMATICS TO CORPORATE RIVALS',
-                desc: 'Sell quantum capacitor schematics to private aerospace conglomerates.',
+                desc: 'Sell quantum capacitor schematics to highest corporate aerospace bidder.',
                 stakes: '+1200 Scrap, +3 Chips, +18 Commercial Rep, -35 Agency Rep, -30 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -772,7 +772,7 @@ const STORYLETS = [
         tag: 'CIVIC RADAR EXPANSION',
         sectorId: 1,
         assetId: 'tdrss_relay_omega',
-        dossier: 'Because you released the black box telemetry to open public science (Storylet 01), global amateur ground stations have networked their dishes into a decentralized orbital tracking mesh.',
+        dossier: 'Ground stations have networked into a global open orbital tracking mesh based on your published data.',
         conditions: (save) => {
             return (save.campaignFlags && save.campaignFlags.derelict_open_source === true);
         },
@@ -780,7 +780,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'SYNC SHIP SENSORS WITH CIVILIAN MESH',
-                desc: 'Integrate the open amateur feed into your navigation computer, permanently expanding collision radar detection range by +15%.',
+                desc: 'Integrate open mesh feeds to expand collision radar warning range by +15%.',
                 stakes: '+15% Sensor Warning Range, +12 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -796,7 +796,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'COMMERCIALIZE REAL-TIME FEED',
-                desc: 'Package the civilian radar mesh into a low-latency tracking API and sell access to commercial satellite operators.',
+                desc: 'Package the civilian radar mesh into a low-latency paid tracking API for operators.',
                 stakes: '+450 Scrap, +15 Commercial Rep, -8 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -820,7 +820,7 @@ const STORYLETS = [
         tag: 'DIPLOMATIC ENDOWMENT',
         sectorId: 3,
         assetId: 'envisat_derelict',
-        dossier: 'Having successfully saved Envisat from catastrophic kinetic destruction (Storylet 02), the European Space Agency awards your crew their prestigious Clean Space Excellence Grant.',
+        dossier: 'The European Space Agency awards your crew their Clean Space Excellence Grant for saving Envisat.',
         conditions: (save) => {
             return (save.campaignFlags && save.campaignFlags.envisat_safeguarded === true);
         },
@@ -828,7 +828,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'ACCEPT R&D BLUEPRINTS & ADVANCED CELLS',
-                desc: 'Receive advanced European ion thruster blueprints and high-efficiency photovoltaic materials for spacecraft engineering.',
+                desc: 'Receive advanced European ion thruster blueprints and photovoltaic cells.',
                 stakes: '+300 Scrap, +3 Cells, +2 Chips, +15 Agency Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -847,7 +847,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'ESTABLISH PERMANENT SUN-SYNC SAFETY HUB',
-                desc: 'Invest grant funds into automated debris sweep monitors across Sector 03 to permanently improve sector health.',
+                desc: 'Deploy automated debris sweep monitors to permanently enhance Sector 03 cleanliness.',
                 stakes: '+25 Sector 03 Health, +20 Agency Rep, +15 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -871,7 +871,7 @@ const STORYLETS = [
         tag: 'GRASSROOTS CIVIL ENDEAVOR',
         sectorId: 2,
         assetId: 'iss_heritage_habitat',
-        dossier: 'Your defense of equal public shipping corridors over corporate monopoly (Storylet 03) captured international news. A viral crowdfunding campaign has accumulated massive citizen donations to fund your missions.',
+        dossier: 'A viral citizen crowdfunding campaign has raised substantial donations for your independent orbital missions.',
         conditions: (save) => {
             return (save.campaignFlags && save.campaignFlags.public_corridor_protected === true);
         },
@@ -879,7 +879,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'ACCEPT COMMUNITY REPAIR FUND',
-                desc: 'Deposit the citizen contributions directly into your workshop treasury for ship maintenance and upgrades.',
+                desc: 'Deposit citizen contributions into workshop treasury for refits and maintenance.',
                 stakes: '+500 Scrap, +4 Metal, +15 Public Rep',
                 canAfford: () => true,
                 effect: (save) => {
@@ -897,7 +897,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'SUBSIDIZE UNIVERSITY CUBESAT DE-ORBITING',
-                desc: 'Use the funds to retrieve and de-orbit dead university educational cubesats free of charge.',
+                desc: 'Use funds to retrieve and de-orbit dead educational small satellites free of charge.',
                 stakes: '+28 Public Rep, +12 Agency Rep, +15 Sector 01 Health, +15 Sector 02 Health',
                 canAfford: () => true,
                 effect: (save) => {
@@ -924,7 +924,7 @@ const STORYLETS = [
         tag: 'PERPETUAL CULTURAL RECOGNITION',
         sectorId: 1,
         assetId: 'vanguard_1_probe',
-        dossier: 'In gratitude for preserving humanity’s oldest satellite Vanguard 1 (Storylet 04), the Smithsonian National Air and Space Museum establishes a permanent public exhibition honoring your spacecraft and flight crew.',
+        dossier: 'The Smithsonian National Air and Space Museum establishes an endowment honoring your preservation of Vanguard 1.',
         conditions: (save) => {
             return (save.campaignFlags && save.campaignFlags.vanguard_preserved === true);
         },
@@ -932,7 +932,7 @@ const STORYLETS = [
             {
                 id: 'choice_a',
                 label: 'ACCEPT PERPETUAL EXHIBITION ENDOWMENT',
-                desc: 'Establish a formal partnership that grants ongoing subsidies and cuts future contract solicitation fees in half.',
+                desc: 'Establish formal partnership granting ongoing subsidies and 50% cheaper contract search.',
                 stakes: '+400 Scrap, +20 Public Rep, +15 Agency Rep, 50% Cheaper Contract Rerolls',
                 canAfford: () => true,
                 effect: (save) => {
@@ -950,7 +950,7 @@ const STORYLETS = [
             {
                 id: 'choice_b',
                 label: 'EXCHANGE ENDOWMENT FOR SURPLUS AEROSPACE ALLOYS',
-                desc: 'Request the museum archive exchange symbolic honors for high-grade titanium and beryllium scrap stockpiles.',
+                desc: 'Trade museum honors for immediate high-grade titanium and beryllium alloy stocks.',
                 stakes: '+6 Metal, +3 Cells, +150 Scrap, +10 Commercial Rep',
                 canAfford: () => true,
                 effect: (save) => {

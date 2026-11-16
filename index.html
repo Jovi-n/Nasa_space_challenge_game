@@ -223,22 +223,47 @@
         <div class="menu-container">
             <h1 class="game-title">ORBITAL CLEANUP</h1>
             <div class="game-subtitle">MISSION ZERO // KESSLER DEFENSE INITIATIVE</div>
-            <p class="mission-lore">
-                Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
+            <p class="mission-lore" style="font-size: 0.95rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 20px;">
+                Cleanse Earth's orbit of hazardous debris, evade kinetic strikes, and recycle salvage at the Aegis Depot before cascade collapse.
             </p>
             <div class="menu-buttons">
-                <button type="button" id="btn-menu-survival" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: 700; text-shadow: 1px 1px 0px #000;" onclick="if(window.uiController){window.uiController.startCascadeSurvival();}else{alert('Starting Cascade Survival...');}">⚡ CASCADE SURVIVAL MODE</button>
-                <button type="button" id="btn-menu-campaign-map" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="if(window.uiController){window.uiController.openCampaignMap();}">🗺️ ORBITAL CAMPAIGN MAP</button>
-                <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;" onclick="window.openMissionBoard();">MISSION BOARD &amp; CAMPAIGN</button>
-                <button id="btn-menu-start" class="btn-secondary">CUSTOM MISSION DESIGN</button>
-                <button id="btn-menu-hangar" class="btn-secondary">HANGAR &amp; UPGRADES</button>
-                <button id="btn-menu-help" class="btn-secondary">FLIGHT MANUAL &amp; HOW TO PLAY</button>
-                <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS &amp; LEADERBOARD</button>
-                <button id="btn-menu-sources" class="btn-secondary">DATA &amp; AEROSPACE SOURCES</button>
-                <button id="btn-menu-credits" class="btn-secondary">MISSION CREDITS</button>
-                <button type="button" id="btn-menu-telemetry" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="window.toggleTelemetryOverlay();">📡 FLIGHT TELEMETRY &amp; MONITOR [T / F3]</button>
+                <!-- Primary Modes -->
+                <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700; font-size: 1.05rem;" onclick="window.openMissionBoard();">
+                    📋 MISSION BOARD &amp; CAMPAIGN
+                </button>
+                <button type="button" id="btn-menu-survival" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: 700; font-size: 1rem;" onclick="if(window.uiController){window.uiController.startCascadeSurvival();}else{alert('Starting Cascade Survival...');}">
+                    ⚡ CASCADE SURVIVAL MODE
+                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" id="btn-menu-campaign-map" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-size: 0.85rem; padding: 10px;" onclick="if(window.uiController){window.uiController.openCampaignMap();}">
+                        🗺️ CAMPAIGN MAP
+                    </button>
+                    <button id="btn-menu-start" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🛠️ CUSTOM STUDIO
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button id="btn-menu-hangar" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🔬 FLEET HANGAR
+                    </button>
+                    <button id="btn-menu-leaderboard" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🏆 TOP RECORDS
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px;">
+                    <button id="btn-menu-help" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px;">
+                        📖 HOW TO PLAY
+                    </button>
+                    <button type="button" id="btn-menu-telemetry" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px; border-color: var(--accent-cyan); color: var(--accent-cyan);" onclick="window.toggleTelemetryOverlay();">
+                        📡 TELEMETRY [T]
+                    </button>
+                    <button id="btn-menu-sources" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px;">
+                        ℹ️ SOURCES
+                    </button>
+                </div>
+                <button id="btn-menu-credits" class="btn-secondary" style="display: none;">MISSION CREDITS</button>
             </div>
-            <div class="audio-controls">
+            <div class="audio-controls" style="margin-top: 14px;">
                 <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
                 <button id="btn-toggle-music" class="btn-audio active">MUSIC: ON</button>
             </div>
@@ -254,7 +279,7 @@
                 <div>
                     <h2 class="panel-title">MISSION BOARD // CAMPAIGN CONTRACTS</h2>
                     <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
-                        TACTICAL SECTOR CLEARANCE // PERSISTENT ORBITAL REPUTATION &amp; HEALTH
+                        ACTIVE CONTRACTS // ORBITAL STABILITY &amp; REPUTATION
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -310,9 +335,9 @@
 
             <div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                 <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-muted);">
-                    Select an operational contract above to launch with custom budget &amp; requirements, or design a custom flight.
+                    Select an operational contract above, or configure a custom flight.
                 </div>
-                <button type="button" id="btn-board-custom-design" class="btn-secondary" style="font-size: 0.85rem;">OPEN CUSTOM MISSION STUDIO</button>
+                <button type="button" id="btn-board-custom-design" class="btn-secondary" style="font-size: 0.85rem;">CUSTOM MISSION STUDIO</button>
             </div>
         </div>
     </div>
@@ -326,7 +351,7 @@
                 <div>
                     <h2 class="panel-title">ORBITAL CAMPAIGN TACTICAL MAP</h2>
                     <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
-                        NEAR-EARTH ORBITAL INFRASTRUCTURE &amp; SECTOR CASCADE DEFENSE MATRIX
+                        ORBITAL SHELLS // REAL-TIME HAZARD &amp; INFRASTRUCTURE STATUS
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -664,88 +689,178 @@
     <div id="screen-how-to-play" class="screen-layer hidden">
         <div class="guide-container">
             <div class="panel-header">
-                <h2 class="panel-title">AEGIS FLIGHT & OPERATIONS MANUAL</h2>
+                <div>
+                    <h2 class="panel-title">AEGIS OPERATIONS MANUAL</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        FLIGHT PROCEDURES // CAPTURE SYSTEMS // HAZARD DEFENSE
+                    </div>
+                </div>
                 <button class="btn-secondary btn-back-to-menu">RETURN</button>
+            </div>
+
+            <!-- Quick 4-Step Loop Banner -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 12px 0 16px; background: rgba(0, 243, 255, 0.04); border: 1px solid rgba(0, 243, 255, 0.3); padding: 10px 14px; border-radius: 4px;">
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--accent-cyan); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">01</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">THRUST &amp; PILOT</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Burn <span class="kbd">W</span> to accelerate; steer with <span class="kbd">A</span>/<span class="kbd">D</span>. Retro-brake with <span class="kbd">S</span>.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--salvage); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">02</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">RETRIEVE DEBRIS</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Press <span class="kbd">SPACE</span> to fire Grapple, Net, or hold Tractor Beam to capture debris.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--danger); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">03</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">EVADE &amp; DEFLECT</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Dodge threats or press <span class="kbd">Q</span> Laser Nudge to push away meteors.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--clean); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">04</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">DOCK &amp; RECYCLE</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Return to Depot and press <span class="kbd">E</span> to cash in Scrap, repair hull &amp; refuel.</div>
+                    </div>
+                </div>
             </div>
 
             <div class="guide-tabs">
                 <button class="tab-btn active" data-tab="controls">FLIGHT CONTROLS</button>
                 <button class="tab-btn" data-tab="equipment">EQUIPMENT OPERATION</button>
-                <button class="tab-btn" data-tab="debris">DEBRIS & RECYCLING</button>
+                <button class="tab-btn" data-tab="debris">DEBRIS &amp; RECYCLING</button>
                 <button class="tab-btn" data-tab="hazards">ORBITAL HAZARDS</button>
             </div>
 
             <!-- Controls Tab -->
             <div id="tab-content-controls" class="tab-content active">
-                <p>Mastering orbital dynamics requires balancing forward acceleration, inertial drift, and retro-braking.</p>
-                <div class="guide-keybinds">
+                <div class="guide-keybinds" style="margin-top: 10px;">
                     <div class="key-card">
                         <div><span class="kbd">W</span> or <span class="kbd">▲</span></div>
-                        <strong>Main Propulsion Thruster:</strong> Fires rear ion engines to accelerate forward. Burns fuel.
+                        <strong>Main Propulsion Thruster:</strong> Fires main engine forward. Burns fuel.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">A</span> / <span class="kbd">D</span> or <span class="kbd">◄</span> / <span class="kbd">►</span></div>
-                        <strong>RCS Yaw Steering:</strong> Rotates spacecraft left or right with reaction control thrusters.
+                        <strong>RCS Yaw Steering:</strong> Rotates craft left or right.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">S</span> or <span class="kbd">▼</span></div>
-                        <strong>Retro-Braking:</strong> Fires forward counter-thrusters to shed orbital velocity.
+                        <strong>Retro-Braking:</strong> Counter-thrusters to shed orbital velocity.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">SPACEBAR</span></div>
-                        <strong>Activate Equipment:</strong> Fires Grapple Arm, deploys Capture Net, or holds Magnetic Beam.
+                        <strong>Activate Equipment:</strong> Fires Grapple Arm, deploys Capture Net, or holds Tractor Beam.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">Q</span></div>
-                        <strong>Laser Nudge:</strong> Emits a focused kinetic laser pulse to deflect incoming hazards/debris. Consumes 12 battery.
+                        <strong>Laser Nudge:</strong> Deflects incoming hazards and debris (consumes 12 battery).
                     </div>
                     <div class="key-card">
-                        <div><span class="kbd">E</span> or Hold Position</div>
-                        <strong>Dock & Recycle:</strong> Docks at Aegis Depot to offload debris for 100% Score & Scrap Credits.
+                        <div><span class="kbd">E</span> (At Depot)</div>
+                        <strong>Dock &amp; Recycle:</strong> Offloads debris for 100% Score &amp; Scrap Credits, restores hull &amp; fuel.
                     </div>
                     <div class="key-card">
-                        <div><span class="kbd">R</span> (Docked)</div>
-                        <strong>Strip Materials:</strong> At Aegis Depot, strip cargo for raw materials (Metal, Cells, Chips) at 50% credit yield.
+                        <div><span class="kbd">R</span> (At Depot)</div>
+                        <strong>Strip Materials:</strong> Converts cargo into Metal, Cells, and Chips for tech research.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">T</span> or <span class="kbd">F3</span></div>
+                        <strong>Telemetry Monitor:</strong> Real-time collision radar, physics metrics &amp; mission timers.
                     </div>
                     <div class="key-card">
                         <div><span class="kbd">P</span> or <span class="kbd">ESC</span></div>
-                        <strong>Pause Mission:</strong> Pauses mission and opens command options.
+                        <strong>Pause Mission:</strong> Pauses mission and displays abort / audio options.
                     </div>
                 </div>
             </div>
 
             <!-- Equipment Tab -->
             <div id="tab-content-equipment" class="tab-content">
-                <p>Your chosen retrieval tool drastically changes your flight approach:</p>
-                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
-                    <li><strong>Robotic Grapple Arm:</strong> Fires a high-velocity mechanical cable directly forward. Clamps onto a single debris item and reels it into your hold. Lowest battery consumption and yields a <strong>+35% Scrap Bonus</strong>.</li>
-                    <li><strong>Wide-Angle Capture Net:</strong> Launches an expanding electromagnetic energy mesh that encloses all small/medium debris pieces within its blast radius simultaneously. Great for clearing dense fragment clouds.</li>
-                    <li><strong>Magnetic Tractor Beam:</strong> Hold SPACEBAR to emit a continuous graviton cone. Continuously pulls all metallic debris in front of you into your intake. High battery drain.</li>
-                </ul>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px;">
+                    <div class="key-card" style="border-left: 3px solid var(--accent-cyan);">
+                        <strong style="color: var(--accent-cyan); font-size: 0.95rem;">🦾 Robotic Grapple Arm</strong>
+                        <div style="font-size: 0.78rem; color: var(--salvage); margin: 4px 0;">+35% SCRAP BONUS // LOW BATTERY DRAIN</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Fires a mechanical harpoon cable forward. Clamps onto a single debris item and reels it in.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid var(--salvage);">
+                        <strong style="color: var(--salvage); font-size: 0.95rem;">🕸️ Wide-Angle Capture Net</strong>
+                        <div style="font-size: 0.78rem; color: var(--accent-cyan); margin: 4px 0;">AREA OF EFFECT // HIGH VOLUME CLEARANCE</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Launches an expanding electromagnetic mesh that snares all nearby fragments simultaneously.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #a855f7;">
+                        <strong style="color: #a855f7; font-size: 0.95rem;">🧲 Magnetic Tractor Beam</strong>
+                        <div style="font-size: 0.78rem; color: #eab308; margin: 4px 0;">CONTINUOUS CONE // HIGH BATTERY DRAIN</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Hold SPACEBAR to emit a continuous graviton cone that drags all metallic salvage toward your intake.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <!-- Debris Tab -->
             <div id="tab-content-debris" class="tab-content">
-                <p>Earth's orbit contains multiple classes of hazardous debris:</p>
-                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
-                    <li><strong>Structural Bolt & Shards (15kg):</strong> Small, fast-moving metal fragments from shattered rocket skins.</li>
-                    <li><strong>Broken Solar Array (45kg):</strong> Fragile photovoltaic panels rich in rare earth materials.</li>
-                    <li><strong>Research Cubesat (75kg):</strong> Miniaturized satellites carrying high-value avionics.</li>
-                    <li><strong>Spent Rocket Upper Stage (220kg):</strong> Massive propulsion tank left drifting. High scrap yield.</li>
-                    <li><strong>Derelict Comms Satellite (380kg):</strong> Heavy telecommunication platforms with intact dishes.</li>
-                    <li><strong>Prototype Fusion Core (160kg):</strong> Rare experimental modules with enormous credit bounty.</li>
-                </ul>
-                <p><strong>Aegis Depot Recycling:</strong> When your cargo hold fills up, fly back to the central orbital station. Docking safely unloads all items, converts them to Score & Scrap Credits, refuels your tanks, and restores full hull integrity!</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+                    <div class="key-card">
+                        <strong style="color: #fff;">🔩 Structural Bolt &amp; Shards (15 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Fast-moving metallic fragments. Quick capture yield.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🔋 Broken Solar Array (45 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Photovoltaic panels rich in rare cells and materials.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">💾 Research Cubesat (75 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Miniaturized satellite chassis containing high-value microchips.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🚀 Spent Upper Stage (220 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Massive propellant tank. High scrap payout upon safe recovery.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🛰️ Derelict Comms Satellite (380 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Heavy telecommunication platform with intact avionics.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">⚡ Prototype Fusion Core (160 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Rare experimental module yielding maximum credit bounties.</div>
+                    </div>
+                </div>
+                <div style="margin-top: 12px; background: rgba(0, 243, 255, 0.05); border: 1px solid var(--accent-cyan); padding: 10px 14px; border-radius: 3px; font-size: 0.85rem; color: #cbd5e1;">
+                    🎯 <strong>Recycling Tip:</strong> When cargo hold is full, return to Aegis Depot and press <span class="kbd">E</span> to cash in scrap and repair hull, or <span class="kbd">R</span> to strip for metal, cells, and chips.
+                </div>
             </div>
 
             <!-- Hazards Tab -->
             <div id="tab-content-hazards" class="tab-content">
-                <p>Watch out for dangerous orbital threats and heed the Collision Warning Radar:</p>
-                <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
-                    <li><strong>Kinetic Micrometeoroids:</strong> Hypersonic projectiles crossing orbit. Severe collision damage.</li>
-                    <li><strong>Volatile Hydrazine Mines:</strong> Explosive pressurized fuel tanks. Heavy explosive damage on ram.</li>
-                    <li><strong>Defunct RTG Nuclear Satellites:</strong> Cold War satellites emitting continuous radiation fields that rapidly drain battery systems.</li>
-                </ul>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px;">
+                    <div class="key-card" style="border-left: 3px solid var(--danger);">
+                        <strong style="color: var(--danger); font-size: 0.95rem;">☄️ Kinetic Micrometeoroids</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Hypersonic projectiles crossing orbit. Severe impact damage. Evade with thrusters or deflect with <span class="kbd">Q</span> Laser Nudge.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #f97316;">
+                        <strong style="color: #f97316; font-size: 0.95rem;">💥 Volatile Hydrazine Tanks</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Pressurized propellant tanks. Detonate violently on ramming. Grapple carefully from distance.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #eab308;">
+                        <strong style="color: #eab308; font-size: 0.95rem;">☢️ Defunct RTG Nuclear Cores</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Cold War nuclear satellites emitting radiation fields that rapidly drain craft battery reserves.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
