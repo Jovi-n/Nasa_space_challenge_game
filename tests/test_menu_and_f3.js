@@ -245,7 +245,16 @@ async function runTests() {
     assert(!elements['hud-f3-debug'].classList.contains('hidden'), 'Pressing ` (backtick) should toggle telemetry without Fn key');
     assert(backtickEvent.defaultPrevented, 'Backtick event should have defaultPrevented');
     global.window.toggleTelemetryOverlay();
-    console.log('[PASS] Test 7: HUD F3 button, controls hint & backtick (`) key work as interactive toggles');
+
+    // Test 7c: 'T' key toggle (universal non-dead key for laptops)
+    const tKeyEvent = { key: 't', code: 'KeyT', keyCode: 84, defaultPrevented: false, preventDefault: () => { tKeyEvent.defaultPrevented = true; }, stopPropagation: () => {} };
+    if (global.window._listeners && global.window._listeners['keydown']) {
+        global.window._listeners['keydown'].forEach(fn => fn(tKeyEvent));
+    }
+    assert(!elements['hud-f3-debug'].classList.contains('hidden'), 'Pressing T key should toggle telemetry without Fn key');
+    assert(tKeyEvent.defaultPrevented, 'T key event should have defaultPrevented');
+    global.window.toggleTelemetryOverlay();
+    console.log('[PASS] Test 7: HUD F3 button, controls hint, backtick (`), and T key work as interactive toggles');
 
     // Test 8: F3 Telemetry with active Flight Director
     const mockScene = {

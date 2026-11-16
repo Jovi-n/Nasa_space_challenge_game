@@ -69,9 +69,9 @@
                 var activeScr = (window.uiController && window.uiController.currentScreenName) ? window.uiController.currentScreenName : 'MENU';
 
                 el.innerHTML = [
-                    '<div class="f3-title" style="display: flex; justify-content: space-between;">',
+                    '<div class="f3-title" style="display: flex; justify-content: space-between; align-items: center;">',
                     '  <span>SYSTEM &amp; ENGINE TELEMETRY</span>',
-                    '  <span style="color: var(--ink-muted); font-size: 0.65rem;">[F3 CLOSE]</span>',
+                    '  <button type="button" onclick="window.toggleTelemetryOverlay();" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: var(--danger); font-family: var(--font-mono); font-size: 0.7rem; padding: 2px 6px; cursor: pointer; border-radius: 2px;">✕ CLOSE</button>',
                     '</div>',
                     '<div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>',
                     '<div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">' + activeScr.toUpperCase() + '</strong></div>',
@@ -79,7 +79,8 @@
                     '<div class="f3-row"><span>CAMPAIGN SEED:</span> <strong>SEED-' + seed + '</strong></div>',
                     '<div class="f3-row"><span>REPUTATION:</span> <strong>AGY ' + (rep.agency || 50) + '% | COM ' + (rep.commercial || 50) + '% | PUB ' + (rep.public || 50) + '%</strong></div>',
                     '<div class="f3-row"><span>CREDITS:</span> <strong>' + credits + ' SCRAP</strong></div>',
-                    '<div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>'
+                    '<div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>',
+                    '<div style="margin-top: 8px; font-size: 0.7rem; color: var(--ink-muted); border-top: 1px dotted var(--border); padding-top: 4px; text-align: center;">Hotkey: Press [T] or [F3] to toggle</div>'
                 ].join('');
             }
         };
@@ -171,7 +172,15 @@
         };
 
         window.addEventListener('keydown', function(e) {
-            if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114 || e.key === '`' || e.code === 'Backquote' || e.keyCode === 192) {
+            // Ignore hotkeys if user is currently typing in an input or textarea
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+            var isF3 = e.key === 'F3' || e.code === 'F3' || e.keyCode === 114;
+            var isBacktick = e.key === '`' || e.code === 'Backquote' || e.keyCode === 192 || e.key === '~';
+            var isKeyT = e.key === 't' || e.key === 'T' || e.code === 'KeyT' || e.keyCode === 84;
+
+            if (isF3 || isBacktick || isKeyT) {
                 e.preventDefault();
                 e.stopPropagation();
                 window.toggleTelemetryOverlay();
@@ -182,7 +191,7 @@
 <body>
 
     <!-- Global Floating Telemetry Button (Instant access on any screen, no Fn key required) -->
-    <button type="button" id="btn-global-telemetry" class="global-telemetry-btn" title="Toggle Tactical Telemetry [F3 or ` key]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [F3 / `]</button>
+    <button type="button" id="btn-global-telemetry" class="global-telemetry-btn" title="Toggle Tactical Telemetry [Press T or F3]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [T / F3]</button>
 
     <!-- Phaser 3 Game Container -->
     <div id="game-container"></div>
@@ -205,6 +214,7 @@
                 <button id="btn-menu-leaderboard" class="btn-secondary">CAREER RECORDS &amp; LEADERBOARD</button>
                 <button id="btn-menu-sources" class="btn-secondary">DATA &amp; AEROSPACE SOURCES</button>
                 <button id="btn-menu-credits" class="btn-secondary">MISSION CREDITS</button>
+                <button type="button" id="btn-menu-telemetry" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="window.toggleTelemetryOverlay();">📡 FLIGHT TELEMETRY &amp; MONITOR [T / F3]</button>
             </div>
             <div class="audio-controls">
                 <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
@@ -725,7 +735,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <button type="button" id="btn-toggle-f3-hud" class="hud-f3-btn" title="Toggle Flight Telemetry [F3]" onclick="window.toggleTelemetryOverlay();">📡 F3</button>
+                        <button type="button" id="btn-toggle-f3-hud" class="hud-f3-btn" title="Toggle Flight Telemetry [T / F3]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [T / F3]</button>
                         <div id="hud-lane-indicator" class="hud-lane-badge lane-mid">LANE 2: CO-ORBITAL [SYNC]</div>
                         <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
                     </div>
@@ -811,7 +821,7 @@
                 <span class="kbd">E</span> Recycle &nbsp;|&nbsp; 
                 <span class="kbd">R</span> Strip &nbsp;|&nbsp; 
                 <span class="kbd">H</span> Repair &nbsp;|&nbsp; 
-                <span class="kbd-btn" id="btn-f3-hint" title="Toggle Telemetry" onclick="window.toggleTelemetryOverlay();" style="cursor: pointer;"><span class="kbd">F3</span> Telemetry</span> &nbsp;|&nbsp; 
+                <span class="kbd-btn" id="btn-f3-hint" title="Toggle Telemetry" onclick="window.toggleTelemetryOverlay();" style="cursor: pointer;"><span class="kbd">T</span> / <span class="kbd">F3</span> Telemetry</span> &nbsp;|&nbsp; 
                 <span class="kbd">P</span> Pause
             </div>
 
@@ -1091,15 +1101,15 @@
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
     <!-- Core Game Scripts (Cache-Busting Enabled) -->
-    <script src="data/parts.js?v=8a.2"></script>
-    <script src="data/missions.js?v=8a.2"></script>
-    <script src="data/donki-snapshot.js?v=8a.2"></script>
-    <script src="js/campaign.js?v=8a.2"></script>
-    <script src="js/audio.js?v=8a.2"></script>
-    <script src="js/data.js?v=8a.2"></script>
-    <script src="js/director.js?v=8a.2"></script>
-    <script src="js/graphics.js?v=8a.2"></script>
-    <script src="js/game.js?v=8a.2"></script>
-    <script src="js/ui.js?v=8a.2"></script>
+    <script src="data/parts.js?v=8a.3"></script>
+    <script src="data/missions.js?v=8a.3"></script>
+    <script src="data/donki-snapshot.js?v=8a.3"></script>
+    <script src="js/campaign.js?v=8a.3"></script>
+    <script src="js/audio.js?v=8a.3"></script>
+    <script src="js/data.js?v=8a.3"></script>
+    <script src="js/director.js?v=8a.3"></script>
+    <script src="js/graphics.js?v=8a.3"></script>
+    <script src="js/game.js?v=8a.3"></script>
+    <script src="js/ui.js?v=8a.3"></script>
 </body>
 </html>

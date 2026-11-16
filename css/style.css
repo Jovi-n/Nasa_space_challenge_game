@@ -1183,7 +1183,7 @@ body, html {
     font-size: 0.78rem;
     color: var(--ink);
     z-index: 2000;
-    pointer-events: none;
+    pointer-events: auto;
     border-radius: 2px;
 }
 .hud-f3-btn {
