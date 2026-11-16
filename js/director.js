@@ -56,9 +56,11 @@ class MissionDirector {
 
         this.cascadeCountdown = this.difficulty.kesslerGracePeriod || 5.0;
 
-        // Setup F3 key listener
+        // Setup Telemetry key listeners (F3, T, and Backquote/Tilde)
         if (scene.input && scene.input.keyboard) {
             this.keyF3 = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F3);
+            this.keyT = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
+            this.keyTilde = scene.input.keyboard.addKey(192);
         }
     }
 
@@ -97,8 +99,11 @@ class MissionDirector {
         // 6. Near-Miss Hazard Detection
         this.checkNearMisses();
 
-        // 7. Check F3 Debug Key (fallback if not handled by window key listener)
-        if (this.keyF3 && Phaser.Input.Keyboard.JustDown(this.keyF3)) {
+        // 7. Check Telemetry Keys (F3, T, or `)
+        const pressF3 = this.keyF3 && Phaser.Input.Keyboard.JustDown(this.keyF3);
+        const pressT = this.keyT && Phaser.Input.Keyboard.JustDown(this.keyT);
+        const pressTilde = this.keyTilde && Phaser.Input.Keyboard.JustDown(this.keyTilde);
+        if (pressF3 || pressT || pressTilde) {
             if (!this._lastF3ToggleTime || (Date.now() - this._lastF3ToggleTime > 250)) {
                 this.toggleDebugOverlay();
             }
