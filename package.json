@@ -1,0 +1,20 @@
+{
+  "name": "orbital-cleanup-mission-zero",
+  "version": "1.0.0",
+  "description": "Orbital Cleanup: Mission Zero - NASA Space Debris Challenge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/audit_phase9.js"
+  },
+  "keywords": [
+    "nasa",
+    "space-debris",
+    "phaser",
+    "orbital-mechanics",
+    "kessler-syndrome",
+    "leaderboard"
+  ],
+  "author": "Aegis Orbital Initiative",
+  "license": "MIT"
+}

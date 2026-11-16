@@ -2852,8 +2852,9 @@ class OrbitalGameScene extends Phaser.Scene {
             .replace('Operation Cleanse - Earth Ring', 'GEO Graveyard')
             .trim();
 
+        const activeCommander = (typeof window !== 'undefined' && window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || save.commanderName || 'Commander';
         const leaderboardEntry = {
-            name: save.commanderName || 'Commander',
+            name: activeCommander,
             score: totalMissionScore,
             debris: this.debrisDeliveredCount,
             mission: sectorClean,
@@ -2861,11 +2862,16 @@ class OrbitalGameScene extends Phaser.Scene {
             status: isVictory ? 'CLEARED' : 'FAILED'
         };
 
-        if (!Array.isArray(save.leaderboard)) save.leaderboard = [];
-        save.leaderboard.push(leaderboardEntry);
-        save.leaderboard.sort((a, b) => b.score - a.score);
-        if (save.leaderboard.length > 8) {
-            save.leaderboard = save.leaderboard.slice(0, 8);
+        // Submit score via LeaderboardService (remote API + local save sync)
+        if (typeof window !== 'undefined' && window.LeaderboardService) {
+            window.LeaderboardService.submitScore(leaderboardEntry).catch(e => console.warn('[Game] Leaderboard submit:', e));
+        } else {
+            if (!Array.isArray(save.leaderboard)) save.leaderboard = [];
+            save.leaderboard.push(leaderboardEntry);
+            save.leaderboard.sort((a, b) => b.score - a.score);
+            if (save.leaderboard.length > 50) {
+                save.leaderboard = save.leaderboard.slice(0, 50);
+            }
         }
 
         // Save ONCE with the unified save object

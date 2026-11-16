@@ -506,12 +506,7 @@ class OrbitalStorage {
                 music: true
             },
             commanderName: 'Commander',
-            leaderboard: [
-                { name: 'Cmdr. Shepard', score: 18450, debris: 74, mission: 'GEO Graveyard', date: 'Archive Record' },
-                { name: 'Dr. Ryan Stone', score: 14200, debris: 58, mission: 'Kessler Storm', date: 'Archive Record' },
-                { name: 'Capt. Cooper', score: 11900, debris: 46, mission: 'Polar Orbit', date: 'Archive Record' },
-                { name: 'Aegis Vanguard', score: 8500, debris: 35, mission: 'LEO Corridor', date: 'Archive Record' }
-            ]
+            leaderboard: []
         };
     }
 
@@ -634,9 +629,15 @@ class OrbitalStorage {
                 merged.survivalRecords = [];
             }
             if (!merged.commanderName) merged.commanderName = 'Commander';
+            if (typeof window !== 'undefined' && window.OrbitalAuth && window.OrbitalAuth.isAuthenticated()) {
+                merged.commanderName = window.OrbitalAuth.getCurrentUser().callsign;
+            }
             if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';
-            if (!Array.isArray(merged.leaderboard) || merged.leaderboard.length === 0) {
-                merged.leaderboard = defaultSave.leaderboard;
+            if (Array.isArray(merged.leaderboard)) {
+                // Ensure leaderboard consists ONLY of real users (filter out mock/archive records)
+                merged.leaderboard = merged.leaderboard.filter(e => e && e.date !== 'Archive Record' && e.name !== 'Cmdr. Shepard' && e.name !== 'Dr. Ryan Stone' && e.name !== 'Capt. Cooper' && e.name !== 'Aegis Vanguard');
+            } else {
+                merged.leaderboard = [];
             }
             if (!Array.isArray(merged.availableContracts) || merged.availableContracts.length === 0) {
                 if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.generateContractPool === 'function') {

@@ -29,6 +29,7 @@ class UIController {
 
         this.initDOMElements();
         this.attachEventListeners();
+        try { this.initAuthUi(); } catch (e) { console.warn('[UI] Auth UI init deferred:', e); }
         try { this.renderHangarShop(); } catch (e) { console.warn('[UI] Hangar render deferred:', e); }
         try { this.renderMissionDesignView(); } catch (e) { console.warn('[UI] Mission Design render deferred:', e); }
         try { this.renderLeaderboard(); } catch (e) { console.warn('[UI] Leaderboard render deferred:', e); }
@@ -54,7 +55,8 @@ class UIController {
             campaignMap: document.getElementById('screen-campaign-map'),
             techModal: document.getElementById('modal-tech-research'),
             endingModal: document.getElementById('modal-campaign-ending'),
-            newCampaignModal: document.getElementById('modal-new-campaign')
+            newCampaignModal: document.getElementById('modal-new-campaign'),
+            authModal: document.getElementById('modal-auth')
         };
 
         // HUD Elements
@@ -1549,9 +1551,9 @@ class UIController {
     }
 
     /**
-     * Render Leaderboard & Career Stats
+     * Render Leaderboard & Career Stats (Real Players Only)
      */
-    renderLeaderboard() {
+    async renderLeaderboard() {
         this.save = OrbitalStorage.load();
 
         const sDebris = document.getElementById('stat-total-debris');
@@ -1563,25 +1565,239 @@ class UIController {
         const sCredits = document.getElementById('stat-total-credits');
         if (sCredits) sCredits.innerText = (this.save.credits || 0).toLocaleString();
 
+        const pilotPill = document.getElementById('leaderboard-current-pilot');
+        const activeName = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || this.save.commanderName || 'Cadet';
+        if (pilotPill) pilotPill.innerText = activeName.toUpperCase();
+
         const tbody = document.getElementById('leaderboard-tbody');
         if (!tbody) return;
-        tbody.innerHTML = '';
 
-        this.save.leaderboard.forEach((entry, idx) => {
+        let records = [];
+        let isLive = false;
+
+        if (window.LeaderboardService) {
+            try {
+                const res = await window.LeaderboardService.fetchTopScores();
+                records = (res && Array.isArray(res.records)) ? res.records : [];
+                isLive = !!res.isLive;
+            } catch (e) {
+                console.warn('[UI] Leaderboard fetch error:', e);
+            }
+        }
+
+        // Fallback to local save if service returned empty or not available
+        if (records.length === 0 && Array.isArray(this.save.leaderboard)) {
+            records = this.save.leaderboard.filter(e => e && e.date !== 'Archive Record' && e.name !== 'Cmdr. Shepard' && e.name !== 'Dr. Ryan Stone' && e.name !== 'Capt. Cooper' && e.name !== 'Aegis Vanguard');
+        }
+
+        const netStatus = document.getElementById('leaderboard-network-status');
+        if (netStatus) {
+            netStatus.innerHTML = isLive
+                ? '🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>'
+                : '💻 <span style="color: var(--accent-cyan);">LOCAL PILOT RECORDS</span>';
+        }
+
+        tbody.innerHTML = '';
+        if (records.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 32px; font-family: var(--font-mono); color: var(--ink-muted);">
+                        NO REAL FLIGHT RECORDS RECORDED YET.<br><br>
+                        <span style="font-size: 0.85rem; color: var(--accent-cyan);">
+                            Enlist your Callsign and launch a mission to take the #01 rank!
+                        </span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        records.forEach((entry, idx) => {
             const row = document.createElement('tr');
-            const isArchive = entry.date === 'Archive Record';
-            const dateDisplay = isArchive ? '<span style="color: var(--accent-cyan); opacity: 0.85;">Archive Record</span>' : (entry.date || 'Archive Record');
-            const statusTag = entry.status === 'FAILED' ? ' <span style="color: var(--danger); font-size: 0.75rem;">[FAILED]</span>' : '';
+            const statusTag = entry.status === 'FAILED' ? ' <span style="color: var(--danger); font-size: 0.72rem;">[FAILED]</span>' : '';
+            const isMe = (activeName && entry.name && activeName.toLowerCase() === entry.name.toLowerCase());
+            if (isMe) {
+                row.style.background = 'rgba(0, 243, 255, 0.08)';
+            }
             row.innerHTML = `
-                <td>#0${idx + 1}</td>
-                <td><strong>${entry.name || 'Commander'}</strong></td>
+                <td>#${idx < 9 ? '0' : ''}${idx + 1}</td>
+                <td><strong style="color: ${isMe ? 'var(--accent-cyan)' : '#fff'};">${entry.name || 'Commander'}</strong>${isMe ? ' <span style="font-size: 0.7rem; color: var(--salvage); margin-left: 4px;">[YOU]</span>' : ''}</td>
                 <td>${(entry.mission || 'LEO Corridor').trim()}${statusTag}</td>
                 <td>${entry.debris || 0}</td>
-                <td class="score-cell">${entry.score.toLocaleString()} PTS</td>
-                <td>${dateDisplay}</td>
+                <td class="score-cell">${(entry.score || 0).toLocaleString()} PTS</td>
+                <td>${entry.date || 'Recent'}</td>
             `;
             tbody.appendChild(row);
         });
+    }
+
+    /**
+     * Commander Authentication & Callsign Registry UI
+     */
+    initAuthUi() {
+        this.authMode = 'login';
+        this.updateAuthDisplay();
+
+        // Listen for global auth changes
+        window.addEventListener('orbital_auth_changed', () => {
+            this.updateAuthDisplay();
+            this.renderLeaderboard();
+        });
+
+        // Switch commander button in Main Menu
+        document.getElementById('btn-auth-switch')?.addEventListener('click', () => {
+            this.openAuthModal();
+        });
+
+        // Enlist / switch button in Leaderboard screen
+        document.getElementById('btn-leaderboard-auth')?.addEventListener('click', () => {
+            this.openAuthModal();
+        });
+
+        // Refresh Leaderboard button
+        document.getElementById('btn-refresh-leaderboard')?.addEventListener('click', () => {
+            window.soundSystem?.playUiClick();
+            this.renderLeaderboard();
+        });
+
+        // Auth modal close button
+        document.getElementById('btn-close-auth-modal')?.addEventListener('click', () => {
+            this.closeAuthModal();
+        });
+
+        // Tab: Login vs Register
+        const tabLogin = document.getElementById('tab-auth-login');
+        const tabRegister = document.getElementById('tab-auth-register');
+        const btnSubmit = document.getElementById('btn-auth-submit');
+        const statusMsg = document.getElementById('auth-status-msg');
+
+        tabLogin?.addEventListener('click', () => {
+            this.authMode = 'login';
+            tabLogin.classList.add('active');
+            tabRegister?.classList.remove('active');
+            if (btnSubmit) btnSubmit.innerText = 'AUTHENTICATE & LOG IN 🚀';
+            if (statusMsg) statusMsg.innerText = '';
+            window.soundSystem?.playUiClick();
+        });
+
+        tabRegister?.addEventListener('click', () => {
+            this.authMode = 'register';
+            tabRegister.classList.add('active');
+            tabLogin?.classList.remove('active');
+            if (btnSubmit) btnSubmit.innerText = 'ENLIST NEW CALLSIGN 🚀';
+            if (statusMsg) statusMsg.innerText = '';
+            window.soundSystem?.playUiClick();
+        });
+
+        // Submit form
+        btnSubmit?.addEventListener('click', async () => {
+            const callsignInput = document.getElementById('input-auth-callsign');
+            const pinInput = document.getElementById('input-auth-pin');
+            const callsign = (callsignInput?.value || '').trim();
+            const pin = (pinInput?.value || '').trim();
+
+            if (!callsign) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ Please enter a Commander Callsign.';
+                }
+                return;
+            }
+            if (!pin || pin.length < 4) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ Security PIN must be at least 4 digits.';
+                }
+                return;
+            }
+
+            if (statusMsg) {
+                statusMsg.style.color = 'var(--accent-cyan)';
+                statusMsg.innerText = 'Connecting to orbital registry...';
+            }
+
+            try {
+                if (!window.OrbitalAuth) throw new Error('Auth service initializing...');
+                let res;
+                if (this.authMode === 'register') {
+                    res = await window.OrbitalAuth.register(callsign, pin);
+                } else {
+                    res = await window.OrbitalAuth.login(callsign, pin);
+                }
+
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--clean)';
+                    statusMsg.innerText = '✓ ' + (res.message || 'Authenticated successfully!');
+                }
+                window.soundSystem?.playCollect?.();
+
+                setTimeout(() => {
+                    this.closeAuthModal();
+                    this.updateAuthDisplay();
+                    this.renderLeaderboard();
+                }, 800);
+            } catch (err) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ ' + err.message;
+                }
+                window.soundSystem?.playWarning?.();
+            }
+        });
+
+        // Guest button
+        document.getElementById('btn-auth-guest')?.addEventListener('click', () => {
+            if (window.OrbitalAuth) {
+                window.OrbitalAuth.setGuest();
+            }
+            if (statusMsg) {
+                statusMsg.style.color = 'var(--salvage)';
+                statusMsg.innerText = 'Logged in as temporary Guest Cadet.';
+            }
+            window.soundSystem?.playUiClick();
+            setTimeout(() => {
+                this.closeAuthModal();
+                this.updateAuthDisplay();
+            }, 500);
+        });
+    }
+
+    openAuthModal() {
+        const modal = document.getElementById('modal-auth');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        const statusMsg = document.getElementById('auth-status-msg');
+        if (statusMsg) statusMsg.innerText = '';
+        window.soundSystem?.playUiClick();
+    }
+
+    closeAuthModal() {
+        const modal = document.getElementById('modal-auth');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        window.soundSystem?.playUiClick();
+    }
+
+    updateAuthDisplay() {
+        const user = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser()) || { callsign: 'Cadet', isGuest: true };
+        const nameElem = document.getElementById('auth-current-callsign');
+        if (nameElem) nameElem.innerText = user.callsign.toUpperCase();
+
+        const pilotPill = document.getElementById('leaderboard-current-pilot');
+        if (pilotPill) pilotPill.innerText = user.callsign.toUpperCase();
+
+        const netElem = document.getElementById('auth-network-indicator');
+        if (netElem) {
+            if (user.isGuest) {
+                netElem.innerText = 'GUEST';
+                netElem.style.borderColor = 'var(--salvage)';
+                netElem.style.color = 'var(--salvage)';
+            } else {
+                netElem.innerText = 'ENLISTED';
+                netElem.style.borderColor = 'var(--clean)';
+                netElem.style.color = 'var(--clean)';
+            }
+        }
     }
 
     /**

@@ -1,5 +1,31 @@
 # Changelog & Upgrade Progress Tracking
 
+## [Post-Phase 9 — Commander Authentication & Real-Player Online Leaderboard] - 2026-11-17
+### Status: Completed & Verified
+
+### Overview
+Added full pilot authentication and persistent real-player leaderboard capabilities so that when deployed, only real players who played the game appear on the global board.
+
+### Key Changes
+1. **Commander Authentication System (`js/leaderboard-service.js` & `server.js`):**
+   - Callsign registration and login with 4-digit security PIN verification.
+   - Session persistence in local client storage with token issuance.
+   - UI Active Commander pill in Main Menu and Leaderboard with switch/login modal (`#modal-auth`).
+   - Guest mode quick-start for casual test play.
+2. **Real-Player Leaderboard Service:**
+   - Completely removed preset/archive placeholder commanders (`Cmdr. Shepard`, `Dr. Ryan Stone`, etc.).
+   - Clean filtering ensures only real completed mission runs are recorded and displayed.
+   - Dual-mode synchronization: queries remote `/api/leaderboard` on self-hosted Node environments (Render, Railway, VPS) with transparent fallback to local client persistence on static hosts (GitHub Pages, Vercel).
+3. **Standalone Production Server (`server.js` & `package.json`):**
+   - Zero-dependency native Node.js HTTP server serving static assets and REST endpoints (`/api/auth/register`, `/api/auth/login`, `/api/leaderboard`).
+   - Persistent disk JSON stores in `data/users.json` and `data/leaderboard.json`.
+4. **Testing & Audit:**
+   - Added automated test suite `tests/test_auth_and_leaderboard.js` (5 checks).
+   - Added automated test suite `tests/test_server_api.js` (4 checks).
+   - Verified 99 / 99 checks in `tests/audit_phase9.js` and 100% pass across all 11 test suites.
+
+---
+
 ## [Phase 0 — Stabilize and Fix Existing Bugs] - 2026-11-15
 ### Status: Completed & Verified
 

@@ -46,21 +46,32 @@ A high-fidelity top-down 2D orbital simulation and tactical arcade game built wi
 
 ---
 
-## 💻 How to Run Locally
+## 💻 How to Run Locally & Deploy
 
-*Orbital Cleanup: Mission Zero* requires **zero build steps** and **zero npm dependencies**.
+*Orbital Cleanup: Mission Zero* features a zero-dependency server that handles web hosting, commander authentication, and persistent real-player leaderboards.
 
+### 1. Run Locally
 ```bash
-# Option 1: Python 3 Standard Server
+# Recommended: Full Game + Real Leaderboard & Callsign Auth Server
+npm start
+# or: node server.js
+
+# Alternative: Python 3 Standard Server
 python -m http.server 8080
-
-# Option 2: Node.js Serve
-npx serve -l 8080
-
-# Option 3: Direct File Execution
-Double-click index.html in Google Chrome, Microsoft Edge, Firefox, or Safari.
 ```
-Then navigate to: **`http://localhost:8080`**
+Open your browser to: **`http://localhost:8080`**
+
+### 2. Deploying for Online Play
+When deployed so other players can join, the game automatically connects players to the real multiplayer leaderboard:
+- **Render / Railway / Fly.io / Heroku / Node VPS:** Connect your repository and set build command to `none` and start command to `node server.js` (or `npm start`). Players can enlist their callsigns, create security PINs, and compete on the global leaderboard in real time!
+- **GitHub Pages / Vercel / Netlify (Static Hosting):** Push the repository to your host. The game automatically operates client-side with full offline and local browser persistence, ready for players on any device.
+
+---
+
+## 👨‍🚀 Commander Authentication & Real-Player Leaderboard
+- **Callsign & PIN Security:** Players enlist under unique Commander Callsigns protected by 4-digit security PINs to prevent score spoofing.
+- **Only Real Players:** All fake and preset archive placeholders have been removed. The leaderboard strictly showcases verified runs completed by real commanders.
+- **Live Sync & Ranking:** Flight scores (Score, Debris Recycled, Sector, Status) are submitted immediately upon mission debrief and ranked descending.
 
 ---
 
@@ -68,11 +79,15 @@ Then navigate to: **`http://localhost:8080`**
 
 ```
 ├── index.html                  # Game entry point, menus, HUD overlay & modals
+├── package.json                # Project manifest & start script
+├── server.js                   # Zero-dependency Node.js game & leaderboard API server
 ├── README.md                   # Project overview & quickstart guide
 ├── USER_MANUAL.md              # Complete Commander's Flight Operations Manual
 ├── css/
 │   └── style.css               # Sci-fi glassmorphism design system & styling
 ├── data/
+│   ├── leaderboard.json        # Persistent real player flight records
+│   ├── users.json              # Registered commander profiles & secure PIN hashes
 │   ├── parts.js                # Airframes, equipment, and payload definitions
 │   ├── missions.js             # 8 authentic orbital sectors and historical briefs
 │   ├── donki-snapshot.js       # Real & simulated NASA DONKI space weather events

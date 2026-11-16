@@ -223,9 +223,24 @@
         <div class="menu-container">
             <h1 class="game-title">ORBITAL CLEANUP</h1>
             <div class="game-subtitle">MISSION ZERO // KESSLER DEFENSE INITIATIVE</div>
-            <p class="mission-lore" style="font-size: 0.95rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 20px;">
+            <p class="mission-lore" style="font-size: 0.95rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px;">
                 Cleanse Earth's orbit of hazardous debris, evade kinetic strikes, and recycle salvage at the Aegis Depot before cascade collapse.
             </p>
+
+            <!-- Active Commander Profile Badge -->
+            <div id="user-auth-badge" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 auto 16px; background: rgba(15, 23, 42, 0.85); border: 1px solid var(--accent-cyan); padding: 6px 14px; border-radius: 4px; max-width: 420px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">👨‍🚀</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 0.68rem; color: #94a3b8; font-family: var(--font-mono); letter-spacing: 0.5px;">ACTIVE COMMANDER:</div>
+                        <strong id="auth-current-callsign" style="font-family: var(--font-heading); color: var(--accent-cyan); font-size: 0.95rem;">CADET</strong>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span id="auth-network-indicator" style="font-family: var(--font-mono); font-size: 0.68rem; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--clean); color: var(--clean);">ONLINE</span>
+                    <button type="button" id="btn-auth-switch" class="btn-secondary" style="font-size: 0.72rem; padding: 4px 8px; border-color: var(--salvage); color: var(--salvage);">LOGIN / SWITCH</button>
+                </div>
+            </div>
             <div class="menu-buttons">
                 <!-- Primary Modes -->
                 <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700; font-size: 1.05rem;" onclick="window.openMissionBoard();">
@@ -871,8 +886,18 @@
     <div id="screen-leaderboard" class="screen-layer hidden">
         <div class="hangar-container">
             <div class="panel-header">
-                <h2 class="panel-title">CAREER STATISTICS & TOP RUNS</h2>
-                <button class="btn-secondary btn-back-to-menu">RETURN</button>
+                <div>
+                    <h2 class="panel-title">CAREER STATISTICS &amp; LEADERBOARD</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.82rem; letter-spacing: 1px;">
+                        REAL PLAYER FLIGHT RECORDS // ORBITAL DEFENSE INITIATIVE
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-refresh-leaderboard" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--clean); color: var(--clean);">
+                        🔄 REFRESH
+                    </button>
+                    <button class="btn-secondary btn-back-to-menu">RETURN</button>
+                </div>
             </div>
 
             <div class="career-stats-grid">
@@ -894,7 +919,12 @@
                 </div>
             </div>
 
-            <div class="section-label">LOCAL TOP RUNS</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;">
+                <div class="section-label" style="margin: 0;">TOP FLIGHT RECORDS (REAL PLAYERS ONLY)</div>
+                <div id="leaderboard-network-status" style="font-family: var(--font-mono); font-size: 0.75rem;">
+                    🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>
+                </div>
+            </div>
             <table class="leaderboard-table">
                 <thead>
                     <tr>
@@ -908,6 +938,15 @@
                 </thead>
                 <tbody id="leaderboard-tbody"></tbody>
             </table>
+
+            <div style="margin-top: 14px; padding: 10px 14px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #cbd5e1;">
+                    👨‍🚀 LOGGED IN AS: <strong id="leaderboard-current-pilot" style="color: var(--accent-cyan);">CADET</strong>
+                </div>
+                <button type="button" id="btn-leaderboard-auth" class="btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; border-color: var(--salvage); color: var(--salvage);">
+                    ENLIST / SWITCH CALLSIGN
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1410,6 +1449,55 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         17. COMMANDER AUTHENTICATION & PILOT REGISTRY MODAL
+         ==================================================================== -->
+    <div id="modal-auth" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 480px; text-align: left;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.15rem; color: var(--accent-cyan);">COMMANDER AUTHENTICATION</h2>
+                    <div style="font-family: var(--font-mono); color: #94a3b8; font-size: 0.76rem; letter-spacing: 0.5px;">
+                        AEGIS PERSONNEL REGISTRY // ORBITAL FLIGHT CREDENTIALS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-auth-modal" data-modal="modal-auth" style="padding: 4px 10px;">✕</button>
+            </div>
+
+            <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                <button type="button" id="tab-auth-login" class="tab-btn active" style="flex: 1; padding: 8px; font-size: 0.75rem;">PILOT LOGIN</button>
+                <button type="button" id="tab-auth-register" class="tab-btn" style="flex: 1; padding: 8px; font-size: 0.75rem;">NEW ENLISTMENT</button>
+            </div>
+
+            <form id="form-auth-pilot" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label style="display: block; font-family: var(--font-mono); font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                        COMMANDER CALLSIGN / NAME (REAL PLAYERS ONLY):
+                    </label>
+                    <input type="text" id="input-auth-callsign" placeholder="e.g. Phoenix, Astra, Orion" maxlength="16" autocomplete="username" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-bright); color: #fff; font-family: var(--font-mono); font-size: 0.95rem; border-radius: 3px;" />
+                </div>
+
+                <div>
+                    <label style="display: block; font-family: var(--font-mono); font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                        SECURITY PIN / PASSCODE (4+ DIGITS TO PROTECT YOUR SCORES):
+                    </label>
+                    <input type="password" id="input-auth-pin" placeholder="Enter 4-8 digit PIN" maxlength="12" autocomplete="current-password" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-bright); color: #fff; font-family: var(--font-mono); font-size: 0.95rem; border-radius: 3px;" />
+                </div>
+
+                <div id="auth-status-msg" style="min-height: 20px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-cyan); line-height: 1.4;"></div>
+
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <button type="button" id="btn-auth-submit" class="btn-primary" style="flex: 2; padding: 12px; font-weight: bold; background: var(--salvage); border-color: #d97706; color: #000;">
+                        AUTHENTICATE CALLSIGN 🚀
+                    </button>
+                    <button type="button" id="btn-auth-guest" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 0.8rem;">
+                        GUEST
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
@@ -1421,6 +1509,7 @@
     <script src="js/campaign.js?v=8c.1"></script>
     <script src="js/audio.js?v=8c.1"></script>
     <script src="js/data.js?v=8c.1"></script>
+    <script src="js/leaderboard-service.js?v=8c.1"></script>
     <script src="js/director.js?v=8c.1"></script>
     <script src="js/graphics.js?v=8c.1"></script>
     <script src="js/game.js?v=8c.1"></script>
