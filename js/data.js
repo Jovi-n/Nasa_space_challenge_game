@@ -471,6 +471,7 @@ class OrbitalStorage {
             activeDilemmaId: null,
             availableContracts: [],
             activeContract: null,
+            contractRerolls: 0,
             consequencesHistory: [],
             totalDebrisRecycled: 0,
             totalMassDeorbitedKg: 0,
@@ -533,6 +534,9 @@ class OrbitalStorage {
         }
         if (data.activeDilemmaId === undefined) {
             data.activeDilemmaId = null;
+        }
+        if (data.contractRerolls === undefined) {
+            data.contractRerolls = 0;
         }
         if (!Array.isArray(data.consequencesHistory)) {
             data.consequencesHistory = [];

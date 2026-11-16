@@ -526,10 +526,6 @@ class UIController {
             this.switchScreen('missionDesign');
         });
 
-        document.getElementById('btn-reroll-contracts')?.addEventListener('click', () => {
-            this.rerollContracts();
-        });
-
         document.getElementById('btn-results-hangar')?.addEventListener('click', () => {
             this.screens.resultsModal.classList.add('hidden');
             this.switchScreen('hangar');
@@ -1704,6 +1700,10 @@ class UIController {
      * Solicit / Refresh Mission Board contracts (-50 Scrap fee, discounted with Smithsonian endowment)
      */
     rerollContracts() {
+        if (this._isRerolling) return;
+        this._isRerolling = true;
+        setTimeout(() => { this._isRerolling = false; }, 300);
+
         this.save = OrbitalStorage.load();
         const cost = (this.save.campaignFlags && this.save.campaignFlags.smithsonian_endowed) ? 25 : 50;
         if ((this.save.credits || 0) < cost) {
@@ -1713,6 +1713,7 @@ class UIController {
         }
 
         this.save.credits -= cost;
+        this.save.contractRerolls = (this.save.contractRerolls || 0) + 1;
         if (typeof CampaignManager !== 'undefined') {
             this.save.availableContracts = CampaignManager.generateContractPool(this.save);
         }

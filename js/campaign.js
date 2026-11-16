@@ -184,11 +184,13 @@ class CampaignManager {
             return x - Math.floor(x);
         };
 
+        const rerollCount = saveData.contractRerolls || 0;
+
         for (let i = 0; i < 3; i++) {
-            const pr1 = pseudoRand(i * 17.3 + (saveData.missionsCompleted || 0) * 5.1);
-            const pr2 = pseudoRand(i * 31.7 + (saveData.missionsCompleted || 0) * 7.3);
-            const pr3 = pseudoRand(i * 47.9 + (saveData.missionsCompleted || 0) * 11.5);
-            const pr4 = pseudoRand(i * 61.1 + (saveData.missionsCompleted || 0) * 13.9);
+            const pr1 = pseudoRand(i * 17.3 + (saveData.missionsCompleted || 0) * 5.1 + rerollCount * 29.3);
+            const pr2 = pseudoRand(i * 31.7 + (saveData.missionsCompleted || 0) * 7.3 + rerollCount * 41.9);
+            const pr3 = pseudoRand(i * 47.9 + (saveData.missionsCompleted || 0) * 11.5 + rerollCount * 53.7);
+            const pr4 = pseudoRand(i * 61.1 + (saveData.missionsCompleted || 0) * 13.9 + rerollCount * 67.1);
 
             // Select Sector (biased towards unlocked sectors or damaged sectors)
             const sectorIdx = Math.floor(pr1 * Math.min(missions.length, Math.max(2, unlockedCount + 1))) % missions.length;
@@ -275,7 +277,7 @@ class CampaignManager {
             };
 
             const contract = {
-                id: `CTR-${saveData.campaignSeed % 1000}-${sector.id}-${objKey}-${i + 1}`,
+                id: `CTR-${saveData.campaignSeed % 1000}-${sector.id}-${objKey}-${i + 1}${rerollCount > 0 ? ('-R' + rerollCount) : ''}`,
                 title: `${sector.name.split(':')[1]?.trim() || sector.name} // ${obj.name.toUpperCase()}`,
                 sectorId: sector.id,
                 sectorKey: sectorKey,
