@@ -1927,19 +1927,24 @@ window.toggleTelemetryOverlay = function() {
 };
 
 // Global key listener for F3 (prevents Chrome browser Find bar interception)
-window.addEventListener('keydown', (e) => {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-        return;
-    }
-    const isF3 = e.key === 'F3' || e.code === 'F3' || e.keyCode === 114;
-    const isBacktick = e.key === '`' || e.code === 'Backquote' || e.keyCode === 192 || e.key === '~';
-    const isKeyT = e.key === 't' || e.key === 'T' || e.code === 'KeyT' || e.keyCode === 84;
-    if (isF3 || isBacktick || isKeyT) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.toggleTelemetryOverlay();
-    }
-}, true);
+// Attach Global Telemetry Hotkey Listener (Guarded to prevent duplicate attachment)
+if (typeof window !== 'undefined' && !window._telemetryKeyHandlerAttached) {
+    window._telemetryKeyHandlerAttached = true;
+    window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+        const isF3 = e.key === 'F3' || e.code === 'F3' || e.keyCode === 114;
+        const isBacktick = e.key === '`' || e.code === 'Backquote' || e.keyCode === 192 || e.key === '~';
+        const isKeyT = e.key === 't' || e.key === 'T' || e.code === 'KeyT' || e.keyCode === 84;
+        if (isF3 || isBacktick || isKeyT) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            if (typeof window.toggleTelemetryOverlay === 'function') {
+                window.toggleTelemetryOverlay();
+            }
+        }
+    }, true);
+}
 
 // Execute UIController initialization immediately if document ready, or on DOMContentLoaded
 if (typeof window !== 'undefined') {
