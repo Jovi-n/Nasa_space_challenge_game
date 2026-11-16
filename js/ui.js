@@ -98,6 +98,14 @@ class UIController {
             window.soundSystem.resume();
         }
 
+        // Ensure screens dictionary is fully populated
+        if (!this.screens.contracts) {
+            this.screens.contracts = document.getElementById('screen-mission-board');
+        }
+        if (!this.screens.mainMenu) {
+            this.screens.mainMenu = document.getElementById('screen-main-menu');
+        }
+
         // Hide all screens & modals
         Object.values(this.screens).forEach(scr => {
             if (scr && scr.classList) {
@@ -106,19 +114,33 @@ class UIController {
         });
 
         // Show target screen
-        if (this.screens[targetScreenName]) {
-            this.screens[targetScreenName].classList.remove('hidden');
+        const targetScreen = this.screens[targetScreenName] || document.getElementById(
+            targetScreenName === 'contracts' ? 'screen-mission-board' :
+            targetScreenName === 'mainMenu' ? 'screen-main-menu' :
+            targetScreenName === 'missionDesign' ? 'screen-mission-design' :
+            targetScreenName === 'hangar' ? 'screen-hangar' :
+            targetScreenName === 'howToPlay' ? 'screen-how-to-play' :
+            targetScreenName === 'leaderboard' ? 'screen-leaderboard' :
+            targetScreenName === 'gameHud' ? 'hud-overlay' : null
+        );
+
+        if (targetScreen) {
+            targetScreen.classList.remove('hidden');
         }
 
-        // Contextual updates
-        if (targetScreenName === 'hangar') {
-            this.renderHangarShop();
-        } else if (targetScreenName === 'contracts') {
-            this.renderMissionBoard();
-        } else if (targetScreenName === 'missionDesign') {
-            this.renderMissionDesignView();
-        } else if (targetScreenName === 'leaderboard') {
-            this.renderLeaderboard();
+        // Contextual updates (safe with try-catch so screen transition never fails)
+        try {
+            if (targetScreenName === 'hangar') {
+                this.renderHangarShop();
+            } else if (targetScreenName === 'contracts') {
+                this.renderMissionBoard();
+            } else if (targetScreenName === 'missionDesign') {
+                this.renderMissionDesignView();
+            } else if (targetScreenName === 'leaderboard') {
+                this.renderLeaderboard();
+            }
+        } catch (err) {
+            console.error('[UIController] Contextual update error for screen ' + targetScreenName + ':', err);
         }
     }
 
@@ -262,6 +284,71 @@ class UIController {
                 return;
             }
 
+            // 8c. Main Menu & Mission Board Navigation Buttons (Universal Delegation)
+            const menuContractsBtn = e.target.closest('#btn-menu-contracts');
+            if (menuContractsBtn) {
+                e.preventDefault();
+                this.switchScreen('contracts');
+                return;
+            }
+
+            const menuStartBtn = e.target.closest('#btn-menu-start');
+            if (menuStartBtn) {
+                e.preventDefault();
+                this.switchScreen('missionDesign');
+                return;
+            }
+
+            const menuHangarBtn = e.target.closest('#btn-menu-hangar');
+            if (menuHangarBtn) {
+                e.preventDefault();
+                this.switchScreen('hangar');
+                return;
+            }
+
+            const menuHelpBtn = e.target.closest('#btn-menu-help');
+            if (menuHelpBtn) {
+                e.preventDefault();
+                this.switchScreen('howToPlay');
+                return;
+            }
+
+            const menuLeaderboardBtn = e.target.closest('#btn-menu-leaderboard');
+            if (menuLeaderboardBtn) {
+                e.preventDefault();
+                this.switchScreen('leaderboard');
+                return;
+            }
+
+            const boardReturnBtn = e.target.closest('#btn-board-return');
+            if (boardReturnBtn) {
+                e.preventDefault();
+                this.switchScreen('mainMenu');
+                return;
+            }
+
+            const boardCustomBtn = e.target.closest('#btn-board-custom-design');
+            if (boardCustomBtn) {
+                e.preventDefault();
+                this.switchScreen('missionDesign');
+                return;
+            }
+
+            const rerollBtn = e.target.closest('#btn-reroll-contracts');
+            if (rerollBtn) {
+                e.preventDefault();
+                this.rerollContracts();
+                return;
+            }
+
+            const resultsBoardBtn = e.target.closest('#btn-results-board');
+            if (resultsBoardBtn) {
+                e.preventDefault();
+                this.screens.resultsModal?.classList.add('hidden');
+                this.switchScreen('contracts');
+                return;
+            }
+
             // 9. Modal Close Buttons
             const closeBtn = e.target.closest('.btn-close-modal');
             if (closeBtn) {
@@ -287,7 +374,6 @@ class UIController {
 
         // Main Menu Direct Buttons
         document.getElementById('btn-menu-contracts')?.addEventListener('click', () => {
-            this.renderMissionBoard();
             this.switchScreen('contracts');
         });
         document.getElementById('btn-menu-start')?.addEventListener('click', () => {
@@ -1415,139 +1501,169 @@ class UIController {
      * Render Persistent Campaign Mission Board (Phase 8a)
      */
     renderMissionBoard() {
-        this.save = OrbitalStorage.load();
-        if (!this.save.availableContracts || this.save.availableContracts.length === 0) {
-            if (typeof CampaignManager !== 'undefined') {
-                this.save.availableContracts = CampaignManager.generateContractPool(this.save);
-                OrbitalStorage.save(this.save);
+        try {
+            this.save = OrbitalStorage.load();
+            if (!this.save.availableContracts || !Array.isArray(this.save.availableContracts) || this.save.availableContracts.length === 0) {
+                if (typeof CampaignManager !== 'undefined') {
+                    this.save.availableContracts = CampaignManager.generateContractPool(this.save);
+                    OrbitalStorage.save(this.save);
+                }
             }
+
+            // 1. Campaign Standing Bar
+            const seedEl = document.getElementById('board-campaign-seed');
+            if (seedEl) seedEl.innerText = `SEED-${this.save.campaignSeed || '000000'}`;
+
+            const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
+            const repAgencyBar = document.getElementById('board-rep-agency-bar');
+            const repAgencyVal = document.getElementById('board-rep-agency-val');
+            if (repAgencyBar) repAgencyBar.style.width = `${rep.agency || 50}%`;
+            if (repAgencyVal) repAgencyVal.innerText = `${rep.agency || 50}%`;
+
+            const repCommBar = document.getElementById('board-rep-commercial-bar');
+            const repCommVal = document.getElementById('board-rep-commercial-val');
+            if (repCommBar) repCommBar.style.width = `${rep.commercial || 50}%`;
+            if (repCommVal) repCommVal.innerText = `${rep.commercial || 50}%`;
+
+            const repPubBar = document.getElementById('board-rep-public-bar');
+            const repPubVal = document.getElementById('board-rep-public-val');
+            if (repPubBar) repPubBar.style.width = `${rep.public || 50}%`;
+            if (repPubVal) repPubVal.innerText = `${rep.public || 50}%`;
+
+            const creditsEl = document.getElementById('board-credits-val');
+            if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
+
+            // 2. Render Contract Cards
+            const grid = document.getElementById('contracts-card-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const contracts = (this.save && Array.isArray(this.save.availableContracts)) ? this.save.availableContracts : [];
+            if (contracts.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--ink-muted); font-family: var(--font-mono);">
+                        NO ACTIVE CONTRACTS IN LOCAL REGISTER.<br><br>
+                        <button type="button" class="btn-primary" id="btn-empty-solicit" style="margin-top: 12px; padding: 10px 20px;">
+                            SOLICIT NEW CONTRACTS (-50 SCRAP)
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-empty-solicit')?.addEventListener('click', () => this.rerollContracts());
+                return;
+            }
+
+            contracts.forEach(contract => {
+                if (!contract) return;
+                const card = document.createElement('div');
+                card.className = 'contract-card';
+
+                const risk = contract.risk || 'Moderate';
+                const riskClass = `risk-${risk.toLowerCase()}`;
+                const sKey = contract.sectorKey || `sector_0${contract.sectorId || 1}`;
+                const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined)
+                    ? this.save.sectorHealth[sKey]
+                    : (contract.sectorHealth || 70);
+                const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+                const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+
+                // Modifiers badges
+                let modsHtml = '';
+                if (contract.modifiers && Array.isArray(contract.modifiers) && contract.modifiers.length > 0) {
+                    contract.modifiers.forEach(mKey => {
+                        const m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
+                        if (m) {
+                            modsHtml += `<span class="modifier-badge" title="${m.desc}">${m.icon} ${m.badge}</span>`;
+                        }
+                    });
+                } else {
+                    modsHtml = `<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>`;
+                }
+
+                // Objective badge
+                const objKey = contract.objective || 'quota';
+                const obj = contract.objectiveData || ((typeof CONTRACT_OBJECTIVES !== 'undefined') ? CONTRACT_OBJECTIVES[objKey] : null) || { name: 'QUOTA', badge: 'QUOTA', icon: '🎯' };
+
+                // Material chips
+                let matsHtml = '';
+                if (contract.materialsReward) {
+                    if (contract.materialsReward.metal) matsHtml += `<span class="mat-chip">🔩 +${contract.materialsReward.metal}</span>`;
+                    if (contract.materialsReward.cells) matsHtml += `<span class="mat-chip">🔋 +${contract.materialsReward.cells}</span>`;
+                    if (contract.materialsReward.chips) matsHtml += `<span class="mat-chip">💾 +${contract.materialsReward.chips}</span>`;
+                }
+
+                const client = contract.client || { icon: '🌐', name: 'Orbital Authority' };
+                const title = contract.title || `${contract.sectorName || 'Orbital Sector'} // ${obj.name?.toUpperCase() || 'QUOTA'}`;
+                const targetText = `${contract.targetQuota || 6} ${objKey === 'passivate' ? 'Stages' : (objKey === 'recover' ? 'Core' : 'Items')}`;
+                const suggestedBus = contract.requirements?.suggestedBus || 'SCOUT';
+                const timeLimit = contract.timeLimit || 120;
+                const scrapPayout = contract.scrapPayout || 500;
+                const scoreBounty = contract.scoreBounty || 1000;
+                const desc = contract.description || 'Cleanse orbital hazard cluster in designated orbital lane.';
+
+                card.innerHTML = `
+                    <div class="contract-card-header">
+                        <div>
+                            <div class="contract-client">${client.icon} ${client.name}</div>
+                            <div class="contract-title">${title}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="objective-badge ${objKey}">${obj.icon} ${obj.badge}</span>
+                            <div class="contract-risk-tag ${riskClass}">RISK: ${risk.toUpperCase()}</div>
+                        </div>
+                    </div>
+
+                    <div class="contract-modifiers-row">
+                        ${modsHtml}
+                    </div>
+
+                    <p class="contract-desc">${desc}</p>
+
+                    <div class="contract-sector-health">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 3px; font-family: var(--font-mono);">
+                            <span>ORBITAL SECTOR INTEGRITY:</span>
+                            <span style="color: ${healthColor};">${sHealth}% HEALTH</span>
+                        </div>
+                        <div class="campaign-health-bar">
+                            <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                        </div>
+                        ${carryover > 0 ? `<div style="font-size: 0.72rem; color: var(--danger); margin-top: 3px;">⚠️ ${carryover} residual fragments tracked in orbit.</div>` : ''}
+                    </div>
+
+                    <div class="contract-metrics-grid">
+                        <div class="metric-cell">
+                            <span class="metric-lbl">TARGET:</span>
+                            <span class="metric-v">${targetText}</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">TIME WINDOW:</span>
+                            <span class="metric-v">${timeLimit}s</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">SUGGESTED BUS:</span>
+                            <span class="metric-v" style="text-transform: uppercase;">${suggestedBus}</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">PAYOUT:</span>
+                            <span class="metric-v" style="color: var(--salvage); font-weight: bold;">+${scrapPayout} Scrap</span>
+                        </div>
+                    </div>
+
+                    <div class="contract-card-footer">
+                        <div class="contract-rewards-summary">
+                            ${matsHtml}
+                            <span style="font-size: 0.75rem; color: var(--accent-cyan);">+${scoreBounty} Score</span>
+                        </div>
+                        <button type="button" class="btn-primary btn-accept-contract" data-contract-id="${contract.id || ''}" style="padding: 8px 16px; font-size: 0.85rem;">
+                            ACCEPT CONTRACT 🚀
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        } catch (err) {
+            console.error('[UIController] Error rendering mission board:', err);
         }
-
-        // 1. Campaign Standing Bar
-        const seedEl = document.getElementById('board-campaign-seed');
-        if (seedEl) seedEl.innerText = `SEED-${this.save.campaignSeed || '000000'}`;
-
-        const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
-        const repAgencyBar = document.getElementById('board-rep-agency-bar');
-        const repAgencyVal = document.getElementById('board-rep-agency-val');
-        if (repAgencyBar) repAgencyBar.style.width = `${rep.agency}%`;
-        if (repAgencyVal) repAgencyVal.innerText = `${rep.agency}%`;
-
-        const repCommBar = document.getElementById('board-rep-commercial-bar');
-        const repCommVal = document.getElementById('board-rep-commercial-val');
-        if (repCommBar) repCommBar.style.width = `${rep.commercial}%`;
-        if (repCommVal) repCommVal.innerText = `${rep.commercial}%`;
-
-        const repPubBar = document.getElementById('board-rep-public-bar');
-        const repPubVal = document.getElementById('board-rep-public-val');
-        if (repPubBar) repPubBar.style.width = `${rep.public}%`;
-        if (repPubVal) repPubVal.innerText = `${rep.public}%`;
-
-        const creditsEl = document.getElementById('board-credits-val');
-        if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
-
-        // 2. Render Contract Cards
-        const grid = document.getElementById('contracts-card-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
-
-        const contracts = this.save.availableContracts || [];
-        contracts.forEach(contract => {
-            const card = document.createElement('div');
-            card.className = 'contract-card';
-
-            const riskClass = `risk-${(contract.risk || 'moderate').toLowerCase()}`;
-            const sHealth = (this.save.sectorHealth && this.save.sectorHealth[contract.sectorKey] !== undefined)
-                ? this.save.sectorHealth[contract.sectorKey]
-                : (contract.sectorHealth || 70);
-            const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
-            const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[contract.sectorKey]) || 0;
-
-            // Modifiers badges
-            let modsHtml = '';
-            if (contract.modifiers && contract.modifiers.length > 0) {
-                contract.modifiers.forEach(mKey => {
-                    const m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
-                    if (m) {
-                        modsHtml += `<span class="modifier-badge" title="${m.desc}">${m.icon} ${m.badge}</span>`;
-                    }
-                });
-            } else {
-                modsHtml = `<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>`;
-            }
-
-            // Objective badge
-            const obj = contract.objectiveData || ((typeof CONTRACT_OBJECTIVES !== 'undefined') ? CONTRACT_OBJECTIVES[contract.objective] : null) || { name: 'QUOTA', badge: 'QUOTA', icon: '🎯' };
-
-            // Material chips
-            let matsHtml = '';
-            if (contract.materialsReward) {
-                if (contract.materialsReward.metal) matsHtml += `<span class="mat-chip">🔩 +${contract.materialsReward.metal}</span>`;
-                if (contract.materialsReward.cells) matsHtml += `<span class="mat-chip">🔋 +${contract.materialsReward.cells}</span>`;
-                if (contract.materialsReward.chips) matsHtml += `<span class="mat-chip">💾 +${contract.materialsReward.chips}</span>`;
-            }
-
-            card.innerHTML = `
-                <div class="contract-card-header">
-                    <div>
-                        <div class="contract-client">${contract.client?.icon || '🌐'} ${contract.client?.name || 'Orbital Authority'}</div>
-                        <div class="contract-title">${contract.title}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <span class="objective-badge ${contract.objective}">${obj.icon} ${obj.badge}</span>
-                        <div class="contract-risk-tag ${riskClass}">RISK: ${(contract.risk || 'Moderate').toUpperCase()}</div>
-                    </div>
-                </div>
-
-                <div class="contract-modifiers-row">
-                    ${modsHtml}
-                </div>
-
-                <p class="contract-desc">${contract.description}</p>
-
-                <div class="contract-sector-health">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 3px; font-family: var(--font-mono);">
-                        <span>ORBITAL SECTOR INTEGRITY:</span>
-                        <span style="color: ${healthColor};">${sHealth}% HEALTH</span>
-                    </div>
-                    <div class="campaign-health-bar">
-                        <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
-                    </div>
-                    ${carryover > 0 ? `<div style="font-size: 0.72rem; color: var(--danger); margin-top: 3px;">⚠️ ${carryover} residual fragments tracked in orbit.</div>` : ''}
-                </div>
-
-                <div class="contract-metrics-grid">
-                    <div class="metric-cell">
-                        <span class="metric-lbl">TARGET:</span>
-                        <span class="metric-v">${contract.targetQuota} ${contract.objective === 'passivate' ? 'Stages' : (contract.objective === 'recover' ? 'Core' : 'Items')}</span>
-                    </div>
-                    <div class="metric-cell">
-                        <span class="metric-lbl">TIME WINDOW:</span>
-                        <span class="metric-v">${contract.timeLimit}s</span>
-                    </div>
-                    <div class="metric-cell">
-                        <span class="metric-lbl">SUGGESTED BUS:</span>
-                        <span class="metric-v" style="text-transform: uppercase;">${contract.requirements?.suggestedBus || 'SCOUT'}</span>
-                    </div>
-                    <div class="metric-cell">
-                        <span class="metric-lbl">PAYOUT:</span>
-                        <span class="metric-v" style="color: var(--salvage); font-weight: bold;">+${contract.scrapPayout} Scrap</span>
-                    </div>
-                </div>
-
-                <div class="contract-card-footer">
-                    <div class="contract-rewards-summary">
-                        ${matsHtml}
-                        <span style="font-size: 0.75rem; color: var(--accent-cyan);">+${contract.scoreBounty} Score</span>
-                    </div>
-                    <button type="button" class="btn-primary btn-accept-contract" data-contract-id="${contract.id}" style="padding: 8px 16px; font-size: 0.85rem;">
-                        ACCEPT CONTRACT 🚀
-                    </button>
-                </div>
-            `;
-
-            grid.appendChild(card);
-        });
     }
 
     /**

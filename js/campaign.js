@@ -168,9 +168,9 @@ class CampaignManager {
      */
     static generateContractPool(saveData) {
         const seed = saveData.campaignSeed || Math.floor(Math.random() * 900000) + 100000;
-        const missions = (typeof MISSIONS_DATA !== 'undefined' && Array.isArray(MISSIONS_DATA))
+        const missions = (typeof MISSIONS_DATA !== 'undefined' && Array.isArray(MISSIONS_DATA) && MISSIONS_DATA.length > 0)
             ? MISSIONS_DATA
-            : [];
+            : ((typeof GAME_DATA !== 'undefined' && Array.isArray(GAME_DATA.LEVELS)) ? GAME_DATA.LEVELS : []);
         if (missions.length === 0) return [];
 
         const contracts = [];
