@@ -288,9 +288,9 @@ async function runTests() {
     // 9a: Verify CSS places telemetry button and overlay on the left side (left: 18px), not top-right over salvage bar
     const cssContent = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
     assert(cssContent.includes('.global-telemetry-btn {\n    position: fixed;\n    top: 14px;\n    left: 18px;'), 'global-telemetry-btn must be positioned at left: 18px to clear salvage bar');
-    assert(cssContent.includes('.global-telemetry-btn.hud-mode {\n    top: 112px;\n    left: 18px;\n}'), 'global-telemetry-btn.hud-mode must be positioned below gauges at top: 112px; left: 18px');
+    assert(cssContent.includes('.global-telemetry-btn.hud-mode {\n    top: 168px;\n    left: 18px;\n}'), 'global-telemetry-btn.hud-mode must be positioned below gauges at top: 168px; left: 18px');
     assert(cssContent.includes('.hud-f3-debug {\n    position: fixed;\n    top: 52px;\n    left: 18px;'), 'hud-f3-debug must be positioned at left: 18px');
-    assert(cssContent.includes('.hud-f3-debug.hud-mode {\n    top: 148px;\n    left: 18px;\n}'), 'hud-f3-debug.hud-mode must be positioned at top: 148px; left: 18px');
+    assert(cssContent.includes('.hud-f3-debug.hud-mode {\n    top: 208px;\n    left: 18px;\n}'), 'hud-f3-debug.hud-mode must be positioned at top: 208px; left: 18px');
 
     // 9b: Verify hud-mode class dynamically toggles on switchScreen
     global.window.uiController.switchScreen('gameHud');

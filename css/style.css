@@ -1187,7 +1187,7 @@ body, html {
     border-radius: 2px;
 }
 .hud-f3-debug.hud-mode {
-    top: 148px;
+    top: 208px;
     left: 18px;
 }
 .hud-f3-btn {
@@ -1231,7 +1231,7 @@ body, html {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 .global-telemetry-btn.hud-mode {
-    top: 112px;
+    top: 168px;
     left: 18px;
 }
 .global-telemetry-btn:hover {
