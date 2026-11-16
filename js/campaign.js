@@ -162,6 +162,259 @@ const CONTRACT_CLIENTS = [
     }
 ];
 
+// =============================================================================
+// PHASE 8c: TECHNOLOGY PROGRESSION PATHS (6 PATHS × 3 TIERS)
+// =============================================================================
+const TECH_PATHS = {
+    capture: {
+        id: 'capture',
+        name: 'Debris Capture Systems',
+        icon: '🧲',
+        desc: 'Electromagnetic flux, intake collection funnel, and containment nets.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Magnetic Intake Grate',
+                desc: 'Standard electromagnetic funnel for kinetic debris retrieval.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Standard tractor & net collection capacity'
+            },
+            {
+                tier: 2,
+                name: 'Wide-Aperture Magnetic Funnel',
+                desc: 'Expanded copper-niobium coils project a broader tractor cone.',
+                cost: { credits: 450, metal: 4, cells: 1, chips: 0 },
+                bonuses: '+25% Tractor beam pull speed & +20% intake range'
+            },
+            {
+                tier: 3,
+                name: 'Kinetic Harpoon & Nanotube Net',
+                desc: 'Micro-filament carbon nanotube netting and hypervelocity magnetic grapple.',
+                cost: { credits: 950, metal: 8, cells: 3, chips: 2 },
+                bonuses: '+50% Tractor range, +1 Net capacity, tractor grounds electrostatic debris'
+            }
+        ]
+    },
+    sensors: {
+        id: 'sensors',
+        name: 'Sensor Avionics & Radar',
+        icon: '📡',
+        desc: 'Space surveillance radar, collision warning distance, and stealth detection.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Optical Proximity Camera',
+                desc: 'Standard visual guidance sensor with standard collision warning envelope.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Standard radar ping range'
+            },
+            {
+                tier: 2,
+                name: 'Doppler Collision Radar',
+                desc: 'High-frequency phased-array radar calculates relative closing velocities.',
+                cost: { credits: 400, metal: 2, cells: 0, chips: 2 },
+                bonuses: '+30% Radar warning distance & directional hazard arrows'
+            },
+            {
+                tier: 3,
+                name: 'Multi-Spectral Lidar Array',
+                desc: 'Multi-frequency lidar unmasks low-observability debris and penetrates storm noise.',
+                cost: { credits: 850, metal: 3, cells: 2, chips: 4 },
+                bonuses: 'Reveals stealth hazards instantly, -50% space storm radar distortion'
+            }
+        ]
+    },
+    power: {
+        id: 'power',
+        name: 'Power Architecture & Storage',
+        icon: '🔋',
+        desc: 'Photovoltaic cells, battery energy density, and surge protection.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Monocrystalline Solar Bus',
+                desc: 'Standard silicon solar arrays with 100 Wh energy storage.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Standard 100 Battery capacity & solar recharge'
+            },
+            {
+                tier: 2,
+                name: 'Graphene Supercapacitor Cells',
+                desc: 'Lightweight graphene-doped battery cells provide rapid charge uptake.',
+                cost: { credits: 350, metal: 1, cells: 3, chips: 1 },
+                bonuses: '+30 Max Battery, +25% Solar recharge rate'
+            },
+            {
+                tier: 3,
+                name: 'Solid-State Quantum Capacitors',
+                desc: 'High-density dielectric storage immune to deep-space thermal freezing.',
+                cost: { credits: 800, metal: 3, cells: 6, chips: 3 },
+                bonuses: '+60 Max Battery, -40% Energy drain from nuclear hazards & EMP surges'
+            }
+        ]
+    },
+    shielding: {
+        id: 'shielding',
+        name: 'Whipple Shielding & Armor',
+        icon: '🛡️',
+        desc: 'Structural bumper plating, kinetic impact damping, and EMP grounding.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Single-Layer Aluminum Bumper',
+                desc: 'Basic spacecraft skin capable of absorbing low-velocity particle impacts.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Baseline 100 Hull points'
+            },
+            {
+                tier: 2,
+                name: 'Dual-Layer Stuffed Whipple Shield',
+                desc: 'Nextel and Kevlar ceramic weave disrupts hypervelocity projectiles into clouds.',
+                cost: { credits: 500, metal: 5, cells: 1, chips: 0 },
+                bonuses: '+25 Max Hull, -20% Kinetic collision impact damage'
+            },
+            {
+                tier: 3,
+                name: 'Faraday Deflector Armor',
+                desc: 'Conductive outer hull grounding mesh dissipates plasma lightning and EMP surges.',
+                cost: { credits: 1100, metal: 9, cells: 4, chips: 2 },
+                bonuses: '+50 Max Hull, -40% Collision damage, -60% Coronal EMP surge damage'
+            }
+        ]
+    },
+    communications: {
+        id: 'communications',
+        name: 'Telemetry & Ground Comms',
+        icon: '🌐',
+        desc: 'Data uplink, commercial network contracts, and space agency diplomacy.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Omnidirectional VHF Antenna',
+                desc: 'Direct-to-ground telemetry tracking link.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Standard contract payouts and solicit rates'
+            },
+            {
+                tier: 2,
+                name: 'Deep Space Relay Interlink',
+                desc: 'Connects directly through TDRSS satellites for uninterrupted orbital telemetry.',
+                cost: { credits: 350, metal: 1, cells: 1, chips: 2 },
+                bonuses: '+15% Scrap contract payout, -50% Contract solicitation reroll cost'
+            },
+            {
+                tier: 3,
+                name: 'Quantum Encrypted Ground Uplink',
+                desc: 'Zero-latency orbital cryptographic pipeline across global space operations.',
+                cost: { credits: 850, metal: 2, cells: 3, chips: 5 },
+                bonuses: '+25% Faction reputation gains on contract victories, unlocks classified bounties'
+            }
+        ]
+    },
+    propulsion: {
+        id: 'propulsion',
+        name: 'Reaction Control & Propulsion',
+        icon: '🚀',
+        desc: 'Thruster specific impulse, angular moment control, and fuel consumption.',
+        tiers: [
+            {
+                tier: 1,
+                name: 'Hydrazine Reaction Thrusters',
+                desc: 'Standard bipropellant thruster quads for 3-axis orbital maneuvering.',
+                cost: { credits: 0, metal: 0, cells: 0, chips: 0 },
+                bonuses: 'Standard 100 Fuel capacity & burn rate'
+            },
+            {
+                tier: 2,
+                name: 'Pulsed Plasma Micro-Thrusters',
+                desc: 'High-precision magnetic plasma nozzles improve angular reaction torque.',
+                cost: { credits: 450, metal: 3, cells: 2, chips: 1 },
+                bonuses: '+20% Angular turn rate, -15% Main thruster fuel burn rate'
+            },
+            {
+                tier: 3,
+                name: 'Hall Effect Xenon Ion Engine',
+                desc: 'High-specific-impulse electric propulsion drive with auxiliary RCS clusters.',
+                cost: { credits: 1050, metal: 6, cells: 5, chips: 3 },
+                bonuses: '+30 Max Fuel, +25% Ship acceleration & top speed, -30% Fuel burn'
+            }
+        ]
+    }
+};
+
+// =============================================================================
+// PHASE 8c: FOUR DISTINCT CAMPAIGN ENDINGS
+// =============================================================================
+const CAMPAIGN_ENDINGS = {
+    kessler_collapse: {
+        id: 'kessler_collapse',
+        title: 'THE KESSLER CASCADE CATASTROPHE',
+        subtitle: 'TRAGIC COLLAPSE // ORBITAL COLLAPSE AND SEVERANCE',
+        badge: 'CRITICAL CASCADE EXTINCTION',
+        badgeClass: 'ending-collapse',
+        icon: '💥',
+        summary: 'Chain-reaction hypervelocity collisions have shredded low Earth orbit into an impenetrable wall of supersonic shrapnel.',
+        epilogue: 'The critical density threshold was breached. A runaway fragmentation cascade pulverized thousands of satellites into trillions of millimeter-sized lethal bullets. World space agencies have officially declared orbital flight impossible for the next century. Ground radar monitors watch a glowing veil of debris encircle Earth, severing humanity’s reach to the stars.',
+        checkEligible: (save) => {
+            const healthValues = Object.values(save.sectorHealth || {});
+            if (healthValues.length === 0) return false;
+            const avgHealth = healthValues.reduce((a, b) => a + b, 0) / healthValues.length;
+            const criticalCount = healthValues.filter(h => h < 30).length;
+            return avgHealth < 38 || criticalCount >= 3;
+        }
+    },
+    commercial_monopoly: {
+        id: 'commercial_monopoly',
+        title: 'CORPORATE TOLLWAY ORBIT',
+        subtitle: 'COMMERCIAL HEGEMONY // PRIVATIZATION OF THE COMMONS',
+        badge: 'CORPORATE MONOPOLY',
+        badgeClass: 'ending-commercial',
+        icon: '🛰️',
+        summary: 'Commercial aerospace mega-conglomerates have privatized orbital transit into high-margin proprietary toll highways.',
+        epilogue: 'Your close commercial partnership allowed private telecom consortia to buy out and secure key orbital corridors. Near-Earth space is now strictly gated by proprietary subscription tiers and corporate automated defense satellites. While commercial operations thrive, civil science, university cubesats, and public exploration have been priced out of the sky.',
+        checkEligible: (save) => {
+            const rep = save.reputation || { commercial: 50 };
+            const healthValues = Object.values(save.sectorHealth || {});
+            const avgHealth = healthValues.length ? (healthValues.reduce((a, b) => a + b, 0) / healthValues.length) : 50;
+            return rep.commercial >= 70 && rep.commercial > rep.agency && rep.commercial > rep.public && avgHealth >= 45;
+        }
+    },
+    military_fortress: {
+        id: 'military_fortress',
+        title: 'FORTRESS ORBIT CORDON',
+        subtitle: 'DEFENSE HEGEMONY // PLANETARY SECURITY EXCLUSION ZONE',
+        badge: 'MILITARIZED DEFENSE CORDON',
+        badgeClass: 'ending-agency',
+        icon: '🛡️',
+        summary: 'Space Defense Command has turned near-Earth space into an armed planetary exclusion fortress.',
+        epilogue: 'Relying heavily on defense agency contracts and classified cryptographic payloads, orbit has been fortified by armed interceptor platforms and quantum surveillance mesh grids. Debris is vaporized by high-energy military laser stations, but all unvetted civil and commercial launches are interdicted. Earth rests behind a permanent, armed iron dome.',
+        checkEligible: (save) => {
+            const rep = save.reputation || { agency: 50 };
+            const healthValues = Object.values(save.sectorHealth || {});
+            const avgHealth = healthValues.length ? (healthValues.reduce((a, b) => a + b, 0) / healthValues.length) : 50;
+            return rep.agency >= 70 && rep.agency > rep.commercial && rep.agency > rep.public && avgHealth >= 45;
+        }
+    },
+    orbital_renaissance: {
+        id: 'orbital_renaissance',
+        title: 'THE ORBITAL RENAISSANCE',
+        subtitle: 'GOLDEN SUSTAINABILITY // INTERNATIONAL OPEN COMMONS',
+        badge: 'SUSTAINABLE COMMONS [TRIUMPH]',
+        badgeClass: 'ending-renaissance',
+        icon: '🌟',
+        summary: 'Near-Earth orbit has been restored to a pristine, open, sustainable international sanctuary.',
+        epilogue: 'A historic triumph of public space stewardship! By keeping sector health high, protecting historical heritage assets like Vanguard 1 and the ISS, and fostering international transparency, humanity created the permanent UN Autonomous Orbital Sanitation Fleet. Debris density is declining for the first time in human history. The gateway to the Moon and Mars is open and safe for all.',
+        checkEligible: (save) => {
+            const rep = save.reputation || { public: 50 };
+            const healthValues = Object.values(save.sectorHealth || {});
+            if (healthValues.length === 0) return false;
+            const avgHealth = healthValues.reduce((a, b) => a + b, 0) / healthValues.length;
+            const minHealth = Math.min(...healthValues);
+            return avgHealth >= 75 && minHealth >= 50 && rep.public >= 65;
+        }
+    }
+};
+
 class CampaignManager {
     /**
      * Generate 3 diverse contracts based on campaign state, sector health, and seed
@@ -435,8 +688,211 @@ class CampaignManager {
         save.activeContract = null;
         save.availableContracts = CampaignManager.generateContractPool(save);
 
+        // Advance World Clock (7 days on victory, 12 days on failure)
+        CampaignManager.advanceWorldClock(save, victory ? 7 : 12);
+
         OrbitalStorage.save(save);
         return consequenceRecord;
+    }
+
+    // =========================================================================
+    // PHASE 8c: WORLD CLOCK & SOLAR WEATHER CYCLE
+    // =========================================================================
+    static advanceWorldClock(save, days) {
+        if (!save.worldEpochDay) save.worldEpochDay = 1;
+        save.worldEpochDay += Math.max(1, Math.round(days || 1));
+        return save.worldEpochDay;
+    }
+
+    static getFormattedDate(save) {
+        const epochDay = (save && save.worldEpochDay) ? save.worldEpochDay : 1;
+        const baseDate = new Date('2054-04-12T06:00:00Z');
+        const currentDate = new Date(baseDate.getTime() + (epochDay - 1) * 86400000);
+        const isoDate = currentDate.toISOString().split('T')[0];
+        const solar = this.getSolarCycleStatus(epochDay);
+        return {
+            epochDay: epochDay,
+            calendarDate: isoDate,
+            fullString: `EPOCH DAY ${String(epochDay).padStart(3, '0')} // ${isoDate}`,
+            solarStatus: solar.status,
+            solarLevel: solar.level,
+            solarClass: solar.class
+        };
+    }
+
+    static getSolarCycleStatus(epochDay) {
+        const cycle = ((epochDay || 1) % 28);
+        if (cycle >= 22) {
+            return { status: 'STORM WARNING: HIGH DENSITY', level: 'HIGH', class: 'storm-high' };
+        } else if (cycle >= 14) {
+            return { status: 'ELEVATED SOLAR ACTIVITY', level: 'MODERATE', class: 'storm-mod' };
+        }
+        return { status: 'QUIET SUN: NOMINAL', level: 'LOW', class: 'storm-low' };
+    }
+
+    // =========================================================================
+    // PHASE 8c: TECHNOLOGY TREE MANAGEMENT
+    // =========================================================================
+    static getTechPaths() {
+        return TECH_PATHS;
+    }
+
+    static unlockTech(save, pathKey) {
+        if (!TECH_PATHS[pathKey]) return { success: false, reason: 'Invalid tech path' };
+        if (!save.techTree) {
+            save.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        }
+        const currentTier = save.techTree[pathKey] || 1;
+        if (currentTier >= 3) return { success: false, reason: 'Maximum tech tier already deployed' };
+
+        const nextTierData = TECH_PATHS[pathKey].tiers[currentTier]; // tier index = currentTier (0-based)
+        if (!nextTierData) return { success: false, reason: 'Next tier data unavailable' };
+
+        const cost = nextTierData.cost;
+        if ((save.credits || 0) < cost.credits) return { success: false, reason: `Requires ${cost.credits} Scrap` };
+        if (!save.materials) save.materials = { metal: 0, cells: 0, chips: 0 };
+        if ((save.materials.metal || 0) < cost.metal) return { success: false, reason: `Requires ${cost.metal} Metal` };
+        if ((save.materials.cells || 0) < cost.cells) return { success: false, reason: `Requires ${cost.cells} Power Cells` };
+        if ((save.materials.chips || 0) < cost.chips) return { success: false, reason: `Requires ${cost.chips} Quantum Chips` };
+
+        // Deduct resources
+        save.credits -= cost.credits;
+        save.materials.metal -= cost.metal;
+        save.materials.cells -= cost.cells;
+        save.materials.chips -= cost.chips;
+
+        // Upgrade tier
+        save.techTree[pathKey] = currentTier + 1;
+
+        if (typeof OrbitalStorage !== 'undefined' && typeof OrbitalStorage.save === 'function') {
+            OrbitalStorage.save(save);
+        }
+
+        return {
+            success: true,
+            pathKey: pathKey,
+            newTier: save.techTree[pathKey],
+            tierName: nextTierData.name,
+            bonuses: nextTierData.bonuses
+        };
+    }
+
+    static getTechStatModifiers(save) {
+        const tree = (save && save.techTree) ? save.techTree : { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        return {
+            tractorPullMod: 1 + (tree.capture - 1) * 0.25,
+            tractorRangeMod: 1 + (tree.capture - 1) * 0.20,
+            extraNetCapacity: tree.capture >= 3 ? 1 : 0,
+            radarRangeMod: 1 + (tree.sensors - 1) * 0.25,
+            revealStealth: tree.sensors >= 3,
+            radarNoiseReduction: tree.sensors >= 3 ? 0.50 : (tree.sensors >= 2 ? 0.25 : 0),
+            batteryMaxBonus: (tree.power - 1) * 25,
+            solarRechargeMod: 1 + (tree.power - 1) * 0.20,
+            empDrainReduction: (tree.power - 1) * 0.20,
+            hullMaxBonus: (tree.shielding - 1) * 25,
+            collisionDamageDamping: (tree.shielding - 1) * 0.20,
+            stormSurgeDamping: tree.shielding >= 3 ? 0.60 : (tree.shielding >= 2 ? 0.25 : 0),
+            scrapPayoutMod: 1 + (tree.communications - 1) * 0.15,
+            solicitDiscount: tree.communications >= 2 ? 0.50 : 0,
+            repGainMod: 1 + (tree.communications - 1) * 0.20,
+            handlingMod: 1 + (tree.propulsion - 1) * 0.20,
+            fuelBurnReduction: (tree.propulsion - 1) * 0.15,
+            accelerationMod: 1 + (tree.propulsion - 1) * 0.15
+        };
+    }
+
+    // =========================================================================
+    // PHASE 8c: CAMPAIGN ENDINGS EVALUATION
+    // =========================================================================
+    static evaluateCampaignEnding(save) {
+        if (!save) return null;
+
+        // Check each ending in priority order (Collapse -> Renaissance -> Commercial -> Military)
+        if (CAMPAIGN_ENDINGS.kessler_collapse.checkEligible(save)) {
+            return CAMPAIGN_ENDINGS.kessler_collapse;
+        }
+        if (CAMPAIGN_ENDINGS.orbital_renaissance.checkEligible(save)) {
+            return CAMPAIGN_ENDINGS.orbital_renaissance;
+        }
+        if (CAMPAIGN_ENDINGS.commercial_monopoly.checkEligible(save)) {
+            return CAMPAIGN_ENDINGS.commercial_monopoly;
+        }
+        if (CAMPAIGN_ENDINGS.military_fortress.checkEligible(save)) {
+            return CAMPAIGN_ENDINGS.military_fortress;
+        }
+
+        // Default or in-progress status
+        return null;
+    }
+
+    // =========================================================================
+    // PHASE 8c: SAFE NEW CAMPAIGN & SAVE ARCHIVING
+    // =========================================================================
+    static archiveCurrentCampaign(save, label) {
+        if (!save) return null;
+        try {
+            const archiveKey = `orbital_cleanup_archive_${Date.now()}`;
+            const archiveRecord = {
+                archivedAt: new Date().toISOString(),
+                label: label || `Archive Seed-${save.campaignSeed || '000000'}`,
+                data: JSON.parse(JSON.stringify(save))
+            };
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(archiveKey, JSON.stringify(archiveRecord));
+            }
+            return archiveKey;
+        } catch (e) {
+            console.error('[CampaignManager] Failed to archive campaign:', e);
+            return null;
+        }
+    }
+
+    static startNewCampaign(currentSave) {
+        // Archive current campaign first to guarantee zero silent loss
+        if (currentSave) {
+            this.archiveCurrentCampaign(currentSave, `Career Archive - Seed ${currentSave.campaignSeed}`);
+        }
+
+        const freshSave = OrbitalStorage.getDefaultSave();
+        freshSave.campaignSeed = Math.floor(Math.random() * 900000) + 100000;
+        freshSave.worldEpochDay = 1;
+        freshSave.missionsCompleted = 0;
+        freshSave.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        freshSave.availableContracts = this.generateContractPool(freshSave);
+
+        // Preserve lifetime career high scores and archive records
+        if (currentSave && currentSave.leaderboard) {
+            freshSave.leaderboard = currentSave.leaderboard;
+        }
+        if (currentSave && Array.isArray(currentSave.survivalRecords)) {
+            freshSave.survivalRecords = currentSave.survivalRecords;
+        }
+
+        OrbitalStorage.save(freshSave);
+        return freshSave;
+    }
+
+    // =========================================================================
+    // PHASE 8c: CASCADE SURVIVAL MODE HELPER
+    // =========================================================================
+    static recordSurvivalRun(save, record) {
+        if (!Array.isArray(save.survivalRecords)) save.survivalRecords = [];
+        const entry = {
+            timestamp: new Date().toISOString(),
+            timeSurvivedSec: record.timeSurvivedSec || 0,
+            formattedTime: record.formattedTime || '00:00',
+            debrisCollected: record.debrisCollected || 0,
+            score: record.score || 0,
+            rating: record.rating || 'RECRUIT'
+        };
+        save.survivalRecords.unshift(entry);
+        save.survivalRecords.sort((a, b) => b.score - a.score);
+        if (save.survivalRecords.length > 10) save.survivalRecords.pop();
+
+        if (typeof OrbitalStorage !== 'undefined' && typeof OrbitalStorage.save === 'function') {
+            OrbitalStorage.save(save);
+        }
+        return entry;
     }
 }
 
@@ -445,6 +901,8 @@ if (typeof window !== 'undefined') {
     window.CONTRACT_OBJECTIVES = CONTRACT_OBJECTIVES;
     window.CONTRACT_MODIFIERS = CONTRACT_MODIFIERS;
     window.CONTRACT_CLIENTS = CONTRACT_CLIENTS;
+    window.TECH_PATHS = TECH_PATHS;
+    window.CAMPAIGN_ENDINGS = CAMPAIGN_ENDINGS;
     window.CampaignManager = CampaignManager;
 }
 if (typeof module !== 'undefined' && module.exports) {
@@ -452,6 +910,8 @@ if (typeof module !== 'undefined' && module.exports) {
         CONTRACT_OBJECTIVES,
         CONTRACT_MODIFIERS,
         CONTRACT_CLIENTS,
+        TECH_PATHS,
+        CAMPAIGN_ENDINGS,
         CampaignManager
     };
 }

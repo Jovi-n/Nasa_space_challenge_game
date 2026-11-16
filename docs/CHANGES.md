@@ -717,3 +717,59 @@
    - Published `docs/STORYLETS.md` documenting conditions, stakes, delayed mechanics, and asset details.
    - Created `tests/test_phase8b.js` with 8 comprehensive automated test suites.
    - All 6 project test suites pass with 100% success rate (35+ test assertions across physics, weather, UI, contracts, and storylets).
+
+---
+
+## [Phase 8c — Optional Full Campaign Experience, Interactive Map, Tech Progression & Cascade Survival] - 2026-11-16
+### Status: Completed & Verified
+
+### Features & Systems Implemented:
+1. **Interactive Campaign Map (`#screen-campaign-map`)**:
+   - Built a comprehensive tactical sector overview displaying all 8 orbital sectors in altitude order (LEO 420 km to GEO 35,986 km and Kessler Ground Zero).
+   - Each sector card displays altitude band, persistent orbital cleanliness score (0–100%), active hazard ratings (Micrometeoroids, Coronal Plasma, Hypergolic Residue, Kinetic Clouds), associated assets, and available contract indicators.
+   - **Sector Tactical Inspector**: Clicking any sector card loads detailed orbital metadata, registered infrastructure platforms, real-time threat indices, and gives the player one-click flight deployment (launch contract flight or launch standard patrol).
+   - Dedicated navigation buttons accessible from both Main Menu (`🗺️ ORBITAL CAMPAIGN MAP`) and Mission Board (`🗺️ CAMPAIGN MAP`).
+
+2. **World Clock & Solar Activity Cycle**:
+   - Implemented an in-universe campaign epoch calendar starting at `2054-04-12 (Epoch Day 1)`.
+   - The clock advances dynamically based on player actions: +7 days on successful contract completion, +12 days on abort/failure, +2 days upon resolving storylet dilemmas, and +2 days upon soliciting contract refreshes.
+   - Integrated with a realistic 28-day solar rotation cycle:
+     - Days 1–18: `QUIET SUN` (Normal operational conditions)
+     - Days 19–24: `ELEVATED SOLAR ACTIVITY` (Increased particle flux, slight sensor interference)
+     - Days 25–28: `STORM WARNING: HIGH DENSITY` (Coronal mass ejections, intense ionospheric drag, and plasma shockwaves)
+   - Real-time date and solar weather badge prominently displayed on Mission Board and Campaign Map headers.
+
+3. **Technology Progression Paths (`TECH_PATHS`)**:
+   - Implemented 6 distinct tech branches with 3 research tiers each (Tiers I, II, III):
+     - **Capture Mechanics** (`capture`): Automated net canister loader, magnetic induction coil, quantum-tether harpoon (improves net capacity and tractor intake).
+     - **Sensor & Telemetry Suite** (`sensors`): Sub-harmonic doppler array, wideband lidar pulse, deep-space synthetic aperture radar (expands radar detection range and hazard advance warnings).
+     - **Power Distribution & Storage** (`power`): Solid-state graphene battery bank, high-yield GaAs solar sails, dual-mode magnetohydrodynamic bus (boosts maximum battery capacity and orbital solar recharge).
+     - **Whipple Shielding & Armor** (`shielding`): Multi-layered Kevlar spall liner, aerogel-ceramic honeycomb matrix, active electromagnetic plasma deflector (increases maximum hull HP, impact damage damping, and storm surge grounding).
+     - **Communications & Logistics** (`communications`): TDRSS deep-space uplink, automated broker node, autonomous scrap recycling pipeline (improves contract payout value, lowers solicitation costs, and increases salvage efficiency).
+     - **Propulsion & Attitude Control** (`propulsion`): Pulsed cold-gas vernier thrusters, bi-propellant apogee motor, magnetoplasmadynamic continuous drive (improves turn rate and thruster fuel efficiency).
+   - Added interactive modal (`#modal-tech-research`) displaying current unlock tiers, required research commodities (Scrap, Metal, Cells, Chips), and one-click upgrades.
+   - Tech stat modifiers are dynamically injected into player stats during in-flight initialization.
+
+4. **Four Distinct Campaign Endings (`CAMPAIGN_ENDINGS`)**:
+   - Integrated multi-variable campaign evaluation assessing orbital health across all sectors, faction reputations (`agency`, `commercial`, `public`), campaign storylet flags, and unlocked tech tiers:
+     - **The Kessler Collapse (Catastrophic Failure)**: Triggered if average orbital sector health drops below 35% or 3+ sectors suffer total cascade collapse. Low Earth Orbit becomes an impenetrable debris storm.
+     - **Commercial Monopoly (Corporate Takeover)**: Achieved with Commercial Reputation >= 80%, Agency Reputation < 50%, and High-Tier Logistics research. Orbital salvage privatized under corporate tollway monopoly.
+     - **Military Fortress (Defense Command Hegemony)**: Achieved with Agency Reputation >= 80%, Public Reputation < 50%, and High-Tier Defense/Sensors. Orbital space classified as a restricted national security fortress.
+     - **Orbital Renaissance (The Golden Space Age - Optimal Ending)**: Achieved with average orbital cleanliness >= 85%, all three faction reputations >= 60%, and 12+ total tech tiers unlocked. Sustainable, thriving international space commons.
+   - Built Epilogue Climax modal (`#modal-campaign-ending`) providing comprehensive campaign retrospectives, achievement badges, and ending epilogues.
+
+5. **Safe New Campaign Option**:
+   - Added non-destructive `➕ NEW CAMPAIGN` feature to Mission Board and Campaign Map.
+   - Before wiping or re-seeding active state, the current playthrough is automatically archived into a timestamped localStorage backup (`orbital_cleanup_archive_<timestamp>`) preserving past progress.
+   - Generates a fresh procedural campaign seed, resets sectors to baseline, and provides a fresh start.
+
+6. **Cascade Survival Game Mode**:
+   - Added endless high-stakes game mode directly selectable from Main Menu (`⚡ CASCADE SURVIVAL MODE`) or Campaign Map.
+   - Starts player in critical cascade conditions; mission clock counts up continuously.
+   - Every 25 seconds, an escalating cascade wave spawns bonus high-velocity fragments, explosive boosters, and radioactive derelicts.
+   - Post-mission debrief records survival duration, scrap harvested, debris neutralized, and awards tactical survival ratings (`SURVIVOR`, `VETERAN`, `CASCADE MASTER`, `ORBITAL LEGEND`) stored in `save.survivalRecords`.
+
+7. **Save Compatibility & Verification**:
+   - All Phase 8c features are fully integrated into Save Version 2 non-destructive migration.
+   - Created `tests/test_phase8c.js` verifying world clock progression, tech research unlocks, ending predicates, save archiving, and survival mode tracking.
+   - All 7 automated test suites pass with 100% success rate.

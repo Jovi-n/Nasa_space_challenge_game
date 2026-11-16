@@ -224,6 +224,8 @@
                 Earth's orbit has reached critical debris density. Abandoned satellites, explosive rocket stages, and fragments threaten human spaceflight. Command your orbital sanitation craft, manage critical fuel and battery reserves, and cleanse the orbital lanes before the Kessler cascade becomes irreversible.
             </p>
             <div class="menu-buttons">
+                <button type="button" id="btn-menu-survival" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: 700; text-shadow: 1px 1px 0px #000;" onclick="if(window.uiController){window.uiController.startCascadeSurvival();}else{alert('Starting Cascade Survival...');}">⚡ CASCADE SURVIVAL MODE</button>
+                <button type="button" id="btn-menu-campaign-map" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="if(window.uiController){window.uiController.openCampaignMap();}">🗺️ ORBITAL CAMPAIGN MAP</button>
                 <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;" onclick="window.openMissionBoard();">MISSION BOARD &amp; CAMPAIGN</button>
                 <button id="btn-menu-start" class="btn-secondary">CUSTOM MISSION DESIGN</button>
                 <button id="btn-menu-hangar" class="btn-secondary">HANGAR &amp; UPGRADES</button>
@@ -253,8 +255,11 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-board-campaign-map" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">🗺️ CAMPAIGN MAP</button>
+                    <button type="button" id="btn-board-tech-tree" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #a855f7; color: #a855f7;">🔬 TECH RESEARCH</button>
                     <button type="button" id="btn-board-assets" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">🛰️ ASSET REGISTRY</button>
                     <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
+                    <button type="button" id="btn-board-new-campaign" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #eab308; color: #eab308;">➕ NEW CAMPAIGN</button>
                     <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
                 </div>
             </div>
@@ -264,6 +269,11 @@
                 <div class="standing-group">
                     <span class="standing-label">CAMPAIGN SEED:</span>
                     <strong id="board-campaign-seed" style="font-family: var(--font-mono); color: var(--accent-cyan);">SEED-000000</strong>
+                </div>
+                <div class="standing-group">
+                    <span class="standing-label">WORLD CLOCK:</span>
+                    <strong id="board-epoch-clock" style="font-family: var(--font-mono); color: var(--clean);">DAY 001 // 2054-04-12</strong>
+                    <span id="board-solar-badge" class="badge-solar-quiet" style="font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--clean); color: var(--clean); border-radius: 2px;">[QUIET SUN]</span>
                 </div>
                 <div class="standing-meters">
                     <div class="standing-meter-box">
@@ -300,6 +310,75 @@
                     Select an operational contract above to launch with custom budget &amp; requirements, or design a custom flight.
                 </div>
                 <button type="button" id="btn-board-custom-design" class="btn-secondary" style="font-size: 0.85rem;">OPEN CUSTOM MISSION STUDIO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         1C. INTERACTIVE ORBITAL CAMPAIGN MAP (PHASE 8c)
+         ==================================================================== -->
+    <div id="screen-campaign-map" class="screen-layer hidden">
+        <div class="contracts-container" style="max-width: 1200px;">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">ORBITAL CAMPAIGN TACTICAL MAP</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        NEAR-EARTH ORBITAL INFRASTRUCTURE &amp; SECTOR CASCADE DEFENSE MATRIX
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-map-board" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--salvage); color: var(--salvage);">📋 MISSION BOARD</button>
+                    <button type="button" id="btn-map-tech" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #a855f7; color: #a855f7;">🔬 TECH RESEARCH</button>
+                    <button type="button" id="btn-map-evaluate" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #eab308; color: #eab308;">🏆 EVALUATE ENDING</button>
+                    <button type="button" id="btn-map-new-campaign" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">➕ NEW CAMPAIGN</button>
+                    <button type="button" id="btn-map-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
+                </div>
+            </div>
+
+            <!-- Campaign Standing & Telemetry Bar -->
+            <div class="campaign-standing-bar">
+                <div class="standing-group">
+                    <span class="standing-label">ORBITAL EPOCH:</span>
+                    <strong id="map-epoch-clock" style="font-family: var(--font-mono); color: var(--clean);">DAY 001 // 2054-04-12</strong>
+                    <span id="map-solar-badge" class="badge-solar-quiet" style="font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--clean); color: var(--clean); border-radius: 2px;">[QUIET SUN]</span>
+                </div>
+                <div class="standing-meters">
+                    <div class="standing-meter-box">
+                        <span class="rep-label">AGY:</span>
+                        <span id="map-rep-agency-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">COM:</span>
+                        <span id="map-rep-commercial-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">PUB:</span>
+                        <span id="map-rep-public-val" class="rep-val">50%</span>
+                    </div>
+                </div>
+                <div class="standing-funds">
+                    <span>FUNDS: <strong id="map-credits-val" style="color: var(--salvage);">0 SCRAP</strong></span>
+                </div>
+            </div>
+
+            <!-- Two-Column Tactical Map Interface -->
+            <div class="campaign-map-grid">
+                <!-- Left: 8 Orbital Shells Node Grid -->
+                <div class="campaign-sectors-column">
+                    <div style="font-family: var(--font-pixel); font-size: 0.8rem; color: var(--accent-cyan); margin-bottom: 8px; letter-spacing: 1px;">
+                        TRACKED ORBITAL ALTITUDE SHELLS (LEO 420 KM ➔ GEO 35,986 KM):
+                    </div>
+                    <div id="campaign-map-sectors-list" class="campaign-sectors-list">
+                        <!-- Populated dynamically with 8 sector nodes -->
+                    </div>
+                </div>
+
+                <!-- Right: Focused Sector Tactical Dossier Inspector -->
+                <div class="campaign-inspector-column">
+                    <div id="campaign-sector-inspector" class="sector-inspector-panel">
+                        <!-- Populated with selected sector details, stationed assets, active contracts & launch button -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1136,20 +1215,97 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         14. TECHNOLOGY RESEARCH & UPGRADES MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-tech-research" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 960px; max-height: 85vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 14px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL TECHNOLOGY R&amp;D // SUBSYSTEM BLUEPRINTS</h2>
+                    <div style="font-family: var(--font-mono); color: #a855f7; font-size: 0.8rem;">
+                        ADVANCE SPACECRAFT SYSTEMS ACROSS 6 SUBSYSTEM RESEARCH PATHS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-tech-modal" data-modal="modal-tech-research" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+
+            <!-- Tech Funds & Materials Bar -->
+            <div class="tech-resources-bar" id="tech-resources-bar" style="display: flex; gap: 16px; flex-wrap: wrap; background: rgba(16, 24, 39, 0.8); border: 1px solid var(--border); padding: 8px 14px; margin-bottom: 14px; font-family: var(--font-mono); font-size: 0.85rem;">
+                <!-- Populated dynamically with Scrap & Materials -->
+            </div>
+
+            <!-- 6 Tech Paths Cards Grid -->
+            <div id="tech-paths-grid" class="tech-paths-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         15. CAMPAIGN ENDING & EPILOGUE MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-campaign-ending" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 820px; max-height: 88vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" id="ending-modal-header" style="font-size: 1.3rem;">CAMPAIGN CLIMAX // ORBITAL EVALUATION REPORT</h2>
+                    <div id="ending-modal-subtitle" style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem;">
+                        GLOBAL ORBITAL STABILITY VERDICT
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-campaign-ending" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+
+            <div id="ending-content-body">
+                <!-- Populated dynamically with Ending Badge, Title, Epilogue and Stats Recap -->
+            </div>
+
+            <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; flex-wrap: wrap;">
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-campaign-ending">RESUME PLAYING (FREE ROAM)</button>
+                <button type="button" id="btn-ending-new-campaign" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: bold;">START NEW CAMPAIGN 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         16. NEW CAMPAIGN CONFIRMATION & ARCHIVE MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-new-campaign" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 600px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.2rem; color: #eab308;">INITIALIZE NEW CAMPAIGN</h2>
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-new-campaign">✕ CANCEL</button>
+            </div>
+            <div style="font-family: var(--font-body); font-size: 1rem; line-height: 1.6; margin-bottom: 18px;">
+                <p>Are you sure you want to initialize a fresh orbital campaign?</p>
+                <div style="background: rgba(16, 24, 39, 0.7); border: 1px solid var(--border); padding: 12px; margin: 12px 0; font-family: var(--font-mono); font-size: 0.85rem;">
+                    <div>• <strong>Current Campaign Archive:</strong> Progress will be safely archived to Local Storage.</div>
+                    <div>• <strong>Career Records Preserved:</strong> High scores and lifetime leaderboard records remain intact.</div>
+                    <div>• <strong>Fresh Seed:</strong> A new orbital campaign seed, reset world clock (Epoch Day 1), and pristine sector status will be established.</div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 14px;">
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-new-campaign">CANCEL &amp; RESUME</button>
+                <button type="button" id="btn-confirm-new-campaign" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: bold;">CONFIRM: ARCHIVE &amp; START NEW</button>
+            </div>
+        </div>
+    </div>
+
     <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
     <!-- Core Game Scripts (Cache-Busting Enabled) -->
-    <script src="data/parts.js?v=8b.1"></script>
-    <script src="data/missions.js?v=8b.1"></script>
-    <script src="data/donki-snapshot.js?v=8b.1"></script>
-    <script src="data/storylets.js?v=8b.1"></script>
-    <script src="js/campaign.js?v=8b.1"></script>
-    <script src="js/audio.js?v=8b.1"></script>
-    <script src="js/data.js?v=8b.1"></script>
-    <script src="js/director.js?v=8b.1"></script>
-    <script src="js/graphics.js?v=8b.1"></script>
-    <script src="js/game.js?v=8b.1"></script>
-    <script src="js/ui.js?v=8b.1"></script>
+    <script src="data/parts.js?v=8c.1"></script>
+    <script src="data/missions.js?v=8c.1"></script>
+    <script src="data/donki-snapshot.js?v=8c.1"></script>
+    <script src="data/storylets.js?v=8c.1"></script>
+    <script src="js/campaign.js?v=8c.1"></script>
+    <script src="js/audio.js?v=8c.1"></script>
+    <script src="js/data.js?v=8c.1"></script>
+    <script src="js/director.js?v=8c.1"></script>
+    <script src="js/graphics.js?v=8c.1"></script>
+    <script src="js/game.js?v=8c.1"></script>
+    <script src="js/ui.js?v=8c.1"></script>
 </body>
 </html>

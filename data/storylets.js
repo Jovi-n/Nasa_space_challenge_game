@@ -1052,6 +1052,13 @@ class StoryletManager {
         // Clear active dilemma
         save.activeDilemmaId = null;
 
+        // Advance World Clock (+2 days for storylet decision)
+        if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.advanceWorldClock === 'function') {
+            CampaignManager.advanceWorldClock(save, 2);
+        } else {
+            save.worldEpochDay = (save.worldEpochDay || 1) + 2;
+        }
+
         // Save state persistently
         if (typeof OrbitalStorage !== 'undefined' && typeof OrbitalStorage.save === 'function') {
             OrbitalStorage.save(save);

@@ -473,6 +473,17 @@ class OrbitalStorage {
             activeContract: null,
             contractRerolls: 0,
             consequencesHistory: [],
+            worldEpochDay: 1,
+            techTree: {
+                capture: 1,
+                sensors: 1,
+                power: 1,
+                shielding: 1,
+                communications: 1,
+                propulsion: 1
+            },
+            survivalRecords: [],
+            campaignEndingAchieved: null,
             totalDebrisRecycled: 0,
             totalMassDeorbitedKg: 0,
             missionsCompleted: 0,
@@ -538,6 +549,18 @@ class OrbitalStorage {
         if (data.contractRerolls === undefined) {
             data.contractRerolls = 0;
         }
+        if (data.worldEpochDay === undefined) {
+            data.worldEpochDay = 1;
+        }
+        if (!data.techTree || typeof data.techTree !== 'object') {
+            data.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        }
+        if (!Array.isArray(data.survivalRecords)) {
+            data.survivalRecords = [];
+        }
+        if (data.campaignEndingAchieved === undefined) {
+            data.campaignEndingAchieved = null;
+        }
         if (!Array.isArray(data.consequencesHistory)) {
             data.consequencesHistory = [];
         }
@@ -600,6 +623,15 @@ class OrbitalStorage {
             }
             if (!merged.campaignFlags || typeof merged.campaignFlags !== 'object') {
                 merged.campaignFlags = {};
+            }
+            if (!merged.techTree || typeof merged.techTree !== 'object') {
+                merged.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+            }
+            if (merged.worldEpochDay === undefined) {
+                merged.worldEpochDay = 1;
+            }
+            if (!Array.isArray(merged.survivalRecords)) {
+                merged.survivalRecords = [];
             }
             if (!merged.commanderName) merged.commanderName = 'Commander';
             if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';

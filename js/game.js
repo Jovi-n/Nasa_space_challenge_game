@@ -79,6 +79,24 @@ class OrbitalGameScene extends Phaser.Scene {
         const commsBonus = this.pointDesign.groundComms?.radarRangeBonus || 1.0;
         this.radarMultiplier = (1 + (sensorLvl * 0.15)) * commsBonus;
 
+        // Phase 8c Technology Tree Stat Modifiers
+        if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.getTechStatModifiers === 'function') {
+            const techMods = CampaignManager.getTechStatModifiers(save);
+            this.maxBattery += techMods.batteryMaxBonus;
+            this.battery = this.maxBattery;
+            this.batteryRechargeRate *= techMods.solarRechargeMod;
+            this.maxHull += techMods.hullMaxBonus;
+            this.hull = this.maxHull;
+            this.damageReduction *= (1 - techMods.collisionDamageDamping);
+            this.radarMultiplier *= techMods.radarRangeMod;
+            this.turnRate *= techMods.handlingMod;
+            this.fuelBurnRate *= (1 - techMods.fuelBurnReduction);
+            if (techMods.extraNetCapacity > 0 && this.equipmentConfig && this.equipmentConfig.maxCapacity) {
+                this.equipmentConfig.maxCapacity += techMods.extraNetCapacity;
+            }
+            this.techStatModifiers = techMods;
+        }
+
         // Client Constraints & Objectives
         this.clientConfig = this.pointDesign.client || (typeof PARTS_DATA !== 'undefined' ? PARTS_DATA.clients.esa : { id: 'esa', name: 'ESA Clean Space', payoutMultiplier: 1.25, maxCollisionsAllowed: 1 });
         this.maxCollisionsAllowed = this.clientConfig.maxCollisionsAllowed || 3;
@@ -102,17 +120,26 @@ class OrbitalGameScene extends Phaser.Scene {
         this.hazardSpeedMultiplier = diffConfig.hazardSpeedMultiplier;
         this.scoreMultiplier = diffConfig.scoreMultiplier;
 
+        // Phase 8c: Cascade Survival Mode Configuration
+        this.isSurvivalMode = Boolean(this.missionConfig?.isSurvival || this.isSurvival);
+        if (this.isSurvivalMode) {
+            this.survivalTimeElapsed = 0;
+            this.survivalWave = 1;
+            this.debrisTargetQuota = 999;
+            this.missionTime = 0;
+        }
+
         // Mission Run State
         this.score = 0;
         this.creditsEarned = 0;
         this.debrisDeliveredCount = 0;
-        this.debrisTargetQuota = this.missionConfig.targetQuota;
+        this.debrisTargetQuota = this.isSurvivalMode ? 999 : this.missionConfig.targetQuota;
         this.deliveriesCompleted = 0;
         this.collisionsCount = 0;
         this.totalFuelBurned = 0;
         this.missionMassDeorbitedKg = 0;
-        this.missionTime = Math.round(this.missionConfig.timeLimit * diffConfig.timeLimitMultiplier);
-        this.timeLimitTotal = this.missionTime;
+        this.missionTime = this.isSurvivalMode ? 0 : Math.round(this.missionConfig.timeLimit * diffConfig.timeLimitMultiplier);
+        this.timeLimitTotal = this.isSurvivalMode ? 9999 : this.missionTime;
         this.elapsedTime = 0;
         this.isMissionOver = false;
         this.isDocked = false;
@@ -611,6 +638,18 @@ class OrbitalGameScene extends Phaser.Scene {
         }
     }
 
+    spawnSurvivalWaveBonus() {
+        if (!this.player || !this.debrisGroup) return;
+        const extraCount = 3 + Math.min(6, this.survivalWave);
+        for (let i = 0; i < extraCount; i++) {
+            this.spawnDebrisItem();
+        }
+        if (typeof this.spawnHazardItem === 'function') {
+            this.spawnHazardItem();
+        }
+        this.logFlightEvent('SURVIVAL_WAVE', `Cascade density surged to Wave ${this.survivalWave}! +${extraCount} fragments spawned.`, 'crit');
+    }
+
     spawnPriorityCore() {
         const w = this.missionConfig.worldSize.width;
         const h = this.missionConfig.worldSize.height;
@@ -765,7 +804,6 @@ class OrbitalGameScene extends Phaser.Scene {
 
         const dt = delta / 1000;
         this.elapsedTime += dt;
-        this.missionTime -= dt;
 
         // Process any queued physics actions safely at frame start
         this.processPendingPhysicsActions();
@@ -774,14 +812,34 @@ class OrbitalGameScene extends Phaser.Scene {
         this.fxGraphics.clear();
         this.hudGraphics.clear();
 
-        // 1. Check Win / Loss Time limits
-        if (this.missionTime <= 0) {
-            if (this.contractObjective === 'survive') {
-                this.handleMissionEnd(true, 'EXTRACTION WINDOW REACHED: CASCADE CLUSTER SURVIVED');
-            } else {
-                this.handleMissionEnd(false, 'TIME LIMIT EXCEEDED - ORBITAL WINDOW LOST');
+        // 1. Survival Mode timer counting UP vs Standard countdown
+        if (this.isSurvivalMode) {
+            this.survivalTimeElapsed += dt;
+            this.missionTime = this.survivalTimeElapsed;
+
+            // Progressive wave escalation every 25 seconds
+            const currentWave = Math.floor(this.survivalTimeElapsed / 25) + 1;
+            if (currentWave > this.survivalWave) {
+                this.survivalWave = currentWave;
+                this.scoreMultiplier = 1.0 + (this.survivalWave - 1) * 0.5;
+                window.soundSystem?.playAlertBeep?.();
+                if (typeof this.showFloatingText === 'function' && this.player) {
+                    this.showFloatingText(this.player.x, this.player.y - 45, `⚡ WAVE ${this.survivalWave}: DENSITY ESCALATION!`, '#ef4444');
+                }
+                this.spawnSurvivalWaveBonus();
             }
-            return;
+        } else {
+            this.missionTime -= dt;
+
+            // Check Win / Loss Time limits
+            if (this.missionTime <= 0) {
+                if (this.contractObjective === 'survive') {
+                    this.handleMissionEnd(true, 'EXTRACTION WINDOW REACHED: CASCADE CLUSTER SURVIVED');
+                } else {
+                    this.handleMissionEnd(false, 'TIME LIMIT EXCEEDED - ORBITAL WINDOW LOST');
+                }
+                return;
+            }
         }
 
         // 1b. Protected Satellites Boundary Wrap & Loss Verification
@@ -2555,6 +2613,35 @@ class OrbitalGameScene extends Phaser.Scene {
         window.soundSystem.setThruster(false);
         window.soundSystem.setTractorBeam(false);
         window.soundSystem.playWarning(false);
+
+        // Phase 8c: Cascade Survival Mode Finalization
+        if (this.isSurvivalMode) {
+            const timeSurvivedSec = Math.floor(this.elapsedTime);
+            const mins = Math.floor(timeSurvivedSec / 60);
+            const secs = timeSurvivedSec % 60;
+            const formattedTime = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            let rating = 'CADET';
+            if (timeSurvivedSec >= 150) rating = 'TITAN OF THE COMMONS';
+            else if (timeSurvivedSec >= 90) rating = 'CASCADE ACE';
+            else if (timeSurvivedSec >= 45) rating = 'ORBITAL VETERAN';
+
+            const survivalScore = this.score + (timeSurvivedSec * 50) + (this.debrisDeliveredCount * 150);
+
+            if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.recordSurvivalRun === 'function') {
+                const sSave = OrbitalStorage.load();
+                CampaignManager.recordSurvivalRun(sSave, {
+                    timeSurvivedSec: timeSurvivedSec,
+                    formattedTime: formattedTime,
+                    debrisCollected: this.debrisDeliveredCount,
+                    score: survivalScore,
+                    rating: rating
+                });
+            }
+
+            reason = `CASCADE SURVIVED: ${formattedTime} // WAVE ${this.survivalWave} [${rating}]`;
+            isVictory = true;
+        }
 
         if (isVictory) {
             window.soundSystem.playMissionSuccess();

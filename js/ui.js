@@ -50,7 +50,11 @@ class UIController {
             tutorialModal: document.getElementById('modal-tutorial'),
             sourcesModal: document.getElementById('modal-sources'),
             creditsModal: document.getElementById('modal-credits'),
-            shareCodeModal: document.getElementById('modal-share-code')
+            shareCodeModal: document.getElementById('modal-share-code'),
+            campaignMap: document.getElementById('screen-campaign-map'),
+            techModal: document.getElementById('modal-tech-research'),
+            endingModal: document.getElementById('modal-campaign-ending'),
+            newCampaignModal: document.getElementById('modal-new-campaign')
         };
 
         // HUD Elements
@@ -120,6 +124,7 @@ class UIController {
             targetScreenName === 'hangar' ? 'screen-hangar' :
             targetScreenName === 'howToPlay' ? 'screen-how-to-play' :
             targetScreenName === 'leaderboard' ? 'screen-leaderboard' :
+            targetScreenName === 'campaignMap' ? 'screen-campaign-map' :
             targetScreenName === 'gameHud' ? 'hud-overlay' : null
         );
 
@@ -355,6 +360,61 @@ class UIController {
             if (boardAssetsBtn) {
                 e.preventDefault();
                 this.openAssetRegistryModal();
+                return;
+            }
+
+            // Phase 8c: Campaign Map Navigation
+            const campaignMapBtn = e.target.closest('#btn-board-campaign-map, #btn-menu-campaign-map');
+            if (campaignMapBtn) {
+                e.preventDefault();
+                this.openCampaignMap();
+                return;
+            }
+
+            const mapBoardBtn = e.target.closest('#btn-map-board');
+            if (mapBoardBtn) {
+                e.preventDefault();
+                this.switchScreen('contracts');
+                this.renderMissionBoard();
+                return;
+            }
+
+            // Phase 8c: Tech Research Modal
+            const techResearchBtn = e.target.closest('#btn-board-tech-tree, #btn-map-tech');
+            if (techResearchBtn) {
+                e.preventDefault();
+                this.openTechTreeModal();
+                return;
+            }
+
+            // Phase 8c: Campaign Endings Evaluation
+            const evaluateEndingBtn = e.target.closest('#btn-map-evaluate');
+            if (evaluateEndingBtn) {
+                e.preventDefault();
+                this.openCampaignEndingModal();
+                return;
+            }
+
+            // Phase 8c: New Campaign Prompt & Confirmation
+            const newCampaignBtn = e.target.closest('#btn-board-new-campaign, #btn-map-new-campaign, #btn-ending-new-campaign');
+            if (newCampaignBtn) {
+                e.preventDefault();
+                this.openNewCampaignModal();
+                return;
+            }
+
+            const confirmNewCampaignBtn = e.target.closest('#btn-confirm-new-campaign');
+            if (confirmNewCampaignBtn) {
+                e.preventDefault();
+                this.confirmNewCampaign();
+                return;
+            }
+
+            // Phase 8c: Cascade Survival Mode
+            const survivalBtn = e.target.closest('#btn-menu-survival');
+            if (survivalBtn) {
+                e.preventDefault();
+                this.startCascadeSurvival();
                 return;
             }
 
@@ -1560,6 +1620,18 @@ class UIController {
             const creditsEl = document.getElementById('board-credits-val');
             if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
 
+            // Phase 8c: World Clock & Solar Status
+            if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.getFormattedDate === 'function') {
+                const clock = CampaignManager.getFormattedDate(this.save);
+                const clockEl = document.getElementById('board-epoch-clock');
+                if (clockEl) clockEl.innerText = clock.fullString;
+                const solarBadge = document.getElementById('board-solar-badge');
+                if (solarBadge) {
+                    solarBadge.innerText = `[${clock.solarStatus}]`;
+                    solarBadge.className = clock.solarLevel === 'HIGH' ? 'badge-solar-storm' : (clock.solarLevel === 'MODERATE' ? 'badge-solar-elevated' : 'badge-solar-quiet');
+                }
+            }
+
             // 1b. Render Active Storylet Dilemma (Phase 8b)
             this.renderStoryletDilemma();
 
@@ -1831,6 +1903,445 @@ class UIController {
         });
 
         modal.classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // PHASE 8c: INTERACTIVE CAMPAIGN MAP
+    // =========================================================================
+    openCampaignMap() {
+        this.switchScreen('campaignMap');
+        this.renderCampaignMap();
+    }
+
+    renderCampaignMap() {
+        this.save = OrbitalStorage.load();
+        if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.getFormattedDate === 'function') {
+            const clock = CampaignManager.getFormattedDate(this.save);
+            const clockEl = document.getElementById('map-epoch-clock');
+            if (clockEl) clockEl.innerText = clock.fullString;
+            const solarBadge = document.getElementById('map-solar-badge');
+            if (solarBadge) {
+                solarBadge.innerText = `[${clock.solarStatus}]`;
+                solarBadge.className = clock.solarLevel === 'HIGH' ? 'badge-solar-storm' : (clock.solarLevel === 'MODERATE' ? 'badge-solar-elevated' : 'badge-solar-quiet');
+            }
+        }
+
+        const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
+        const repAgencyEl = document.getElementById('map-rep-agency-val');
+        if (repAgencyEl) repAgencyEl.innerText = `${rep.agency || 50}%`;
+        const repCommEl = document.getElementById('map-rep-commercial-val');
+        if (repCommEl) repCommEl.innerText = `${rep.commercial || 50}%`;
+        const repPubEl = document.getElementById('map-rep-public-val');
+        if (repPubEl) repPubEl.innerText = `${rep.public || 50}%`;
+        const creditsEl = document.getElementById('map-credits-val');
+        if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
+
+        const list = document.getElementById('campaign-map-sectors-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const missions = (typeof MISSIONS_DATA !== 'undefined' && Array.isArray(MISSIONS_DATA) && MISSIONS_DATA.length > 0)
+            ? MISSIONS_DATA
+            : ((typeof GAME_DATA !== 'undefined' && Array.isArray(GAME_DATA.LEVELS)) ? GAME_DATA.LEVELS : []);
+
+        const activeContracts = this.save.availableContracts || [];
+        const assets = this.save.assetRegistry || {};
+
+        missions.forEach((sector, idx) => {
+            const sKey = `sector_0${sector.id}`;
+            const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined) ? this.save.sectorHealth[sKey] : 70;
+            const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+            const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+
+            const sectorAssets = Object.values(assets).filter(a => a.sectorId === sector.id || a.sectorKey === sKey);
+            const sectorContract = activeContracts.find(c => c.sectorId === sector.id);
+
+            const card = document.createElement('div');
+            card.className = `sector-node-card ${idx === (this.selectedMapSectorIdx || 0) ? 'selected' : ''}`;
+            card.dataset.sectorId = sector.id;
+
+            card.innerHTML = `
+                <div class="sector-node-header">
+                    <span class="sector-node-name">${sector.name}</span>
+                    <span class="sector-node-alt">${sector.altitudeKm || 400} KM // ${sector.inclination || 'LEO'}</span>
+                </div>
+                <div class="campaign-health-bar" style="margin: 4px 0;">
+                    <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                </div>
+                <div class="sector-node-metrics">
+                    <span style="color: ${healthColor}; font-weight: bold;">${sHealth}% INTEGRITY</span>
+                    <span>${sectorAssets.length} Assets Tracked</span>
+                    ${sectorContract ? `<span style="color: var(--accent-cyan); font-weight: bold;">⚡ CONTRACT READY</span>` : ''}
+                    ${carryover > 0 ? `<span style="color: var(--danger);">⚠️ ${carryover} Debris</span>` : ''}
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                this.selectedMapSectorIdx = idx;
+                document.querySelectorAll('.sector-node-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.renderSectorInspector(sector);
+            });
+
+            list.appendChild(card);
+        });
+
+        const initialSector = missions[this.selectedMapSectorIdx || 0] || missions[0];
+        if (initialSector) {
+            this.renderSectorInspector(initialSector);
+        }
+    }
+
+    renderSectorInspector(sector) {
+        const inspector = document.getElementById('campaign-sector-inspector');
+        if (!inspector || !sector) return;
+
+        const sKey = `sector_0${sector.id}`;
+        const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined) ? this.save.sectorHealth[sKey] : 70;
+        const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+        const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+
+        const assets = this.save.assetRegistry || {};
+        const sectorAssets = Object.values(assets).filter(a => a.sectorId === sector.id || a.sectorKey === sKey);
+        const activeContracts = this.save.availableContracts || [];
+        const sectorContract = activeContracts.find(c => c.sectorId === sector.id);
+
+        let assetsHtml = '';
+        if (sectorAssets.length > 0) {
+            assetsHtml = '<div style="margin-top: 8px;"><strong style="font-family: var(--font-pixel); font-size: 0.75rem; color: var(--accent-cyan);">STATIONED ORBITAL ASSETS:</strong><div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">';
+            sectorAssets.forEach(a => {
+                const statusCls = `status-${(a.status || 'nominal').toLowerCase()}`;
+                assetsHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 4px 8px; font-family: var(--font-mono); font-size: 0.72rem;">
+                        <span>${a.name} (${Math.round(a.massKg || 100)} kg)</span>
+                        <span class="asset-status-pill ${statusCls}">${(a.status || 'nominal').toUpperCase()}</span>
+                    </div>
+                `;
+            });
+            assetsHtml += '</div></div>';
+        }
+
+        let actionBtnHtml = '';
+        if (sectorContract) {
+            actionBtnHtml = `
+                <button type="button" class="btn-primary" id="btn-inspector-launch-contract" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold; background: var(--salvage); border-color: #d97706; color: #000;">
+                    ACCEPT &amp; LAUNCH CONTRACT: ${sectorContract.title} 🚀
+                </button>
+            `;
+        } else {
+            actionBtnHtml = `
+                <button type="button" class="btn-primary" id="btn-inspector-launch-patrol" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold;">
+                    LAUNCH RECON &amp; CLEANUP PATROL IN SECTOR 0${sector.id} 🚀
+                </button>
+            `;
+        }
+
+        inspector.innerHTML = `
+            <div>
+                <div class="inspector-title">${sector.name.toUpperCase()}</div>
+                <div class="inspector-subtitle">${sector.subtitle || ''} // ${sector.altitudeKm || 400} KM ALTITUDE // ${sector.inclination || 'LEO'}</div>
+            </div>
+
+            <div style="background: rgba(16, 24, 39, 0.8); border: 1px solid var(--border); padding: 10px; font-family: var(--font-mono); font-size: 0.78rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>SECTOR INTEGRITY:</span>
+                    <strong style="color: ${healthColor};">${sHealth}% [${sHealth >= 65 ? 'NOMINAL' : (sHealth >= 40 ? 'DEGRADED' : 'CRITICAL CASCADE RISK')}]</strong>
+                </div>
+                <div class="campaign-health-bar">
+                    <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                </div>
+                ${carryover > 0 ? `<div style="color: var(--danger); margin-top: 6px;">⚠️ ${carryover} untracked kinetic fragments adrift in this corridor.</div>` : ''}
+            </div>
+
+            <div style="font-family: var(--font-body); font-size: 0.9rem; color: #cbd5e1; line-height: 1.4; border-left: 2px solid var(--accent-cyan); padding-left: 8px;">
+                ${sector.briefing || sector.objective || ''}
+            </div>
+
+            ${assetsHtml}
+
+            <div style="margin-top: auto;">
+                ${actionBtnHtml}
+            </div>
+        `;
+
+        document.getElementById('btn-inspector-launch-contract')?.addEventListener('click', () => {
+            if (sectorContract) {
+                this.acceptContractAndLaunch(sectorContract.id);
+            }
+        });
+
+        document.getElementById('btn-inspector-launch-patrol')?.addEventListener('click', () => {
+            this.selectedLevelId = sector.id;
+            this.switchScreen('missionDesign');
+            this.switchDesignStep(1);
+        });
+    }
+
+    // =========================================================================
+    // PHASE 8c: TECH RESEARCH MODAL & PROGRESSION
+    // =========================================================================
+    openTechTreeModal() {
+        this.save = OrbitalStorage.load();
+        const modal = document.getElementById('modal-tech-research');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        this.renderTechTree();
+    }
+
+    renderTechTree() {
+        this.save = OrbitalStorage.load();
+        if (!this.save.techTree) {
+            this.save.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        }
+
+        const resBar = document.getElementById('tech-resources-bar');
+        if (resBar) {
+            const mats = this.save.materials || { metal: 0, cells: 0, chips: 0 };
+            resBar.innerHTML = `
+                <span>FUNDS: <strong style="color: var(--salvage);">${(this.save.credits || 0).toLocaleString()} Scrap</strong></span>
+                <span>🔩 METAL: <strong>${mats.metal || 0}</strong></span>
+                <span>🔋 CELLS: <strong>${mats.cells || 0}</strong></span>
+                <span>💾 CHIPS: <strong>${mats.chips || 0}</strong></span>
+            `;
+        }
+
+        const grid = document.getElementById('tech-paths-grid');
+        if (!grid || typeof TECH_PATHS === 'undefined') return;
+        grid.innerHTML = '';
+
+        Object.keys(TECH_PATHS).forEach(pathKey => {
+            const path = TECH_PATHS[pathKey];
+            const currentTier = this.save.techTree[pathKey] || 1;
+            const isMax = currentTier >= 3;
+            const currentTierData = path.tiers[currentTier - 1];
+            const nextTierData = !isMax ? path.tiers[currentTier] : null;
+
+            const card = document.createElement('div');
+            card.className = `tech-card ${isMax ? 'tier-max' : ''}`;
+
+            let nextHtml = '';
+            if (!isMax && nextTierData) {
+                const cost = nextTierData.cost;
+                const canAfford = (this.save.credits || 0) >= cost.credits &&
+                    (this.save.materials?.metal || 0) >= cost.metal &&
+                    (this.save.materials?.cells || 0) >= cost.cells &&
+                    (this.save.materials?.chips || 0) >= cost.chips;
+
+                const costStr = `${cost.credits} Scrap` +
+                    (cost.metal ? `, ${cost.metal} Metal` : '') +
+                    (cost.cells ? `, ${cost.cells} Cells` : '') +
+                    (cost.chips ? `, ${cost.chips} Chips` : '');
+
+                nextHtml = `
+                    <div style="border-top: 1px dotted var(--border); padding-top: 8px; margin-top: 8px;">
+                        <div style="font-family: var(--font-pixel); font-size: 0.72rem; color: #a855f7;">NEXT: TIER ${nextTierData.tier} - ${nextTierData.name}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-muted); margin: 2px 0;">${nextTierData.desc}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--clean); margin-bottom: 6px;">BONUS: ${nextTierData.bonuses}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--salvage); margin-bottom: 6px;">COST: ${costStr}</div>
+                        <button type="button" class="btn-primary btn-upgrade-tech" data-path="${pathKey}" ${canAfford ? '' : 'disabled'} style="width: 100%; padding: 6px 10px; font-size: 0.78rem; ${canAfford ? 'background: #a855f7; border-color: #9333ea;' : 'opacity: 0.5; cursor: not-allowed;'}">
+                            ${canAfford ? `RESEARCH &amp; DEPLOY TIER ${nextTierData.tier}` : 'INSUFFICIENT RESOURCES'}
+                        </button>
+                    </div>
+                `;
+            } else {
+                nextHtml = `
+                    <div style="border-top: 1px solid #a855f7; padding-top: 8px; margin-top: 8px; text-align: center; font-family: var(--font-mono); font-size: 0.75rem; color: #a855f7; font-weight: bold;">
+                        ✓ MAXIMUM TECHNOLOGY TIER ACTIVE
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="tech-header">
+                        <span class="tech-name">${path.icon} ${path.name}</span>
+                        <span class="tech-tier-badge ${isMax ? 'max' : ''}">TIER ${currentTier} / 3</span>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); margin: 4px 0 8px 0;">${path.desc}</div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 8px; font-family: var(--font-mono); font-size: 0.72rem;">
+                        <strong style="color: var(--ink);">${currentTierData.name}</strong>
+                        <div style="color: #94a3b8; font-size: 0.7rem;">${currentTierData.desc}</div>
+                        <div style="color: var(--accent-cyan); margin-top: 4px;">ACTIVE: ${currentTierData.bonuses}</div>
+                    </div>
+                </div>
+                ${nextHtml}
+            `;
+
+            grid.appendChild(card);
+        });
+
+        grid.querySelectorAll('.btn-upgrade-tech').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const pathKey = e.currentTarget.dataset.path;
+                if (!pathKey || typeof CampaignManager === 'undefined') return;
+                const result = CampaignManager.unlockTech(this.save, pathKey);
+                if (result.success) {
+                    window.soundSystem?.playMissionSuccess?.();
+                    this.renderTechTree();
+                } else {
+                    window.soundSystem?.playExplosion?.();
+                    alert(`TECH RESEARCH FAILED\n\n${result.reason}`);
+                }
+            });
+        });
+    }
+
+    // =========================================================================
+    // PHASE 8c: CAMPAIGN ENDINGS & CLIMAX
+    // =========================================================================
+    openCampaignEndingModal() {
+        this.save = OrbitalStorage.load();
+        const modal = document.getElementById('modal-campaign-ending');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        let ending = null;
+        if (typeof CampaignManager !== 'undefined') {
+            ending = CampaignManager.evaluateCampaignEnding(this.save);
+        }
+
+        const body = document.getElementById('ending-content-body');
+        if (!body) return;
+
+        if (!ending) {
+            body.innerHTML = `
+                <div style="text-align: center; padding: 20px; font-family: var(--font-mono);">
+                    <div style="font-family: var(--font-pixel); font-size: 1.1rem; color: var(--salvage); margin-bottom: 8px;">
+                        CAMPAIGN IN PROGRESS // THRESHOLD NOT REACHED
+                    </div>
+                    <p style="color: var(--ink-muted); font-size: 0.9rem; max-width: 600px; margin: 0 auto 16px auto;">
+                        Your orbital campaign is actively developing. Endings evaluate overall sector health, faction reputations, and decisions made across orbital missions.
+                    </p>
+                    <div class="ending-recap-box">
+                        <div><strong>Missions Completed:</strong> ${this.save.missionsCompleted || 0}</div>
+                        <div><strong>World Epoch:</strong> Day ${this.save.worldEpochDay || 1}</div>
+                        <div><strong>Total Debris Recycled:</strong> ${this.save.totalDebrisRecycled || 0} units</div>
+                        <div><strong>Mass Deorbited:</strong> ${(this.save.totalMassDeorbitedKg || 0).toLocaleString()} kg</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 12px;">
+                        Tip: Reach 8+ completed missions or push any faction reputation ≥ 70% or maintain average sector health ≥ 75% to achieve specific historical verdicts!
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        this.save.campaignEndingAchieved = ending.id;
+        OrbitalStorage.save(this.save);
+
+        body.innerHTML = `
+            <div style="text-align: center; margin-bottom: 16px;">
+                <span class="ending-badge ${ending.badgeClass}">${ending.icon} ${ending.badge}</span>
+                <h3 style="font-family: var(--font-pixel); font-size: 1.25rem; color: var(--ink); margin: 6px 0;">${ending.title}</h3>
+                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-cyan);">${ending.subtitle}</div>
+            </div>
+
+            <div style="background: rgba(16, 24, 39, 0.9); border: 2px solid var(--border); padding: 16px; margin: 14px 0; font-family: var(--font-body); font-size: 1.05rem; line-height: 1.7; color: #f1f5f9;">
+                <p><strong>NARRATIVE EPILOGUE:</strong></p>
+                <p>${ending.epilogue}</p>
+            </div>
+
+            <div class="ending-recap-box">
+                <div><strong>Campaign Seed:</strong> SEED-${this.save.campaignSeed || '000000'}</div>
+                <div><strong>Epoch Days Elapsed:</strong> ${this.save.worldEpochDay || 1} Days</div>
+                <div><strong>Missions Completed:</strong> ${this.save.missionsCompleted || 0}</div>
+                <div><strong>Debris Recycled:</strong> ${this.save.totalDebrisRecycled || 0} units</div>
+                <div><strong>Total Mass De-orbited:</strong> ${(this.save.totalMassDeorbitedKg || 0).toLocaleString()} kg</div>
+                <div><strong>Scrap Surplus:</strong> ${(this.save.credits || 0).toLocaleString()} Scrap</div>
+            </div>
+        `;
+    }
+
+    // =========================================================================
+    // PHASE 8c: SAFE NEW CAMPAIGN MANAGEMENT
+    // =========================================================================
+    openNewCampaignModal() {
+        const modal = document.getElementById('modal-new-campaign');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    confirmNewCampaign() {
+        this.save = OrbitalStorage.load();
+        if (typeof CampaignManager !== 'undefined') {
+            this.save = CampaignManager.startNewCampaign(this.save);
+        }
+        document.getElementById('modal-new-campaign')?.classList.add('hidden');
+        document.getElementById('modal-campaign-ending')?.classList.add('hidden');
+        window.soundSystem?.playMissionSuccess?.();
+        alert(`NEW CAMPAIGN INITIALIZED\n\nWelcome Commander. Fresh orbital campaign seed SEED-${this.save.campaignSeed} established at Epoch Day 001. Your prior campaign was safely archived.`);
+        this.switchScreen('contracts');
+        this.renderMissionBoard();
+    }
+
+    // =========================================================================
+    // PHASE 8c: CASCADE SURVIVAL MODE
+    // =========================================================================
+    startCascadeSurvival() {
+        this.save = OrbitalStorage.load();
+        const survivalMission = {
+            id: 8,
+            name: 'Cascade Survival: Ground Zero',
+            subtitle: 'Infinite Orbital Avalanche Simulation',
+            altitudeKm: 850,
+            inclination: '98.8° Polar Intersection',
+            orbitalPeriodMin: 102.0,
+            objective: 'SURVIVE INFINITE CASCADE: Collect fragments and endure escalating debris waves.',
+            targetQuota: 999,
+            timeLimit: 9999,
+            worldSize: { width: 3600, height: 3600 },
+            debrisTypes: ['fragment', 'solar', 'cubesat', 'booster', 'core'],
+            initialDebrisCount: 22,
+            respawnRate: 2400,
+            hazardRate: 6500,
+            hazardTypes: ['hidden_debris', 'venting_rocket'],
+            maxHazards: 4,
+            basePayout: 1000,
+            isSurvival: true
+        };
+
+        this.selectedLevelId = 8;
+        this.switchScreen('gameHud');
+
+        if (this.currentGame) {
+            this.currentGame.destroy(true);
+            this.currentGame = null;
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelArt: true,
+            roundPixels: true,
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { x: 0, y: 0 }, debug: false }
+            },
+            scene: [OrbitalGameScene]
+        };
+
+        this.currentGame = new Phaser.Game(config);
+        const budgets = this.calculateBudgets();
+
+        this.currentGame.scene.start('OrbitalGameScene', {
+            level: survivalMission,
+            isSurvivalMode: true,
+            client: budgets.client,
+            launchVehicle: budgets.lv,
+            bus: budgets.bus,
+            propulsion: budgets.prop,
+            power: budgets.power,
+            equipment: budgets.eq,
+            groundComms: budgets.comms,
+            budgets: budgets,
+            designCode: this.generateDesignCode(),
+            shipId: this.selectedBusId || 'collector',
+            equipmentId: this.selectedEquipmentId || 'net',
+            payloadId: 'armored'
+        });
+
+        window.soundSystem?.resume();
     }
 
     /**
