@@ -1,120 +1,125 @@
 # ORBITAL CLEANUP: MISSION ZERO
+### NASA Space Apps Challenge — Orbital Debris Mitigation & Remediation
 
-A 2D top-down space arcade game built with **Phaser.js**, **HTML5 Canvas**, **CSS3**, and **JavaScript**, combining dynamic arcade spaceflight with real-world orbital debris management concepts and **Mission Design Mode**.
-
----
-
-## 🚀 Game Overview
-Earth's orbit has reached critical debris density (the **Kessler Syndrome** tipping point). As commander of an orbital sanitation spacecraft, your objective is to navigate Earth's orbital lanes, collect discarded satellites, broken solar panels, and spent rocket stages, avoid hyper-velocity kinetic hazards, manage critical fuel and battery reserves, and return collected scrap to the **Aegis Orbital Depot** for recycling.
+A high-fidelity top-down 2D orbital simulation and tactical arcade game built with **Phaser 3.80.1**, **HTML5 Canvas**, **CSS3**, and **Vanilla JavaScript Web Audio API**. Combines arcade spaceflight dynamics with authentic orbital debris mitigation (Active Debris Removal - ADR), space situational awareness (SSA), real NASA DONKI space weather data, and strategic campaign decision systems.
 
 ---
 
-## 🎮 Key Features
+## 🚀 Key Highlights & Differentiators
 
-### 1. Mission Design Mode (Key Differentiator)
-Before launching any mission, plan and customize your mission loadout:
-- **Target Orbit Sector:** 
-  - *Mission 01: Low Earth Orbit (LEO)* - ISS Protection Corridor (Alt: 420 km)
-  - *Mission 02: Sun-Synchronous Polar Orbit* - Earth Observation Graveyard (Alt: 780 km)
-  - *Mission 03: Kessler Cascade Zone* - Critical Collision Storm (Alt: 1,200 km)
-  - *Mission 04: Geostationary Graveyard* - Operation Cleanse Earth Ring (Alt: 35,786 km)
-- **Spacecraft Airframe Selection:**
-  - **Aero-Dart (Scout):** Extreme speed and RCS handling, quick solar battery recharge, compact 3-slot cargo bay.
-  - **Orbital Mule (Collector):** Balanced speed, durable hull, standard 5-slot cargo bay.
-  - **Titan Hauler (Heavy Lifter):** Heavy reinforced hull armor, large 8-slot cargo hold, slower acceleration.
-- **Retrieval Equipment:**
-  - **Robotic Grapple Arm:** Precision mechanical cable that latches onto targets and reels them into the cargo hold. Lowest battery consumption with a **+35% Scrap Bonus**.
-  - **Wide-Angle Capture Net:** Launches an expanding energy mesh that captures multiple small/medium debris pieces within its blast radius simultaneously.
-  - **Magnetic Tractor Beam:** Emits a sustained magnetic cone that continuously pulls metallic debris towards the ship intake.
-- **Mission Payload Balancing:**
-  - *Standard Mission Balance*
-  - *Extended Fuel Tank (+40% Fuel, -10% Speed)*
-  - *Auxiliary Supercapacitor (+40% Battery, +25% Solar Recharge)*
-  - *Nanotube Reinforced Plating (+40% Hull, -15% Handling)*
-
----
-
-### 2. Spaceflight & Arcade Gameplay
-- **Inertial Flight Dynamics:** Authentic top-down space navigation with forward thrust, RCS yaw rotation, and retro-braking.
-- **Realistic Debris & Hazards:**
-  - *Debris:* Structural Bolts & Shards, Broken Solar Arrays, Research Cubesats, Spent Rocket Boosters, Derelict Comms Satellites, and Prototype Fusion Cores.
-  - *Hazards:* High-velocity kinetic micrometeoroids, volatile hypergolic hydrazine tanks, and RTG nuclear satellites with battery-draining radiation fields.
-- **Proximity Collision Warning:** Dynamic visual HUD alarm banner and acoustic proximity radar warning against approaching kinetic threats.
-- **Aegis Orbital Depot Docking:** Dock inside the station perimeter to offload cargo, convert debris into Scrap Credits & Score, replenish Fuel & Battery reserves, and repair Hull integrity.
-
----
-
-### 3. Resource Management
-- **Fuel:** Consumed by main and retro-thrusters.
-- **Battery:** Consumed by equipment (grapple, capture net, continuous tractor beam); recharges via solar panels in orbit.
-- **Hull Health:** Decreased by collisions and explosive debris; hull breach alarm sounds when integrity drops below critical levels.
-- **Cargo Capacity:** Visual hold display showing filled slots.
-
----
-
-### 4. Persistent Hangar & Upgrades
-Earn **Scrap Credits** from successful deliveries to purchase permanent upgrades saved in **LocalStorage**:
-- **Ion-Thruster Efficiency:** Decreases fuel burn rate and boosts cruising velocity.
-- **Nanotube Armor Weave:** Increases maximum hull integrity and reduces collision impact damage.
-- **Photovoltaic Fusion Cell:** Expands battery pool and accelerates solar recharge rate.
-- **Cargo Bay Compression Field:** Adds additional debris storage slots to any ship.
-- **Deep-Space Telemetry Radar:** Extends proximity detection range and increases magnetic collection radius.
-
----
-
-### 5. Web Audio API Procedural Synthesizer
-Zero external audio files required. All sound effects and the ambient synth soundtrack are synthesized in real-time:
-- Pitch-modulated ion thruster roars
-- Pulsating tractor beam graviton hum
-- Mechanical grapple clamp and cable sounds
-- Pentatonic melodic debris collection chimes
-- Station docking and recycling processing audio
-- Proximity warning alarms and collision thuds
-- Atmospheric deep-space ambient music drone
+1. **Authentic Active Debris Removal (ADR) Methodologies:**
+   - **Robotic Grapple Arm:** Mechanical reel-in cable with precision target locks (+35% Scrap Bonus).
+   - **Wide-Angle Capture Net:** Expandable 120m energy mesh sweeping multiple debris fragments simultaneously.
+   - **Magnetic Tractor Beam:** Sustained graviton cone pulling metallic items directly into the cargo intake.
+2. **Real-World Space Weather (NASA DONKI Integration):**
+   - Ingests real coronal mass ejections (CMEs), solar radiation storms, and geomagnetic disturbances from the NASA DONKI API.
+   - Features active solar wind drag forces, coronal plasma EMP surges, and tactical **Faraday Haven** sheltering within the Aegis Depot perimeter.
+3. **Multi-Lane Orbital Dynamics Across 8 Sectors:**
+   - 8 authentic altitude bands from Low Earth Orbit (ISS at 420 km) up to the Geostationary Graveyard (35,986 km).
+   - Accurate differential orbital velocity modeling and historical breakup fields (*Cosmos 2251*, *Fengyun-1C*, *Envisat*).
+4. **Mission Design Studio & Engineering Trade-Offs:**
+   - Pre-flight engineering balances 3 distinct airframes (*Aero-Dart Scout*, *Orbital Mule Collector*, *Titan Hauler*), equipment packages, and subsystem tunings with automated pre-flight Readiness Scoring.
+5. **Macro-Strategic Campaign System:**
+   - **Interactive Campaign Map:** Tactical altitude grid displaying real-time cleanliness %, hazard ratings, registered assets, and active contract profiles.
+   - **World Clock & 28-Day Solar Cycle:** Tracks campaign calendar progression starting at `2054-04-12 (Day 1)` through solar weather rotations (`Quiet Sun`, `Elevated Activity`, `Storm Warning`).
+   - **6-Branch Technology Tree:** Research upgrades across Capture, Sensors, Power, Shielding, Communications, and Propulsion using Scrap and raw salvage materials (`metal`, `cells`, `chips`).
+   - **12 Narrative Storylets & Asset Registry:** High-stakes dilemmas involving historical satellites with immediate and delayed consequences.
+   - **Four Distinct Campaign Endings:** Multi-variable evaluation yields *The Kessler Collapse*, *Commercial Monopoly*, *Military Fortress*, or *Orbital Renaissance*.
+6. **Cascade Survival Game Mode:**
+   - High-intensity endless survival scenario with escalating 25-second cascade waves and persistent combat ratings (`SURVIVOR`, `VETERAN`, `CASCADE MASTER`, `ORBITAL LEGEND`).
+7. **Procedural Web Audio API Synthesizer & Procedural Pixel-Art:**
+   - Zero external audio files and zero PNG downloads. All sound effects, alarms, thrusters, and ambient space music are synthesized in real-time via Web Audio API. All 24 sprites are procedurally generated in canvas memory.
 
 ---
 
 ## 🕹️ Controls
 
 | Key | Action |
-| --- | --- |
-| `W` or `▲ Up Arrow` | Main Forward Propulsion Thruster |
-| `A` / `D` or `◄` / `►` | RCS Yaw Steering (Rotate Spacecraft) |
-| `S` or `▼ Down Arrow` | Retro-Thrusters (Active Braking) |
-| `SPACEBAR` | Activate Collection Equipment (Grapple / Net / Tractor Beam) |
-| `E` or Hold Position | Dock & Recycle at Aegis Orbital Depot |
-| `P` or `ESC` | Pause Mission Menu |
-
----
-
-## 📁 File Structure
-
-```
-├── index.html          # Game entry point, menus, HUD overlay & debriefing modals
-├── css/
-│   └── style.css       # Sci-fi glassmorphism cyberpunk styling & animations
-├── js/
-│   ├── audio.js        # Web Audio API sound & ambient music synthesizer
-│   ├── data.js         # Ships, equipment, missions, upgrades & LocalStorage
-│   ├── graphics.js     # High-resolution procedural canvas sprite generator
-│   ├── game.js         # Phaser 3 Game Scene, physics, equipment & docking
-│   └── ui.js           # UI controller, Mission Design Mode, Hangar & HUD binder
-└── README.md           # Game documentation & flight manual
-```
+| :--- | :--- |
+| `W` or `▲ Up Arrow` | Main Forward Propulsion Thrusters |
+| `A` / `D` or `◄` / `►` | RCS Reaction Control Yaw Steering |
+| `S` or `▼ Down Arrow` | Retro-Thrusters (Counter-Braking) |
+| `SPACEBAR` | Fire Grapple Arm / Launch Capture Net / Sustain Tractor Beam |
+| `E` or Hold Position | Dock & Process Salvage at Aegis Orbital Depot |
+| `F3`, `T`, or `` ` `` | Toggle Engineering Telemetry & System Monitor Overlay |
+| `P` or `ESC` | Pause Flight Simulation |
 
 ---
 
 ## 💻 How to Run Locally
 
-Simply double-click or open `index.html` in any modern web browser (Google Chrome, Microsoft Edge, Firefox, Safari).
+*Orbital Cleanup: Mission Zero* requires **zero build steps** and **zero npm dependencies**.
 
-Alternatively, run a simple local web server:
 ```bash
-# Python 3
+# Option 1: Python 3 Standard Server
 python -m http.server 8080
 
-# Node.js
-npx serve
-```
-Then navigate to `http://localhost:8080`.
+# Option 2: Node.js Serve
+npx serve -l 8080
 
+# Option 3: Direct File Execution
+Double-click index.html in Google Chrome, Microsoft Edge, Firefox, or Safari.
+```
+Then navigate to: **`http://localhost:8080`**
+
+---
+
+## 📁 Repository Structure
+
+```
+├── index.html                  # Game entry point, menus, HUD overlay & modals
+├── README.md                   # Project overview & quickstart guide
+├── USER_MANUAL.md              # Complete Commander's Flight Operations Manual
+├── css/
+│   └── style.css               # Sci-fi glassmorphism design system & styling
+├── data/
+│   ├── parts.js                # Airframes, equipment, and payload definitions
+│   ├── missions.js             # 8 authentic orbital sectors and historical briefs
+│   ├── donki-snapshot.js       # Real & simulated NASA DONKI space weather events
+│   └── storylets.js            # Asset registry & 12 narrative dilemmas
+├── docs/
+│   ├── CHANGES.md              # Complete version history across Phases 0–9
+│   ├── STORYLETS.md            # Detailed storylet decision matrices & conditions
+│   └── SUBMISSION.md           # Formal NASA challenge submission dossier
+├── js/
+│   ├── audio.js                # Web Audio API procedural sound synthesizer
+│   ├── campaign.js             # Campaign state, world clock, tech tree & endings
+│   ├── data.js                 # Save v2 persistence, migrations & difficulty profiles
+│   ├── director.js             # AI Flight Director dynamic tension & event pacing
+│   ├── game.js                 # Phaser 3 Game Scene, physics, equipment & docking
+│   ├── graphics.js             # Procedural canvas pixel-art sprite synthesizer
+│   └── ui.js                   # UI controller, campaign map, modals & event binder
+├── scripts/
+│   ├── fetch-donki.mjs         # Live NASA DONKI API ingestion script
+│   └── playtest_phase5.js      # Automated Flight Director pacing simulator
+└── tests/
+    ├── test_phase6.js          # Procedural texture resolution test
+    ├── test_phase7.js          # Orbital lanes & DONKI weather mechanics test
+    ├── test_phase8a.js         # Procedural contracts & Save v2 migration test
+    ├── test_phase8b.js         # Asset registry & narrative storylets test
+    ├── test_phase8c.js         # World clock, tech paths & campaign endings test
+    ├── test_storm_hazard.js    # Kinetic solar wind drag & EMP surge test
+    ├── test_menu_and_f3.js     # Menu navigation & F3 telemetry overlay test
+    ├── test_complete_flow.js   # End-to-end full gameplay loop test
+    └── audit_phase9.js         # Comprehensive 93-point UI & audio audit test
+```
+
+---
+
+## 🔬 Scientific Data & Methodology
+
+* Historical debris statistics and orbital parameters sourced from **NASA Orbital Debris Program Office (ODPO)** quarterly reports and safety standards (NSS 8719.14).
+* Space weather events sourced from **NASA Space Weather Database Of Notifications, Knowledge, Information (DONKI API)**.
+* All data points are strictly labeled:
+  * `[FACT - NASA ODPO]`: Documented orbital facts, satellite masses, and collision events.
+  * `[FACT - NASA DONKI]`: Real solar flares, coronal mass ejections, and geomagnetic storms.
+  * `[ESTIMATE]`: Transparent simulation approximations adapted for real-time arcade gameplay.
+* Full details available in [docs/SUBMISSION.md](file:///c:/Users/jovin/OneDrive/Documents/Nasa/docs/SUBMISSION.md).
+
+---
+
+## 📜 Documentation & Guides
+* **Commander's Operations Manual:** [USER_MANUAL.md](file:///c:/Users/jovin/OneDrive/Documents/Nasa/USER_MANUAL.md)
+* **NASA Submission Dossier:** [docs/SUBMISSION.md](file:///c:/Users/jovin/OneDrive/Documents/Nasa/docs/SUBMISSION.md)
+* **Narrative Storylet Guide:** [docs/STORYLETS.md](file:///c:/Users/jovin/OneDrive/Documents/Nasa/docs/STORYLETS.md)
+* **Development Changelog:** [docs/CHANGES.md](file:///c:/Users/jovin/OneDrive/Documents/Nasa/docs/CHANGES.md)

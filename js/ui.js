@@ -335,7 +335,7 @@ class UIController {
                 return;
             }
 
-            const boardReturnBtn = e.target.closest('#btn-board-return');
+            const boardReturnBtn = e.target.closest('#btn-board-return, #btn-map-return');
             if (boardReturnBtn) {
                 e.preventDefault();
                 this.switchScreen('mainMenu');
@@ -427,7 +427,7 @@ class UIController {
             }
 
             // 8d. F3 Telemetry HUD Button & Controls Hint
-            const f3Btn = e.target.closest('#btn-toggle-f3-hud, #btn-f3-hint');
+            const f3Btn = e.target.closest('#btn-toggle-f3-hud, #btn-f3-hint, #btn-menu-telemetry');
             if (f3Btn) {
                 e.preventDefault();
                 if (typeof window.toggleTelemetryOverlay === 'function') {
@@ -437,7 +437,7 @@ class UIController {
             }
 
             // 9. Modal Close Buttons
-            const closeBtn = e.target.closest('.btn-close-modal');
+            const closeBtn = e.target.closest('.btn-close-modal, #btn-close-asset-modal, #btn-close-tech-modal');
             if (closeBtn) {
                 e.preventDefault();
                 const modalId = closeBtn.getAttribute('data-modal');

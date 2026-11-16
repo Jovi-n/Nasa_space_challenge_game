@@ -1,12 +1,16 @@
 # ORBITAL CLEANUP: MISSION ZERO
-## Official Commander's Flight Operations Manual & Player Guide
+## Official Commander's Flight Operations Manual & Complete Player Guide
+
+**Version:** 9.0 (NASA Hackathon Final Submission Release)  
+**Classification:** Open Orbital Operations Standard (NASA ODPO / IADC Aligned)  
 
 ---
 
 ## 1. MISSION BRIEFING & BACKGROUND
-Earth’s orbital environment has reached a critical density threshold known as the **Kessler Syndrome**—a catastrophic cascade where orbital collisions spawn clouds of debris, leading to exponential impacts that threaten to render near-Earth space unusable for generations.
 
-As a designated commander under the **Aegis Orbital Defense Initiative**, your task is to pilot an orbital sanitation craft into active debris corridors. You will collect derelict hardware, dodge hypersonic kinetic threats, manage finite fuel and energy, and safely ferry scrap to the **Aegis Orbital Depot** for recycling into mission credits and spacecraft retrofits.
+Earth’s orbital environment has crossed the critical threshold known as the **Kessler Syndrome**—an exponential cascade where orbital collisions spawn high-velocity shrapnel swarms, multiplying further collisions and threatening to render near-Earth space impassable for generations.
+
+As a designated commander under the **Aegis Orbital Defense Initiative**, your mission is to pilot an orbital sanitation craft into active debris sectors. You will collect derelict hardware, passivate volatile rocket stages, dodge hypersonic kinetic threats, weather intense solar radiation storms, manage finite propellant and electrical energy, and safely ferry salvage to the **Aegis Orbital Depot** for recycling.
 
 ---
 
@@ -14,136 +18,161 @@ As a designated commander under the **Aegis Orbital Defense Initiative**, your t
 
 | Action | Primary Key | Secondary Key | Operational Details |
 | :--- | :--- | :--- | :--- |
-| **Main Thruster Propulsion** | `W` | `▲ Up Arrow` | Fires rear ion engines. Accelerates spacecraft in the current heading. Consumes fuel. |
-| **RCS Yaw Steering** | `A` / `D` | `◄` / `►` | Fires lateral reaction control thrusters to rotate spacecraft heading. |
-| **Retro-Thruster Braking** | `S` | `▼ Down Arrow` | Fires forward-facing counter-thrusters to shed orbital velocity and bring ship to a stop. |
+| **Main Forward Propulsion** | `W` | `▲ Up Arrow` | Fires rear ion engines. Accelerates spacecraft along its current heading. Consumes propellant. |
+| **RCS Yaw Steering** | `A` / `D` | `◄` / `►` | Fires lateral reaction control system (RCS) cold-gas thrusters to rotate spacecraft heading. |
+| **Retro-Thruster Braking** | `S` | `▼ Down Arrow` | Fires forward-facing counter-thrusters to shed orbital velocity and bring ship to a halt. |
 | **Activate Equipment** | `SPACEBAR` | `SPACEBAR` | Fires Grapple Arm, deploys Capture Net, or sustains Magnetic Tractor Beam. |
-| **Dock & Recycle** | `E` | Hold Position | Initiates docking sequence when inside Aegis Depot harbor perimeter. |
-| **Mission Pause** | `P` | `ESC` | Halts flight simulation and reveals command options. |
+| **Dock & Recycle Salvage** | `E` | Hold Position | Initiates docking sequence when inside Aegis Depot harbor perimeter. Fully refuels, recharges, and repairs ship. |
+| **Toggle F3 Telemetry HUD** | `F3` | `T` or `` ` `` | Toggles real-time engineering telemetry overlay: vector speed, FPS, physics bodies, solar drag, and storm alerts. |
+| **Mission Pause** | `P` | `ESC` | Halts flight simulation and reveals command abort/resume options. |
 
 > [!TIP]
-> **Orbital Inertia:** Space is frictionless! Releasing the `W` key does not stop your vessel; you will continue to drift at constant velocity. Use gentle taps of `S` (retro-thrusters) or turn around and fire counter-burns to stabilize your drift.
+> **Orbital Inertia & Frictionless Flight:** Space is frictionless! Releasing the `W` key does not stop your vessel; you will continue to drift indefinitely at constant velocity. Tap `S` (retro-thrusters) or turn 180° and fire a gentle counter-burn to arrest your drift before docking or dodging hazards.
 
 ---
 
-## 3. MISSION DESIGN MODE (PRE-FLIGHT PREPARATION)
-Before launching into orbit, every commander enters the **Mission Design Studio**. Combining the right ship, equipment, and payload balance for each mission sector is essential to success:
+## 3. MISSION DESIGN MODE (PRE-FLIGHT ENGINEERING)
 
-### A. Choose Your Spacecraft Airframe
-* **Aero-Dart (Scout):**
-  * *Attributes:* Top Speed (★★★★★), Agility (★★★★★), Cargo (★★☆☆☆), Hull Armor (★★☆☆☆)
-  * *Profile:* Ultra-fast interceptor with 3 cargo slots. Ideal for rapid precision runs and darting out of hazard zones. Features enhanced passive solar recharge rates.
-* **Orbital Mule (Collector):**
-  * *Attributes:* Top Speed (★★★☆☆), Agility (★★★☆☆), Cargo (★★★★☆), Hull Armor (★★★☆☆)
-  * *Profile:* Multi-purpose industrial workhorse with 5 cargo slots. Well-balanced fuel capacity, armor, and battery pools.
-* **Titan Hauler (Heavy Lifter):**
-  * *Attributes:* Top Speed (★★☆☆☆), Agility (★★☆☆☆), Cargo (★★★★★), Hull Armor (★★★★★)
-  * *Profile:* Armored catamaran platform carrying 8 cargo slots and heavy structural shielding. Slower acceleration, but capable of hauling massive debris yields in single runs.
+Before launching into orbit, commanders enter the **Mission Design Studio** to engineer their spacecraft configuration:
 
-### B. Select Retrieval Equipment
+### A. Spacecraft Airframes
+* **Aero-Dart (Scout Bus):**
+  * *Top Speed:* ★★★★★ | *Agility:* ★★★★★ | *Cargo:* 3 Slots | *Armor:* 90 HP
+  * *Profile:* Lightweight needle-delta interceptor. Extreme acceleration and agility. Enhanced passive solar battery recharge. Ideal for fast hazard dodging and high-speed precision runs.
+* **Orbital Mule (Collector Bus):**
+  * *Top Speed:* ★★★☆☆ | *Agility:* ★★★☆☆ | *Cargo:* 5 Slots | *Armor:* 140 HP
+  * *Profile:* Balanced multi-purpose workhorse. Dependable fuel capacity, standard armor, and spacious 5-slot hold.
+* **Titan Hauler (Heavy Lifter Bus):**
+  * *Top Speed:* ★★☆☆☆ | *Agility:* ★★☆☆☆ | *Cargo:* 8 Slots | *Armor:* 240 HP
+  * *Profile:* Armored catamaran platform carrying heavy structural Whipple shielding and a massive 8-slot cargo bay. Slower acceleration, but able to clear large orbital clusters in fewer runs.
+
+### B. Retrieval Equipment
 * **Robotic Grapple Arm:**
-  * Fires a high-tensile clamp directly forward to reel in designated targets one at a time.
-  * *Advantage:* Lowest battery consumption (10 per shot) and grants an innate **+35% Scrap Value Bonus** on retrieved debris.
+  * Fires a high-tensile mechanical clamp forward to reel in targeted debris pieces.
+  * *Advantage:* Lowest battery consumption (10 power/shot) and provides an innate **+35% Scrap Bonus** on retrieved debris.
 * **Wide-Angle Capture Net:**
-  * Launches an expanding electromagnetic energy mesh that grows up to 120m across.
-  * *Advantage:* Captures all small and medium debris fragments within its blast radius simultaneously. Ideal for dense fragment swarms.
+  * Launches an expanding energy mesh (up to 120m diameter) that sweeps up all small and medium debris fragments within its area simultaneously.
+  * *Advantage:* Highly effective against dense fragmentation clouds.
 * **Magnetic Tractor Beam:**
-  * Hold `SPACEBAR` to emit a wide, continuous 70° graviton cone forward.
-  * *Advantage:* Continuously draws nearby metallic debris towards your intake hold. Drains battery continuously while held.
+  * Emits a continuous 70° forward magnetic cone that draws metallic debris directly into the intake hold.
+  * *Advantage:* Hands-free continuous collection; safely grounds electrostatic charged debris. Consumes battery continuously while active.
 
 ### C. Mission Subsystem & Payload Tuning
-* **Standard Mission Balance:** Factory-balanced performance across all systems.
-* **Extended Fuel Tank:** +40% Fuel pool, -10% Cruising speed. Recommended for large sectors.
-* **Auxiliary Supercapacitor:** +40% Battery capacity, +25% Solar recharge velocity. Ideal for sustained tractor beam or net use.
-* **Nanotube Reinforced Plating:** +40% Maximum Hull Integrity, -15% Handling. Crucial for high-hazard collision belts.
+* **Standard Mission Balance:** Factory-standard balance across all systems.
+* **Extended Fuel Tank:** +40% Fuel capacity, -10% Cruising speed. Recommended for large sectors.
+* **Auxiliary Supercapacitor:** +40% Battery capacity, +25% Solar recharge rate. Recommended for sustained tractor beam or net use.
+* **Nanotube Reinforced Plating:** +40% Maximum Hull Integrity, -15% Handling. Essential for heavy hazard collision corridors.
 
 ---
 
-## 4. ORBITAL SECTORS & PROGRESSION
+## 4. ALL 8 ORBITAL SECTORS
 
-```mermaid
-flowchart LR
-    M1["Mission 01: LEO Corridor (420 km)"] --> M2["Mission 02: Polar Graveyard (780 km)"]
-    M2 --> M3["Mission 03: Kessler Cascade (1,200 km)"]
-    M3 --> M4["Mission 04: GEO Graveyard (35,786 km)"]
-```
+Each sector represents an authentic orbital altitude regime with distinct hazards and historical mission contexts:
 
-1. **Mission 01: Low Earth Orbit (LEO) - ISS Corridor (Alt: 420 km)**
-   * *Target Quota:* 8 Debris Units | *Time Window:* 150 seconds
-   * *Environment:* Fragment clouds and broken solar panels threatening human spaceflight lanes. Mild hazard density.
-2. **Mission 02: Sun-Synchronous Polar Orbit (Alt: 780 km)**
-   * *Target Quota:* 14 Debris Units | *Time Window:* 180 seconds
-   * *Environment:* Shattered weather satellites and tumbling solar arrays. Introduces volatile hypergolic fuel tanks.
-3. **Mission 03: Kessler Cascade Zone (Alt: 1,200 km)**
-   * *Target Quota:* 20 Debris Units | *Time Window:* 210 seconds
-   * *Environment:* Ongoing chain-reaction collisions. Dense shrapnel, unguided booster tanks, and toxic hypergolic gas clouds.
-4. **Mission 04: Geostationary Graveyard - Operation Cleanse (Alt: 35,786 km)**
-   * *Target Quota:* 25 Debris Units | *Time Window:* 240 seconds
-   * *Environment:* High-orbit graveyard containing massive communications arrays, leaking nuclear RTG cores, and high-velocity kinetic projectiles.
-
----
-
-## 5. RESOURCE MANAGEMENT & HUD TELEMETRY
-
-Your in-flight HUD provides real-time readouts of spacecraft health and environmental conditions:
-
-* **Fuel Gauge:** Movement burns propellant. Coasting on inertia preserves fuel. If fuel drops to zero far from the station, the ship drifts disabled, failing the mission.
-* **Battery Gauge:** Using equipment consumes power. When inactive, solar panels passively recharge the battery (unless disrupted by radioactive fields).
-* **Hull Integrity:** Displays structural strength. Collisions with debris cause minor hull scuffs; impacts with explosive hazards or kinetic meteorites cause critical damage. A red breach warning flashes below 30%.
-* **Cargo Hold:** Visual indicator slots showing current load vs. capacity. When full, additional debris cannot be collected until delivered to the station.
-* **Collision Radar & Hazard Warning:**
-  * When high-speed obstacles approach within 380m, an urgent audio alarm pulses, and the HUD flashes:  
-    `⚠️ COLLISION WARNING - EVASIVE ACTION REQUIRED ⚠️`
-  * Red directional indicators point toward off-screen incoming threats.
-  * Green directional indicators point toward the **Aegis Station Depot**.
+1. **Sector 01: LEO Station Corridor (Alt: 420 km - ISS Corridor)**
+   * *Target Quota:* 8 Items | *Hazards:* Fragment clouds, cubesats, broken solar panels.
+2. **Sector 02: Upper-Stage Breakup Cloud (Alt: 550 km - Polar Belt)**
+   * *Target Quota:* 14 Items | *Hazards:* Volatile hypergolic hydrazine tanks and booster fragments.
+3. **Sector 03: Cosmos 2251 / Iridium 33 (Alt: 790 km - Collision Junction)**
+   * *Target Quota:* 16 Items | *Hazards:* Hypervelocity shrapnel ribbons from the historic 2009 collision.
+4. **Sector 04: Low-Altitude Breakup (Alt: 950 km - Polar Observation)**
+   * *Target Quota:* 18 Items | *Hazards:* Decaying rocket stages, explosive tanks, and rapid orbital decay.
+5. **Sector 05: Constellation Corridor (Alt: 850 km - Dense Satellite Belt)**
+   * *Target Quota:* 20 Items | *Hazards:* High-density cubesat clusters and kinetic debris.
+6. **Sector 06: Fengyun-1C Breakup Cloud (Alt: 865 km - ASAT Shroud)**
+   * *Target Quota:* 22 Items | *Hazards:* Over 3,500 tracked hyper-kinetic fragments from the 2007 ASAT test.
+7. **Sector 07: GEO Graveyard (Alt: 35,986 km - Geostationary Graveyard)**
+   * *Target Quota:* 24 Items | *Hazards:* Nuclear RTG cores emitting battery-draining radiation, huge comms reflectors.
+8. **Sector 08: Cascade Finale (Alt: 1,200 km - Kessler Ground Zero)**
+   * *Target Quota:* 25 Items | *Hazards:* Maximum-density collision storm combining all orbital threats.
 
 ---
 
-## 6. DEBRIS CATALOG & VALUE BREAKDOWN
+## 5. SPACE WEATHER & DONKI STORM HAZARDS
 
-| Debris Classification | Mass | Base Score | Base Scrap | Tactical Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **Structural Bolt & Shards** | 15 kg | 120 pts | 15 Scrap | Common, fast-drifting metallic shrapnel. |
-| **Broken Solar Array** | 45 kg | 250 pts | 35 Scrap | Fragile photovoltaic panels rich in rare earth metals. |
-| **Research Cubesat** | 75 kg | 420 pts | 60 Scrap | Miniature scientific chassis with intact avionics. |
-| **Spent Rocket Booster** | 220 kg | 750 pts | 110 Scrap | Bulky titanium fuel cylinder with high scrap yield. |
-| **Derelict Comms Satellite** | 380 kg | 1,200 pts | 180 Scrap | High-value orbiter with antenna reflectors. |
-| **Prototype Fusion Core** | 160 kg | 2,000 pts | 300 Scrap | Rare experimental module with cryogenic capacitors. |
+Integrated directly with real space weather phenomena from the **NASA DONKI API**:
 
----
+### Solar Wind & Atmospheric Drag Surge
+* During active space weather (or `storm_season` contracts), high-speed solar wind (>600 km/s) and thermospheric expansion exert continuous physical drag on your craft (`velocity += windAngle * windSpeed * dt`). Adrift debris is accelerated simultaneously, requiring continuous attitude compensation.
 
-## 7. ORBITAL HAZARDS & THREAT MITIGATION
+### Coronal Plasma EMP Surges
+* Periodic coronal shockwaves sweep across the sector with warning sirens and screen flashes.
+* **Tactical Faraday Haven:** Sheltering within the Aegis Depot perimeter (`dist <= dockingRadius + 50`) completely grounds the surge with zero damage!
+* **Open Space Strike:** Caught in open space, the craft suffers electrostatic damage (-14 HP, -18 Battery base) and an Avionics Single-Event Upset (SEU) causing 1.6s of thruster jitter.
 
-* **Kinetic Micrometeoroids:** Jagged hypersonic space rocks streaking across orbital trajectories. Deal severe collision damage. Use retro-burns or lateral maneuvers to evade.
-* **Volatile Hydrazine Mines:** Pressurized fuel containers marked with hazard icons. Explode on impact, inflicting heavy hull damage.
-* **RTG Nuclear Satellites:** Derelict probes emitting a glowing green radiation sphere. Flying within range continuously drains battery reserves and halts solar recharge.
+### Electrostatic Charged Debris
+* Debris items build electrostatic charge during storms. Direct ungrounded impact delivers a static shock (-6 HP, -10 Bat). Locking your **Magnetic Tractor Beam** safely grounds the charge into your ship's battery, awarding `+25 STATIC GROUNDED` bonus points!
 
 ---
 
-## 8. AEGIS ORBITAL DEPOT DOCKING & RECYCLING
+## 6. STRATEGIC CAMPAIGN, WORLD CLOCK & ENDINGS
 
-The central space station serves as your mission hub:
-1. When your cargo hold is full (or when damaged/low on fuel), navigate toward the **Aegis Depot** in the center of the sector.
-2. Enter the glowing green docking perimeter ring.
-3. Bring your ship to a stop or press `E`.
-4. The station's tractor harbor locks your craft, unloads all collected debris, refuels your tanks to 100%, recharges your battery, and repairs all hull damage!
-5. Once your delivered debris count satisfies the mission target quota, the mission completes successfully.
+### Interactive Campaign Map (`🗺️ CAMPAIGN MAP`)
+* Displays all 8 sectors ordered by altitude with live cleanliness scores (0–100%), asset infrastructure, and active contracts.
+* **Sector Tactical Inspector:** Click any sector to view local infrastructure, environmental hazard ratings, and launch direct contract flights or tactical patrols.
+
+### World Clock & 28-Day Solar Cycle
+* Tracks campaign progression starting at `2054-04-12 (Day 1)`.
+* Advances +7 days on successful contract completion, +12 days on failure, +2 days on resolving storylets, and +2 days on contract solicitations.
+* Cycles through 28-day solar rotation phases: `QUIET SUN` (Days 1–18), `ELEVATED SOLAR ACTIVITY` (Days 19–24), and `STORM WARNING: HIGH DENSITY` (Days 25–28).
+
+### 6-Branch Technology Tree (`🔬 TECH RESEARCH`)
+Research permanent fleet upgrades using Scrap and raw salvage commodities (`metal`, `cells`, `chips`):
+1. **Capture Mechanics:** Auto net loaders & induction coils (+net capacity, tractor intake speed).
+2. **Sensors & Telemetry:** Wideband lidar & synthetic aperture radar (+radar multiplier, early hazard warnings).
+3. **Power Distribution:** Graphene battery banks & GaAs solar arrays (+max battery pool, +solar recharge rate).
+4. **Whipple Shielding:** Ceramic honeycomb matrices & plasma deflectors (+max hull, +impact reduction, +storm surge grounding).
+5. **Communications & Logistics:** TDRSS space uplinks & autonomous brokers (+contract payouts, -reroll solicitation costs).
+6. **Propulsion & RCS:** Cold-gas verniers & continuous magnetoplasmadynamic drives (+turn rate, -fuel burn rate).
+
+### 12 Narrative Storylets & Asset Registry
+* Real historical satellites (ISS, Vanguard 1, Envisat, TDRSS) trigger critical dilemmas between missions.
+* Choices alter faction standing across **NASA / Agency**, **Commercial Operators**, and the **Public Science Commons**, with immediate and delayed consequences.
+
+### Four Distinct Campaign Endings
+1. **The Kessler Collapse:** Triggered if orbital cleanliness drops below 35%. LEO is rendered permanently unusable.
+2. **Commercial Monopoly:** Achieved with high Commercial Rep (>= 80%) and advanced logistics. Private corporations seize monopoly control over orbital tollways.
+3. **Military Fortress:** Achieved with high Agency Rep (>= 80%) and defense tech. Near-Earth space is militarized under national defense quarantine.
+4. **Orbital Renaissance (Optimal):** Achieved with orbital cleanliness >= 85%, all faction reputations >= 60%, and 12+ tech tiers unlocked. A clean, thriving, cooperative space age!
 
 ---
 
-## 9. HANGAR WORKSHOP & SHIP UPGRADES
-Scrap credits earned across all missions persist permanently in **LocalStorage**. Visit the Hangar Workshop to upgrade your fleet:
+## 7. CASCADE SURVIVAL MODE
 
-* **Ion-Thruster Efficiency (Tiers 1–5):** Reduces fuel consumption rate by 12% and boosts top cruising speed by 8% per level.
-* **Nanotube Armor Weave (Tiers 1–5):** Increases spacecraft maximum hull integrity by 20% and reduces impact collision damage.
-* **Photovoltaic Fusion Cell (Tiers 1–5):** Expands total battery pool by 20% and increases solar recharge rate.
-* **Cargo Bay Compression Field (Tiers 1–4):** Adds +1 permanent cargo slot to all spacecraft airframes.
-* **Deep-Space Telemetry Radar (Tiers 1–5):** Extends hazard detection range and enhances magnetic tractor suction radius by 15% per tier.
+* Accessible directly from the Main Menu (`⚡ CASCADE SURVIVAL MODE`) or Campaign Map.
+* Endless high-stakes mode where mission time counts upward continuously.
+* Escalating cascade waves spawn every 25 seconds, introducing dense shrapnel clouds, unguided booster hulks, and radioactive derelicts.
+* Awards tactical survival combat ratings:
+  * `< 60s`: `SURVIVOR`
+  * `60s – 120s`: `VETERAN`
+  * `120s – 180s`: `CASCADE MASTER`
+  * `180s+`: `ORBITAL LEGEND`
 
 ---
 
-## 10. SCORING & MISSION RATINGS
-Upon mission completion, your performance is rated on a 1 to 3 Star scale based on:
-$$\text{Final Score} = \text{Recycled Value} + (\text{Time Remaining} \times 15) + \left(\frac{\text{Hull Remaining}}{\text{Max Hull}} \times 500\right)$$
-Achieving higher star tiers unlocks prestigious entries on the **Local Top Runs** leaderboard!
+## 8. AEGIS DEPOT DOCKING, RECYCLING & STRIPPING
 
+The Aegis Orbital Depot at the center of the sector is your safe haven:
+1. **Fly into the Green Docking Perimeter Ring.**
+2. Bring your vessel to a stop or press `E`.
+3. Choose **Recycle (100% Scrap & Score)** or **Strip (50% Scrap + Raw Metal/Cells/Chips for Tech Research)**.
+4. Docking automatically refills your propellant tanks to 100%, recharges your battery pool, and restores your hull to 100% integrity!
+
+---
+
+## 9. SAVE PERSISTENCE & SAFE NEW CAMPAIGN
+
+* All progress, upgrades, materials, high scores, and campaign state automatically persist in browser `localStorage`.
+* **Safe New Campaign:** Clicking `➕ NEW CAMPAIGN` automatically archives your active save to a timestamped backup (`orbital_cleanup_archive_<timestamp>`) in `localStorage` before establishing a fresh campaign seed, ensuring you never accidentally lose past achievements.
+
+---
+
+## 10. SYSTEM REQUIREMENTS & RUNNING LOCALLY
+
+* **Operating System:** Windows, macOS, Linux, ChromeOS.
+* **Browser:** Any modern web browser with Web Audio API and HTML5 Canvas support (Google Chrome, Microsoft Edge, Mozilla Firefox, Apple Safari).
+* **Local Run:**
+  ```bash
+  python -m http.server 8080
+  ```
+  Navigate to `http://localhost:8080`.
