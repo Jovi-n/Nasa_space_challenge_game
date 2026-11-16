@@ -2637,9 +2637,6 @@ button,
     border-radius: 2px;
     border-left: 2px solid #fde047;
 }
-    border-radius: 2px;
-    border-left: 2px solid #fde047;
-}
 
 /* Asset Registry Modal Grid */
 .asset-registry-grid {
@@ -2841,8 +2838,6 @@ button,
     font-family: var(--font-heading);
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--ink);
-}
     color: var(--ink);
 }
 .tech-tier-badge {
