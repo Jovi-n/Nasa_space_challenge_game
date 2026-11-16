@@ -1,0 +1,3249 @@
+/**
+ * ORBITAL CLEANUP: MISSION ZERO - UI CONTROLLER v2
+ * Systems Engineering Mission Design, Live Budgets, Formal Design Review,
+ * CONOPS, Trade Study, Minimap, and Debrief v2
+ */
+
+class UIController {
+    constructor() {
+        this.save = OrbitalStorage.load();
+        this.currentGame = null;
+        this.currentScene = null;
+
+        // Current Step in Mission Design Studio (1: Need & Goals, 2: CONOPS, 3: Trade Study, 4: Point Design)
+        this.currentDesignStep = 1;
+
+        // Mission Design Selections (backed by PARTS_DATA)
+        this.selectedLevelId = 1;
+        this.selectedClientId = this.save.selectedClientId || 'esa';
+        this.selectedLaunchVehicleId = this.save.selectedLaunchVehicleId || 'falcon9';
+        this.selectedBusId = this.save.selectedShip || 'collector';
+        this.selectedPropulsionId = this.save.selectedPropulsionId || 'hypergolic';
+        this.selectedPowerId = this.save.selectedPowerId || 'deployable_wings';
+        this.selectedEquipmentId = this.save.selectedEquipment || 'net';
+        this.selectedGroundCommsId = this.save.selectedGroundCommsId || 'regional_passes';
+
+        // Legacy compatibility
+        this.selectedShipId = this.selectedBusId;
+        this.selectedPayloadId = 'balanced';
+
+        this.initDOMElements();
+        this.attachEventListeners();
+        try { this.initAuthUi(); } catch (e) { console.warn('[UI] Auth UI init deferred:', e); }
+        try { this.renderHangarShop(); } catch (e) { console.warn('[UI] Hangar render deferred:', e); }
+        try { this.renderMissionDesignView(); } catch (e) { console.warn('[UI] Mission Design render deferred:', e); }
+        try { this.renderLeaderboard(); } catch (e) { console.warn('[UI] Leaderboard render deferred:', e); }
+        try { this.initMinimap(); } catch (e) { console.warn('[UI] Minimap init deferred:', e); }
+    }
+
+    initDOMElements() {
+        // Screens
+        this.screens = {
+            mainMenu: document.getElementById('screen-main-menu'),
+            contracts: document.getElementById('screen-mission-board'),
+            missionDesign: document.getElementById('screen-mission-design'),
+            hangar: document.getElementById('screen-hangar'),
+            howToPlay: document.getElementById('screen-how-to-play'),
+            leaderboard: document.getElementById('screen-leaderboard'),
+            gameHud: document.getElementById('hud-overlay'),
+            resultsModal: document.getElementById('modal-results'),
+            pauseModal: document.getElementById('modal-pause'),
+            tutorialModal: document.getElementById('modal-tutorial'),
+            sourcesModal: document.getElementById('modal-sources'),
+            creditsModal: document.getElementById('modal-credits'),
+            shareCodeModal: document.getElementById('modal-share-code'),
+            campaignMap: document.getElementById('screen-campaign-map'),
+            techModal: document.getElementById('modal-tech-research'),
+            endingModal: document.getElementById('modal-campaign-ending'),
+            newCampaignModal: document.getElementById('modal-new-campaign'),
+            authModal: document.getElementById('modal-auth')
+        };
+
+        // HUD Elements
+        this.hud = {
+            fuelBar: document.getElementById('hud-fuel-fill'),
+            fuelText: document.getElementById('hud-fuel-text'),
+            batteryBar: document.getElementById('hud-battery-fill'),
+            batteryText: document.getElementById('hud-battery-text'),
+            hullBar: document.getElementById('hud-hull-fill'),
+            hullText: document.getElementById('hud-hull-text'),
+            cargoSlots: document.getElementById('hud-cargo-slots'),
+            cargoCount: document.getElementById('hud-cargo-count'),
+            scoreText: document.getElementById('hud-score-val'),
+            timerText: document.getElementById('hud-timer-val'),
+            quotaText: document.getElementById('hud-quota-val'),
+            missionName: document.getElementById('hud-mission-name'),
+            warningBanner: document.getElementById('hud-warning-banner'),
+            dockingPrompt: document.getElementById('hud-docking-prompt'),
+            minimapCanvas: document.getElementById('hud-minimap-canvas'),
+            kesslerFill: document.getElementById('hud-kessler-fill'),
+            kesslerVal: document.getElementById('hud-kessler-val'),
+            matMetal: document.getElementById('hud-mat-metal'),
+            matCells: document.getElementById('hud-mat-cells'),
+            matChips: document.getElementById('hud-mat-chips'),
+            missionStage: document.getElementById('hud-mission-stage'),
+            laneIndicator: document.getElementById('hud-lane-indicator'),
+            weatherBanner: document.getElementById('hud-weather-banner'),
+            weatherId: document.getElementById('hud-weather-id'),
+            weatherDate: document.getElementById('hud-weather-date'),
+            weatherDesc: document.getElementById('hud-weather-desc'),
+            weatherSource: document.getElementById('hud-weather-source'),
+            weatherSimLabel: document.getElementById('hud-weather-sim-label')
+        };
+
+        // Mission Design Wizard Elements
+        this.stepButtons = document.querySelectorAll('.step-tab-btn');
+        this.stepViews = document.querySelectorAll('.design-step-view');
+        this.orbitCanvas = document.getElementById('orbit-canvas');
+        this.launchMissionBtn = document.getElementById('btn-launch-mission');
+    }
+
+    switchScreen(targetScreenName) {
+        this.currentScreenName = targetScreenName;
+        if (window.soundSystem) {
+            window.soundSystem.playUiClick();
+            window.soundSystem.resume();
+        }
+
+        // Ensure screens dictionary is fully populated
+        if (!this.screens.contracts) {
+            this.screens.contracts = document.getElementById('screen-mission-board');
+        }
+        if (!this.screens.mainMenu) {
+            this.screens.mainMenu = document.getElementById('screen-main-menu');
+        }
+
+        // Hide all screens & modals
+        document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(scr => {
+            scr.classList.add('hidden');
+        });
+
+        // Show target screen
+        const targetScreen = this.screens[targetScreenName] || document.getElementById(
+            targetScreenName === 'contracts' ? 'screen-mission-board' :
+            targetScreenName === 'mainMenu' ? 'screen-main-menu' :
+            targetScreenName === 'missionDesign' ? 'screen-mission-design' :
+            targetScreenName === 'hangar' ? 'screen-hangar' :
+            targetScreenName === 'howToPlay' ? 'screen-how-to-play' :
+            targetScreenName === 'leaderboard' ? 'screen-leaderboard' :
+            targetScreenName === 'campaignMap' ? 'screen-campaign-map' :
+            targetScreenName === 'gameHud' ? 'hud-overlay' : null
+        );
+
+        if (targetScreen) {
+            targetScreen.classList.remove('hidden');
+        }
+
+        // Align telemetry overlay and floating button cleanly away from gauges and salvage panels
+        const globalBtn = document.getElementById('btn-global-telemetry');
+        const f3DebugEl = document.getElementById('hud-f3-debug');
+        if (targetScreenName === 'gameHud') {
+            if (globalBtn) globalBtn.classList.add('hud-mode');
+            if (f3DebugEl) f3DebugEl.classList.add('hud-mode');
+        } else {
+            if (globalBtn) globalBtn.classList.remove('hud-mode');
+            if (f3DebugEl) f3DebugEl.classList.remove('hud-mode');
+        }
+
+        // Contextual updates (safe with try-catch so screen transition never fails)
+        try {
+            if (targetScreenName === 'hangar') {
+                this.renderHangarShop();
+            } else if (targetScreenName === 'contracts') {
+                this.renderMissionBoard();
+            } else if (targetScreenName === 'missionDesign') {
+                this.renderMissionDesignView();
+            } else if (targetScreenName === 'leaderboard') {
+                this.renderLeaderboard();
+            }
+        } catch (err) {
+            console.error('[UIController] Contextual update error for screen ' + targetScreenName + ':', err);
+        }
+    }
+
+    attachEventListeners() {
+        // Universal Document-Level Event Delegation for 100% Reliable Button & Interactive Handling
+        document.addEventListener('click', (e) => {
+            // 1. Step Tab Buttons (01 NEED, 02 CONOPS, 03 TRADE, 04 POINT DESIGN)
+            const stepTab = e.target.closest('.step-tab-btn');
+            if (stepTab) {
+                e.preventDefault();
+                const step = parseInt(stepTab.getAttribute('data-step'), 10);
+                if (step) {
+                    this.switchDesignStep(step);
+                }
+                return;
+            }
+
+            // 2. Next Step Buttons
+            const nextBtn = e.target.closest('.btn-next-step');
+            if (nextBtn) {
+                e.preventDefault();
+                const target = parseInt(nextBtn.getAttribute('data-target'), 10);
+                if (target) {
+                    this.switchDesignStep(target);
+                }
+                return;
+            }
+
+            // 3. Previous Step Buttons
+            const prevBtn = e.target.closest('.btn-prev-step');
+            if (prevBtn) {
+                e.preventDefault();
+                const target = parseInt(prevBtn.getAttribute('data-target'), 10);
+                if (target) {
+                    this.switchDesignStep(target);
+                }
+                return;
+            }
+
+            // 4. Adopt Architecture Buttons (Step 3 Trade Study)
+            const adoptBtn = e.target.closest('.btn-adopt-arch');
+            if (adoptBtn) {
+                e.preventDefault();
+                const archId = adoptBtn.getAttribute('data-arch');
+                if (archId) {
+                    this.adoptArchitecture(archId);
+                }
+                return;
+            }
+
+            // 5. Quick Launch / Direct Launch Buttons (Anywhere in Design Studio)
+            const launchBtn = e.target.closest('#btn-launch-mission, .btn-quick-launch-direct');
+            if (launchBtn) {
+                e.preventDefault();
+                const budgets = this.calculateBudgets();
+                if (budgets.reviewStatus === 'FAIL') {
+                    window.soundSystem?.playExplosion();
+                    alert(`[FORMAL DESIGN REVIEW FAILED]\n\n${budgets.failureReason}\n\nPlease adjust your subsystems in Step 4 (e.g. increase launcher capacity, reduce dry mass, or add solar arrays) to achieve PASS status before launch.`);
+                    this.switchDesignStep(4);
+                    return;
+                }
+                this.launchConfiguredMission();
+                return;
+            }
+
+            // 6. Quick Demo Button
+            const quickDemoBtn = e.target.closest('#btn-quick-demo');
+            if (quickDemoBtn) {
+                e.preventDefault();
+                this.loadQuickDemoPreset();
+                return;
+            }
+
+            // 6b. Docking Harbor Actions (Recycle vs Strip)
+            const dockRecycleBtn = e.target.closest('#btn-dock-recycle');
+            if (dockRecycleBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerRecycle === 'function') {
+                    this.currentScene.triggerRecycle();
+                }
+                return;
+            }
+
+            const dockStripBtn = e.target.closest('#btn-dock-strip');
+            if (dockStripBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerStrip === 'function') {
+                    this.currentScene.triggerStrip();
+                }
+                return;
+            }
+
+            const dockRepairBtn = e.target.closest('#btn-dock-repair');
+            if (dockRepairBtn) {
+                e.preventDefault();
+                if (this.currentScene && typeof this.currentScene.triggerRepair === 'function') {
+                    this.currentScene.triggerRepair();
+                }
+                return;
+            }
+
+            const diffCard = e.target.closest('.difficulty-card');
+            if (diffCard && diffCard.dataset.difficulty) {
+                e.preventDefault();
+                const diffKey = diffCard.dataset.difficulty;
+                const save = OrbitalStorage.load();
+                save.selectedDifficulty = diffKey;
+                OrbitalStorage.save(save);
+                document.querySelectorAll('.difficulty-card').forEach(c => {
+                    c.classList.toggle('active', c.dataset.difficulty === diffKey);
+                });
+                window.soundSystem?.playUiClick?.();
+                return;
+            }
+
+            // 7. Design Tutorial Button
+            const tutorialBtn = e.target.closest('#btn-design-tutorial');
+            if (tutorialBtn) {
+                e.preventDefault();
+                this.screens.tutorialModal?.classList.remove('hidden');
+                window.soundSystem?.playUiClick();
+                return;
+            }
+
+            // 8. Design Share Button
+            const shareBtn = e.target.closest('#btn-design-share');
+            if (shareBtn) {
+                e.preventDefault();
+                this.openShareCodeModal();
+                return;
+            }
+
+            // 8b. Accept Contract Button (Mission Board)
+            const acceptBtn = e.target.closest('.btn-accept-contract');
+            if (acceptBtn) {
+                e.preventDefault();
+                const contractId = acceptBtn.getAttribute('data-contract-id');
+                if (contractId) {
+                    this.acceptContractAndLaunch(contractId);
+                }
+                return;
+            }
+
+            // 8c. Main Menu & Mission Board Navigation Buttons (Universal Delegation)
+            const menuContractsBtn = e.target.closest('#btn-menu-contracts');
+            if (menuContractsBtn) {
+                e.preventDefault();
+                this.switchScreen('contracts');
+                return;
+            }
+
+            const menuStartBtn = e.target.closest('#btn-menu-start');
+            if (menuStartBtn) {
+                e.preventDefault();
+                this.switchScreen('missionDesign');
+                return;
+            }
+
+            const menuHangarBtn = e.target.closest('#btn-menu-hangar');
+            if (menuHangarBtn) {
+                e.preventDefault();
+                this.switchScreen('hangar');
+                return;
+            }
+
+            const menuHelpBtn = e.target.closest('#btn-menu-help');
+            if (menuHelpBtn) {
+                e.preventDefault();
+                this.switchScreen('howToPlay');
+                return;
+            }
+
+            const menuLeaderboardBtn = e.target.closest('#btn-menu-leaderboard');
+            if (menuLeaderboardBtn) {
+                e.preventDefault();
+                this.switchScreen('leaderboard');
+                return;
+            }
+
+            const boardReturnBtn = e.target.closest('#btn-board-return, #btn-map-return');
+            if (boardReturnBtn) {
+                e.preventDefault();
+                this.switchScreen('mainMenu');
+                return;
+            }
+
+            const boardCustomBtn = e.target.closest('#btn-board-custom-design');
+            if (boardCustomBtn) {
+                e.preventDefault();
+                this.switchScreen('missionDesign');
+                return;
+            }
+
+            const rerollBtn = e.target.closest('#btn-reroll-contracts');
+            if (rerollBtn) {
+                e.preventDefault();
+                this.rerollContracts();
+                return;
+            }
+
+            const boardAssetsBtn = e.target.closest('#btn-board-assets');
+            if (boardAssetsBtn) {
+                e.preventDefault();
+                this.openAssetRegistryModal();
+                return;
+            }
+
+            // Phase 8c: Campaign Map Navigation
+            const campaignMapBtn = e.target.closest('#btn-board-campaign-map, #btn-menu-campaign-map');
+            if (campaignMapBtn) {
+                e.preventDefault();
+                this.openCampaignMap();
+                return;
+            }
+
+            const mapBoardBtn = e.target.closest('#btn-map-board');
+            if (mapBoardBtn) {
+                e.preventDefault();
+                this.switchScreen('contracts');
+                this.renderMissionBoard();
+                return;
+            }
+
+            // Phase 8c: Tech Research Modal
+            const techResearchBtn = e.target.closest('#btn-board-tech-tree, #btn-map-tech');
+            if (techResearchBtn) {
+                e.preventDefault();
+                this.openTechTreeModal();
+                return;
+            }
+
+            // Phase 8c: Campaign Endings Evaluation
+            const evaluateEndingBtn = e.target.closest('#btn-map-evaluate');
+            if (evaluateEndingBtn) {
+                e.preventDefault();
+                this.openCampaignEndingModal();
+                return;
+            }
+
+            // Phase 8c: New Campaign Prompt & Confirmation
+            const newCampaignBtn = e.target.closest('#btn-board-new-campaign, #btn-map-new-campaign, #btn-ending-new-campaign');
+            if (newCampaignBtn) {
+                e.preventDefault();
+                this.openNewCampaignModal();
+                return;
+            }
+
+            const confirmNewCampaignBtn = e.target.closest('#btn-confirm-new-campaign');
+            if (confirmNewCampaignBtn) {
+                e.preventDefault();
+                this.confirmNewCampaign();
+                return;
+            }
+
+            // Phase 8c: Cascade Survival Mode
+            const survivalBtn = e.target.closest('#btn-menu-survival');
+            if (survivalBtn) {
+                e.preventDefault();
+                this.startCascadeSurvival();
+                return;
+            }
+
+            const resultsBoardBtn = e.target.closest('#btn-results-board');
+            if (resultsBoardBtn) {
+                e.preventDefault();
+                this.screens.resultsModal?.classList.add('hidden');
+                this.switchScreen('contracts');
+                return;
+            }
+
+            // 8d. F3 Telemetry HUD Button & Controls Hint
+            const f3Btn = e.target.closest('#btn-toggle-f3-hud, #btn-f3-hint, #btn-menu-telemetry');
+            if (f3Btn) {
+                e.preventDefault();
+                if (typeof window.toggleTelemetryOverlay === 'function') {
+                    window.toggleTelemetryOverlay();
+                }
+                return;
+            }
+
+            // 9. Modal Close Buttons
+            const closeBtn = e.target.closest('.btn-close-modal, #btn-close-asset-modal, #btn-close-tech-modal');
+            if (closeBtn) {
+                e.preventDefault();
+                const modalId = closeBtn.getAttribute('data-modal');
+                if (modalId && document.getElementById(modalId)) {
+                    document.getElementById(modalId).classList.add('hidden');
+                } else {
+                    closeBtn.closest('.modal-layer')?.classList.add('hidden');
+                }
+                window.soundSystem?.playUiClick();
+                return;
+            }
+
+            // 10. Main Menu / Back to Menu Buttons
+            const backBtn = e.target.closest('.btn-back-to-menu');
+            if (backBtn) {
+                e.preventDefault();
+                this.switchScreen('mainMenu');
+                return;
+            }
+        });
+
+        // Main Menu Direct Buttons
+        document.getElementById('btn-menu-contracts')?.addEventListener('click', () => {
+            this.switchScreen('contracts');
+        });
+        document.getElementById('btn-menu-start')?.addEventListener('click', () => {
+            this.switchScreen('missionDesign');
+        });
+        document.getElementById('btn-menu-hangar')?.addEventListener('click', () => {
+            this.switchScreen('hangar');
+        });
+        document.getElementById('btn-menu-help')?.addEventListener('click', () => {
+            this.switchScreen('howToPlay');
+        });
+        document.getElementById('btn-menu-leaderboard')?.addEventListener('click', () => {
+            this.switchScreen('leaderboard');
+        });
+        document.getElementById('btn-menu-sources')?.addEventListener('click', () => {
+            this.screens.sourcesModal?.classList.remove('hidden');
+            window.soundSystem?.playUiClick();
+        });
+        document.getElementById('btn-menu-credits')?.addEventListener('click', () => {
+            this.screens.creditsModal?.classList.remove('hidden');
+            window.soundSystem?.playUiClick();
+        });
+
+        // Mission Design Header Action Buttons
+        document.getElementById('btn-quick-demo')?.addEventListener('click', () => {
+            this.loadQuickDemoPreset();
+        });
+        document.getElementById('btn-design-tutorial')?.addEventListener('click', () => {
+            this.screens.tutorialModal?.classList.remove('hidden');
+            window.soundSystem?.playUiClick();
+        });
+        document.getElementById('btn-design-share')?.addEventListener('click', () => {
+            this.openShareCodeModal();
+        });
+
+        // Modal Close Buttons
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.getAttribute('data-modal');
+                if (modalId && document.getElementById(modalId)) {
+                    document.getElementById(modalId).classList.add('hidden');
+                } else {
+                    btn.closest('.modal-layer')?.classList.add('hidden');
+                }
+                window.soundSystem?.playUiClick();
+            });
+        });
+
+        // Navigation Back Buttons
+        document.querySelectorAll('.btn-back-to-menu').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchScreen('mainMenu');
+            });
+        });
+
+        // Sound Toggle Buttons
+        const sfxBtn = document.getElementById('btn-toggle-sfx');
+        if (sfxBtn) {
+            sfxBtn.addEventListener('click', () => {
+                const state = window.soundSystem.toggleSFX();
+                sfxBtn.innerText = state ? 'SFX: ON' : 'SFX: OFF';
+                sfxBtn.classList.toggle('active', state);
+            });
+        }
+
+        const musicBtn = document.getElementById('btn-toggle-music');
+        if (musicBtn) {
+            musicBtn.addEventListener('click', () => {
+                const state = window.soundSystem.toggleMusic();
+                musicBtn.innerText = state ? 'MUSIC: ON' : 'MUSIC: OFF';
+                musicBtn.classList.toggle('active', state);
+            });
+        }
+
+        // How-To-Play Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`tab-content-${targetTab}`)?.classList.add('active');
+                window.soundSystem?.playUiClick();
+            });
+        });
+
+        // Results Modal / Debrief Actions
+        document.getElementById('btn-results-next')?.addEventListener('click', () => {
+            this.screens.resultsModal.classList.add('hidden');
+            const maxLvl = GAME_DATA.LEVELS ? GAME_DATA.LEVELS.length : 8;
+            if (this.selectedLevelId < maxLvl) {
+                this.selectedLevelId++;
+                this.switchScreen('missionDesign');
+                this.switchDesignStep(1);
+            } else {
+                this.switchScreen('mainMenu');
+            }
+        });
+
+        document.getElementById('btn-results-redesign')?.addEventListener('click', () => {
+            this.screens.resultsModal.classList.add('hidden');
+            this.switchScreen('missionDesign');
+            this.switchDesignStep(4);
+        });
+
+        document.getElementById('btn-results-retry')?.addEventListener('click', () => {
+            this.screens.resultsModal.classList.add('hidden');
+            this.launchConfiguredMission();
+        });
+
+        document.getElementById('btn-results-board')?.addEventListener('click', () => {
+            this.screens.resultsModal?.classList.add('hidden');
+            this.renderMissionBoard();
+            this.switchScreen('contracts');
+        });
+
+        // Mission Board Action Buttons
+        document.getElementById('btn-board-return')?.addEventListener('click', () => {
+            this.switchScreen('mainMenu');
+        });
+
+        document.getElementById('btn-board-custom-design')?.addEventListener('click', () => {
+            this.switchScreen('missionDesign');
+        });
+
+        document.getElementById('btn-results-hangar')?.addEventListener('click', () => {
+            this.screens.resultsModal.classList.add('hidden');
+            this.switchScreen('hangar');
+        });
+
+        document.getElementById('btn-copy-debrief-code')?.addEventListener('click', () => {
+            const code = document.getElementById('debrief-share-code')?.innerText;
+            if (code) {
+                navigator.clipboard?.writeText(code).then(() => {
+                    const btn = document.getElementById('btn-copy-debrief-code');
+                    if (btn) btn.innerText = 'COPIED!';
+                    setTimeout(() => { if (btn) btn.innerText = 'COPY CODE'; }, 2000);
+                });
+            }
+        });
+
+        // Share Code Modal Buttons
+        document.getElementById('btn-copy-current-code')?.addEventListener('click', () => {
+            const code = this.generateDesignCode();
+            navigator.clipboard?.writeText(code).then(() => {
+                const status = document.getElementById('share-code-status');
+                if (status) {
+                    status.innerHTML = `<span style="color: var(--clean);">COPIED CODE TO CLIPBOARD: ${code}</span>`;
+                }
+            });
+        });
+
+        document.getElementById('btn-import-code')?.addEventListener('click', () => {
+            const input = document.getElementById('share-code-input');
+            const status = document.getElementById('share-code-status');
+            if (!input || !input.value.trim()) return;
+            const success = this.parseAndApplyDesignCode(input.value.trim());
+            if (status) {
+                if (success) {
+                    status.innerHTML = `<span style="color: var(--clean);">DESIGN CODE LOADED SUCCESSFULLY!</span>`;
+                    setTimeout(() => {
+                        this.screens.shareCodeModal?.classList.add('hidden');
+                    }, 900);
+                } else {
+                    status.innerHTML = `<span style="color: var(--danger);">INVALID OR CORRUPT DESIGN CODE STRING.</span>`;
+                }
+            }
+        });
+
+        // Pause Menu Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                if (this.currentScene && !this.currentScene.isMissionOver && !this.screens.gameHud.classList.contains('hidden')) {
+                    this.togglePause();
+                }
+            }
+        });
+
+        document.getElementById('btn-pause-resume')?.addEventListener('click', () => {
+            if (this.currentScene) {
+                this.togglePause();
+            } else {
+                this.screens.pauseModal.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('btn-pause-restart')?.addEventListener('click', () => {
+            this.screens.pauseModal.classList.add('hidden');
+            if (this.currentScene) {
+                this.currentScene.scene.resume('OrbitalGameScene');
+            }
+            this.launchConfiguredMission();
+        });
+
+        document.getElementById('btn-pause-abort')?.addEventListener('click', () => {
+            this.screens.pauseModal.classList.add('hidden');
+            if (this.currentScene) {
+                this.currentScene.scene.resume('OrbitalGameScene');
+            }
+            if (this.currentGame) {
+                this.currentGame.destroy(true);
+                this.currentGame = null;
+                this.currentScene = null;
+            }
+            this.switchScreen('mainMenu');
+        });
+    }
+
+    togglePause() {
+        if (!this.currentScene) return;
+        const isPaused = this.currentScene.scene.isPaused('OrbitalGameScene');
+        if (isPaused) {
+            this.currentScene.scene.resume('OrbitalGameScene');
+            this.screens.pauseModal.classList.add('hidden');
+        } else {
+            this.currentScene.scene.pause('OrbitalGameScene');
+            this.screens.pauseModal.classList.remove('hidden');
+        }
+    }
+
+    // =========================================================================
+    // 4-STEP MISSION DESIGN STUDIO CONTROLLER
+    // =========================================================================
+
+    switchDesignStep(stepNumber) {
+        if (stepNumber < 1 || stepNumber > 4) return;
+        this.currentDesignStep = stepNumber;
+        window.soundSystem?.playUiClick();
+
+        // Refresh buttons and views dynamically
+        document.querySelectorAll('.step-tab-btn').forEach(btn => {
+            const s = parseInt(btn.getAttribute('data-step'), 10);
+            btn.classList.toggle('active', s === stepNumber);
+        });
+
+        document.querySelectorAll('.design-step-view').forEach(view => {
+            view.classList.remove('active');
+        });
+
+        const activeView = document.getElementById(`design-step-${stepNumber}`);
+        if (activeView) activeView.classList.add('active');
+
+        // Reset scroll position to top so headers and controls are always immediately accessible
+        const container = document.querySelector('.design-container');
+        if (container) {
+            container.scrollTop = 0;
+        }
+
+        // Step-specific updates
+        if (stepNumber === 1) {
+            this.renderStep1NeedAndGoals();
+        } else if (stepNumber === 2) {
+            this.renderStep2CONOPS();
+            this.drawOrbitDiagram();
+        } else if (stepNumber === 3) {
+            this.renderStep3TradeStudy();
+        } else if (stepNumber === 4) {
+            this.renderStep4PointDesign();
+        }
+    }
+
+    renderMissionDesignView() {
+        this.save = OrbitalStorage.load();
+        this.renderStep1NeedAndGoals();
+        this.renderStep2CONOPS();
+        this.renderStep3TradeStudy();
+        this.renderStep4PointDesign();
+        this.switchDesignStep(this.currentDesignStep || 1);
+    }
+
+    /**
+     * STEP 1: NEED & GOALS (Sector, Client, Contract Requirements Dossier)
+     */
+    renderStep1NeedAndGoals() {
+        // 0. Update Difficulty Selection Cards
+        const currentDiff = this.save.selectedDifficulty || 'standard';
+        document.querySelectorAll('.difficulty-card').forEach(c => {
+            c.classList.toggle('active', c.dataset.difficulty === currentDiff);
+        });
+
+        // 1. Sector Level Cards (All 8 Data-Driven Sectors with Progressive Unlocks)
+        const levelContainer = document.getElementById('design-level-select');
+        if (levelContainer) {
+            levelContainer.innerHTML = '';
+            
+            // Count completed sectors (stars > 0 or recorded high score)
+            const completedCount = Object.keys(this.save.stars || {}).filter(k => (this.save.stars[k] || 0) > 0).length;
+
+            GAME_DATA.LEVELS.forEach(lvl => {
+                let isLocked = false;
+                let lockMsg = '';
+                if (lvl.id === 1) {
+                    isLocked = false;
+                } else if (lvl.id === 8) {
+                    // Finale requires five completed sectors
+                    isLocked = completedCount < 5;
+                    lockMsg = `[LOCKED - REQUIRES 5 COMPLETED SECTORS (${completedCount}/5)]`;
+                } else {
+                    // Progressive unlock: either reached via unlockedLevels or previous sector beaten
+                    const prevCleared = ((this.save.stars || {})[lvl.id - 1] > 0) || ((this.save.highScores || {})[lvl.id - 1] > 0);
+                    isLocked = (lvl.id > (this.save.unlockedLevels || 1)) && !prevCleared;
+                    lockMsg = '[LOCKED - CLEAR PREVIOUS SECTOR]';
+                }
+
+                const isSelected = lvl.id === this.selectedLevelId;
+                const stars = this.save.stars[lvl.id] || 0;
+                const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+
+                const div = document.createElement('div');
+                div.className = `level-card ${isSelected ? 'selected' : ''} ${isLocked ? 'locked' : ''}`;
+                div.innerHTML = `
+                    <div class="level-badge">SECTOR 0${lvl.id}</div>
+                    <div class="level-title">${lvl.name.split(':')[1] || lvl.name}</div>
+                    <div class="level-sub">${lvl.subtitle}</div>
+                    <div class="level-meta">
+                        <span>Target Quota: ${lvl.targetQuota} Units</span>
+                        <span class="stars">${starStr}</span>
+                    </div>
+                    ${isLocked ? `<div class="lock-overlay">${lockMsg}</div>` : ''}
+                `;
+
+                if (!isLocked) {
+                    div.addEventListener('click', () => {
+                        this.selectedLevelId = lvl.id;
+                        window.soundSystem?.playUiClick();
+                        this.renderStep1NeedAndGoals();
+                    });
+                }
+                levelContainer.appendChild(div);
+            });
+        }
+
+        // 2. Client / Stakeholder Cards
+        const clientContainer = document.getElementById('design-client-select');
+        if (clientContainer) {
+            clientContainer.innerHTML = '';
+            Object.values(PARTS_DATA.clients).forEach(client => {
+                const isSelected = client.id === this.selectedClientId;
+                const div = document.createElement('div');
+                div.className = `client-card ${isSelected ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div class="client-header">
+                        <span class="client-name">${client.name}</span>
+                        <span class="trade-badge">×${client.payoutMultiplier} PAYOUT</span>
+                    </div>
+                    <div class="client-agency">${client.agency}</div>
+                    <div class="client-desc">${client.description}</div>
+                    <div class="client-meta-box">
+                        <div>Max Collisions Allowed: <strong style="color: ${client.maxCollisionsAllowed <= 1 ? 'var(--danger)' : 'var(--salvage)'};">${client.maxCollisionsAllowed}</strong></div>
+                        <div>Bonus Requirement: <strong style="color: var(--clean);">${client.bonusCondition}</strong></div>
+                    </div>
+                `;
+                div.addEventListener('click', () => {
+                    this.selectedClientId = client.id;
+                    this.save.selectedClientId = client.id;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playUiClick();
+                    this.renderStep1NeedAndGoals();
+                });
+                clientContainer.appendChild(div);
+            });
+        }
+
+        // 3. Spacecraft Airframe Bus Selection (Directly on Step 1)
+        const busContainer = document.getElementById('design-step1-bus-select');
+        if (busContainer) {
+            busContainer.innerHTML = '';
+            Object.values(PARTS_DATA.buses).forEach(bus => {
+                const isSelected = bus.id === this.selectedBusId;
+                const div = document.createElement('div');
+                div.className = `subsystem-option-card ${isSelected ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="subsystem-opt-title">${bus.name}</span>
+                        ${isSelected ? '<span class="trade-badge" style="background: var(--salvage); color: #000; font-weight: bold;">ACTIVE CRAFT</span>' : ''}
+                    </div>
+                    <div class="subsystem-opt-meta">
+                        Speed: ${bus.baseSpeed} m/s | Hull: ${bus.maxHull} HP | Cargo: ${bus.cargoCapacity} Units | Dry Mass: ${bus.dryMassKg} kg
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--ink-muted); margin-top: 4px;">${bus.description}</div>
+                `;
+                div.addEventListener('click', () => {
+                    this.selectedBusId = bus.id;
+                    this.selectedShipId = bus.id;
+                    this.save.selectedShip = bus.id;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playUiClick();
+                    this.renderStep1NeedAndGoals();
+                    this.renderStep4PointDesign();
+                });
+                busContainer.appendChild(div);
+            });
+        }
+
+        // 4. Capture & Retrieval Equipment Selection (Directly on Step 1)
+        const equipContainer = document.getElementById('design-step1-equipment-select');
+        if (equipContainer) {
+            equipContainer.innerHTML = '';
+            Object.values(PARTS_DATA.equipment).forEach(eq => {
+                const isSelected = eq.id === this.selectedEquipmentId;
+                const div = document.createElement('div');
+                div.className = `subsystem-option-card ${isSelected ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="subsystem-opt-title">${eq.name}</span>
+                        ${isSelected ? '<span class="trade-badge" style="background: var(--salvage); color: #000; font-weight: bold;">EQUIPPED</span>' : ''}
+                    </div>
+                    <div class="subsystem-opt-meta">
+                        Range: ${eq.range}m | Scrap: +${Math.round((eq.scrapBonus - 1) * 100)}% | Type: ${eq.type.toUpperCase()} | Mass: ${eq.massKg} kg
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--ink-muted); margin-top: 4px;">${eq.description}</div>
+                `;
+                div.addEventListener('click', () => {
+                    this.selectedEquipmentId = eq.id;
+                    this.save.selectedEquipment = eq.id;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playUiClick();
+                    this.renderStep1NeedAndGoals();
+                    this.renderStep4PointDesign();
+                });
+                equipContainer.appendChild(div);
+            });
+        }
+
+        // 5. Contract Specification & Measurable Requirements Dossier
+        const dossierBox = document.getElementById('design-requirements-dossier');
+        const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
+        const activeClient = PARTS_DATA.clients[this.selectedClientId] || PARTS_DATA.clients.esa;
+
+        if (dossierBox && activeLevel) {
+            const minMassKg = activeLevel.targetQuota * 45;
+            dossierBox.innerHTML = `
+                <h4>CONTRACT BRIEFING // ${activeClient.name.toUpperCase()}</h4>
+                <p style="margin: 8px 0; font-family: var(--font-body); font-size: 1rem; color: var(--ink);">
+                    ${activeLevel.briefing}
+                </p>
+                ${activeLevel.historicalReference ? `
+                <div style="margin: 10px 0; padding: 8px 12px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--accent-cyan); font-size: 0.82rem; line-height: 1.45; color: var(--ink);">
+                    <strong style="color: var(--accent-cyan);">HISTORICAL FLIGHT DOSSIER //</strong> ${activeLevel.historicalReference}
+                </div>` : ''}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; font-family: var(--font-mono); font-size: 0.85rem;">
+                    <div>• Sector Altitude: <strong style="color: var(--accent-cyan);">${activeLevel.altitudeKm ? `${activeLevel.altitudeKm.toLocaleString()} km` : (activeLevel.subtitle.match(/Alt: [^)]+/)?.[0] || 'LEO 480km')}</strong></div>
+                    <div>• Orbital Inclination: <strong style="color: var(--accent-cyan);">${activeLevel.inclination || '51.6° LEO'}</strong></div>
+                    <div>• Mandatory Target Quota: <strong style="color: var(--clean);">${activeLevel.targetQuota} Debris Items</strong></div>
+                    <div>• Minimum Mass Clearance: <strong style="color: var(--clean);">${minMassKg} kg</strong></div>
+                    <div>• Max Collision Limit: <strong style="color: var(--danger);">${activeClient.maxCollisionsAllowed} Impact(s)</strong></div>
+                    <div>• Minimum Propellant Reserve: <strong style="color: var(--salvage);">&gt; 25% Delta-V</strong></div>
+                    <div>• Mission Time Window: <strong style="color: var(--accent-cyan);">${activeLevel.timeLimit} Seconds</strong></div>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * STEP 2: CONCEPT OF OPERATIONS (CONOPS & Orbit Trajectory)
+     */
+    renderStep2CONOPS() {
+        const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
+        const metaBar = document.getElementById('orbit-telemetry-meta');
+        if (metaBar) {
+            const altitudeStr = activeLevel.altitudeKm ? `${activeLevel.altitudeKm.toLocaleString()} km` : '480 km';
+            const inclinationStr = activeLevel.inclination || '51.6° LEO';
+            const periodStr = activeLevel.orbitalPeriodMin ? `${activeLevel.orbitalPeriodMin} MIN` : '94.2 MIN';
+            metaBar.innerHTML = `
+                <span>ALTITUDE: <strong>${altitudeStr}</strong></span>
+                <span>INCLINATION: <strong>${inclinationStr}</strong></span>
+                <span>PERIOD: <strong>${periodStr}</strong></span>
+                <span>ECCENTRICITY: <strong>&lt; 0.002</strong></span>
+            `;
+        }
+    }
+
+    drawOrbitDiagram() {
+        const canvas = document.getElementById('orbit-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Deep Space Background with Star Blips
+        ctx.fillStyle = '#03050a';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = '#24324a';
+        for (let i = 0; i < 40; i++) {
+            const sx = (i * 37) % w;
+            const sy = (i * 29) % h;
+            ctx.fillRect(sx, sy, 2, 2);
+        }
+
+        // Earth
+        const earthX = 110;
+        const earthY = h / 2;
+        const earthRadius = 38;
+
+        // Atmosphere halo
+        ctx.strokeStyle = '#1e3a5f';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, earthRadius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Planet body
+        ctx.fillStyle = '#0f2942';
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, earthRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(earthX - 14, earthY - 10, 16, 10);
+        ctx.fillRect(earthX - 4, earthY + 6, 20, 8);
+
+        ctx.fillStyle = '#f1f5f9';
+        ctx.font = '9px "Share Tech Mono"';
+        ctx.fillText('EARTH', earthX - 14, earthY + 3);
+
+        // Elliptical Orbit Track (Scaled to altitude)
+        const activeLevel = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
+        const isGEO = (activeLevel.altitudeKm || 0) > 10000;
+        const orbitRadiusX = isGEO ? 245 : 190;
+        const orbitRadiusY = isGEO ? 105 : 85;
+
+        ctx.save();
+        ctx.translate(earthX, earthY);
+        ctx.strokeStyle = activeLevel.palette?.accentColor || '#2b3f5c';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, orbitRadiusX, orbitRadiusY, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Target Debris Belt Zone (Scattered particles along outer arc)
+        const debrisColor = activeLevel.palette?.accentColor || '#f59e0b';
+        ctx.fillStyle = debrisColor;
+        const debrisPoints = isGEO
+            ? [[300, 45], [330, 65], [360, 95], [375, 120], [360, 150], [335, 180], [305, 195]]
+            : [[260, 55], [290, 70], [315, 95], [330, 120], [320, 150], [295, 175], [265, 190]];
+        debrisPoints.forEach(pt => {
+            ctx.fillRect(pt[0], pt[1], 4, 4);
+        });
+
+        ctx.fillStyle = debrisColor;
+        ctx.font = '10px "Share Tech Mono"';
+        const sectorShort = activeLevel.name.split(':')[0] || 'TARGET SECTOR';
+        ctx.fillText(`[${sectorShort.toUpperCase()} - ${activeLevel.altitudeKm || 420} KM]`, 180, 42);
+
+        // Aegis Recycling Depot Marker (Green Station Box)
+        const depotX = 220;
+        const depotY = 195;
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(depotX - 5, depotY - 5, 10, 10);
+        ctx.fillText('[AEGIS DEPOT]', depotX - 35, depotY + 18);
+
+        // Spacecraft Position & Velocity Vector
+        const shipX = 190;
+        const shipY = 48;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(shipX + 6, shipY);
+        ctx.lineTo(shipX - 5, shipY - 4);
+        ctx.lineTo(shipX - 3, shipY);
+        ctx.lineTo(shipX - 5, shipY + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(shipX + 6, shipY);
+        ctx.lineTo(shipX + 28, shipY - 4);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('v = 7.6 km/s', shipX + 10, shipY - 10);
+
+        // De-orbit Re-entry Corridor (Red curved descent arc)
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(depotX, depotY);
+        ctx.quadraticCurveTo(150, 190, earthX + 30, earthY + 25);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.fillText('DEORBIT BURN →', 120, 220);
+    }
+
+    /**
+     * STEP 3: TRADE STUDY (Lean vs Balanced vs Robust Architectures)
+     */
+    renderStep3TradeStudy() {
+        const container = document.getElementById('trade-architectures-grid');
+        if (!container) return;
+        container.innerHTML = '';
+
+        Object.values(PARTS_DATA.tradeArchitectures).forEach(arch => {
+            const div = document.createElement('div');
+            div.className = 'trade-card';
+            div.innerHTML = `
+                <div>
+                    <span class="trade-badge">${arch.id.toUpperCase()} ARCHITECTURE</span>
+                    <div class="trade-name">${arch.name}</div>
+                    <div class="trade-tagline">${arch.tagline}</div>
+                    <div class="trade-specs-list">
+                        <div class="spec-row"><span>Mass Profile:</span> <strong>${arch.tradeSummary.massProfile}</strong></div>
+                        <div class="spec-row"><span>Est. Launch Cost:</span> <strong>${arch.tradeSummary.costProfile}</strong></div>
+                        <div class="spec-row"><span>Operational Risk:</span> <strong>${arch.tradeSummary.riskLevel}</strong></div>
+                        <div class="spec-row" style="margin-top: 4px; border-top: 1px dotted var(--border); padding-top: 4px;">
+                            <span>Best Suited For:</span> <em>${arch.tradeSummary.bestFor}</em>
+                        </div>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 12px;">
+                        • Launcher: ${PARTS_DATA.launchVehicles[arch.launchVehicle]?.name.split('(')[0]}<br>
+                        • Bus: ${PARTS_DATA.buses[arch.bus]?.name.split('(')[0]}<br>
+                        • Prop: ${PARTS_DATA.propulsionTanks[arch.propulsion]?.name.split('(')[0]}<br>
+                        • EPS: ${PARTS_DATA.powerSystems[arch.power]?.name.split('(')[0]}<br>
+                        • Tool: ${PARTS_DATA.equipment[arch.equipment]?.name}<br>
+                        • Comms: ${PARTS_DATA.groundComms[arch.groundComms]?.name.split('(')[0]}
+                    </div>
+                </div>
+                <button class="btn-primary btn-adopt-arch" style="width: 100%;" data-arch="${arch.id}">
+                    ADOPT ${arch.id.toUpperCase()} ARCHITECTURE
+                </button>
+            `;
+
+            div.querySelector('.btn-adopt-arch')?.addEventListener('click', () => {
+                this.adoptArchitecture(arch.id);
+            });
+
+            container.appendChild(div);
+        });
+    }
+
+    adoptArchitecture(archId) {
+        const arch = PARTS_DATA.tradeArchitectures[archId];
+        if (!arch) return;
+
+        this.selectedLaunchVehicleId = arch.launchVehicle;
+        this.selectedBusId = arch.bus;
+        this.selectedPropulsionId = arch.propulsion;
+        this.selectedPowerId = arch.power;
+        this.selectedEquipmentId = arch.equipment;
+        this.selectedGroundCommsId = arch.groundComms;
+
+        // Legacy compatibility
+        this.selectedShipId = arch.bus;
+        this.save.selectedShip = arch.bus;
+        this.save.selectedEquipment = arch.equipment;
+        this.save.selectedLaunchVehicleId = arch.launchVehicle;
+        this.save.selectedPropulsionId = arch.propulsion;
+        this.save.selectedPowerId = arch.power;
+        this.save.selectedGroundCommsId = arch.groundComms;
+        OrbitalStorage.save(this.save);
+
+        window.soundSystem?.playCollect(2);
+        this.switchDesignStep(4);
+    }
+
+    /**
+     * STEP 4: POINT DESIGN & LIVE BUDGETS
+     */
+    renderStep4PointDesign() {
+        this.renderSubsystemSelector('select-launch-vehicle', PARTS_DATA.launchVehicles, this.selectedLaunchVehicleId, (id) => {
+            this.selectedLaunchVehicleId = id;
+            this.save.selectedLaunchVehicleId = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+        });
+
+        this.renderSubsystemSelector('select-spacecraft-bus', PARTS_DATA.buses, this.selectedBusId, (id) => {
+            this.selectedBusId = id;
+            this.selectedShipId = id;
+            this.save.selectedShip = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+            this.renderStep1NeedAndGoals();
+        });
+
+        this.renderSubsystemSelector('select-propulsion', PARTS_DATA.propulsionTanks, this.selectedPropulsionId, (id) => {
+            this.selectedPropulsionId = id;
+            this.save.selectedPropulsionId = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+        });
+
+        this.renderSubsystemSelector('select-power', PARTS_DATA.powerSystems, this.selectedPowerId, (id) => {
+            this.selectedPowerId = id;
+            this.save.selectedPowerId = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+        });
+
+        this.renderSubsystemSelector('select-equipment', PARTS_DATA.equipment, this.selectedEquipmentId, (id) => {
+            this.selectedEquipmentId = id;
+            this.save.selectedEquipment = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+            this.renderStep1NeedAndGoals();
+        });
+
+        this.renderSubsystemSelector('select-ground-comms', PARTS_DATA.groundComms, this.selectedGroundCommsId, (id) => {
+            this.selectedGroundCommsId = id;
+            this.save.selectedGroundCommsId = id;
+            OrbitalStorage.save(this.save);
+            this.renderStep4PointDesign();
+        });
+
+        // Compute and render live budgets & gateway review board
+        this.renderBudgetsAndReview();
+    }
+
+    renderSubsystemSelector(containerId, itemsObject, selectedId, onSelectCallback) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        Object.values(itemsObject).forEach(item => {
+            const isSelected = item.id === selectedId;
+            const div = document.createElement('div');
+            div.className = `subsystem-option-card ${isSelected ? 'selected' : ''}`;
+
+            let metaStr = '';
+            if (item.payloadToLeoKg) {
+                metaStr = `Payload: ${item.payloadToLeoKg} kg | Fairing: ${item.fairingVolumeM3} m³ | Cost: ${item.cost}`;
+            } else if (item.dryMassKg && item.cargoCapacity) {
+                metaStr = `Dry Mass: ${item.dryMassKg} kg | Cargo: ${item.cargoCapacity} | Hull: ${item.maxHull}`;
+            } else if (item.fuelCapacityL) {
+                metaStr = `Fuel: ${item.fuelCapacityL} L | Wet Mass: ${item.wetMassKg} kg | Burn: ×${item.fuelBurnRate}`;
+            } else if (item.generationW) {
+                metaStr = `Power: +${item.generationW} W | Battery: ${item.batteryPool} Ah | Recharge: +${item.rechargeRate}/s`;
+            } else if (item.range) {
+                metaStr = `Range: ${item.range}m | Scrap: +${Math.round((item.scrapBonus - 1) * 100)}% | Type: ${item.type.toUpperCase()}`;
+            } else if (item.coveragePercent) {
+                metaStr = `Coverage: ${item.coveragePercent}% | Latency: ${item.latencyMs}ms | Radar: ×${item.radarRangeBonus}`;
+            }
+
+            const heritageBadge = item.heritage ? `<div class="subsystem-opt-heritage">${item.heritage}</div>` : '';
+
+            div.innerHTML = `
+                <div class="subsystem-opt-title">${item.name}</div>
+                ${heritageBadge}
+                <div class="subsystem-opt-meta">${metaStr}</div>
+            `;
+
+            div.addEventListener('click', () => {
+                window.soundSystem?.playUiClick();
+                onSelectCallback(item.id);
+            });
+
+            container.appendChild(div);
+        });
+    }
+
+    /**
+     * Compute Live Engineering Budgets and Formal Review Board Gateway
+     */
+    calculateBudgets() {
+        const lv = PARTS_DATA.launchVehicles[this.selectedLaunchVehicleId] || PARTS_DATA.launchVehicles.falcon9;
+        const bus = PARTS_DATA.buses[this.selectedBusId] || PARTS_DATA.buses.collector;
+        const prop = PARTS_DATA.propulsionTanks[this.selectedPropulsionId] || PARTS_DATA.propulsionTanks.hypergolic;
+        const power = PARTS_DATA.powerSystems[this.selectedPowerId] || PARTS_DATA.powerSystems.deployable_wings;
+        const eq = PARTS_DATA.equipment[this.selectedEquipmentId] || PARTS_DATA.equipment.net;
+        const comms = PARTS_DATA.groundComms[this.selectedGroundCommsId] || PARTS_DATA.groundComms.regional_passes;
+        const client = PARTS_DATA.clients[this.selectedClientId] || PARTS_DATA.clients.esa;
+
+        // Mass Calculations
+        const dryMassKg = bus.dryMassKg + (prop.dryMassKg || 0) + (power.massKg || 0) + (eq.massKg || 0) + (comms.massKg || 0);
+        const propellantMassKg = (prop.wetMassKg || 0) - (prop.dryMassKg || 0);
+        const totalWetMassKg = dryMassKg + propellantMassKg;
+        const launcherCapacityKg = lv.payloadToLeoKg;
+        const massMarginKg = launcherCapacityKg - totalWetMassKg;
+        const massMarginPct = Math.round((massMarginKg / launcherCapacityKg) * 100);
+
+        // Volume Calculations
+        const totalVolumeM3 = (bus.volumeM3 || 0) + (power.volumeM3 || 0) + (eq.volumeM3 || 0);
+        const fairingVolumeM3 = lv.fairingVolumeM3;
+        const volumeMarginM3 = fairingVolumeM3 - totalVolumeM3;
+        const volumeMarginPct = Math.round((volumeMarginM3 / fairingVolumeM3) * 100);
+
+        // Power Calculations
+        const continuousPowerDrawW = (bus.basePowerDrawW || 0) + (eq.powerDrawW || 0) + (comms.powerDrawW || 0) + (prop.powerDrawW || 0);
+        const powerGenerationW = power.generationW;
+        const powerMarginW = powerGenerationW - continuousPowerDrawW;
+        const powerMarginPct = Math.round((powerMarginW / powerGenerationW) * 100);
+
+        // Lifecycle Hardware + Launch Cost
+        const totalCostScrap = lv.cost + bus.cost + prop.cost + power.cost + eq.cost + comms.cost;
+
+        // Formal Design Review Checklist & Gateway Verdict
+        const checks = [
+            {
+                name: 'Launcher Mass Margin',
+                target: `Wet Mass ≤ ${launcherCapacityKg} kg`,
+                actual: `${totalWetMassKg} kg (Margin: ${massMarginPct}%)`,
+                isPass: massMarginKg >= 0,
+                isWarning: massMarginKg >= 0 && massMarginPct < 15
+            },
+            {
+                name: 'Fairing Volume Envelope',
+                target: `Volume ≤ ${fairingVolumeM3} m³`,
+                actual: `${totalVolumeM3.toFixed(1)} m³ (Margin: ${volumeMarginPct}%)`,
+                isPass: volumeMarginM3 >= 0,
+                isWarning: false
+            },
+            {
+                name: 'Continuous Power Balance',
+                target: `Generation ≥ ${continuousPowerDrawW} W`,
+                actual: `+${powerGenerationW} W vs -${continuousPowerDrawW} W (${powerMarginPct}%)`,
+                isPass: powerMarginW >= 0,
+                isWarning: powerMarginPct < 15
+            },
+            {
+                name: 'Client Mitigation Protocol',
+                target: `Max Collisions: ≤ ${client.maxCollisionsAllowed}`,
+                actual: `${client.name} Standards`,
+                isPass: true,
+                isWarning: client.maxCollisionsAllowed <= 1
+            }
+        ];
+
+        let reviewStatus = 'PASS';
+        let failureReason = '';
+
+        if (massMarginKg < 0) {
+            reviewStatus = 'FAIL';
+            failureReason = `Total spacecraft wet mass (${totalWetMassKg} kg) exceeds ${lv.name} orbital capacity (${launcherCapacityKg} kg) by ${Math.abs(massMarginKg)} kg. Choose a larger launch vehicle or lighter subsystems.`;
+        } else if (volumeMarginM3 < 0) {
+            reviewStatus = 'FAIL';
+            failureReason = `Payload volume (${totalVolumeM3.toFixed(1)} m³) exceeds fairing capacity (${fairingVolumeM3} m³).`;
+        } else if (powerMarginW < 0 || massMarginPct < 15) {
+            reviewStatus = 'WARNING';
+        }
+
+        return {
+            lv, bus, prop, power, eq, comms, client,
+            dryMassKg, propellantMassKg, totalWetMassKg, launcherCapacityKg, massMarginKg, massMarginPct,
+            totalVolumeM3, fairingVolumeM3, volumeMarginM3, volumeMarginPct,
+            continuousPowerDrawW, powerGenerationW, powerMarginW, powerMarginPct,
+            totalCostScrap, checks, reviewStatus, failureReason
+        };
+    }
+
+    renderBudgetsAndReview() {
+        const budgets = this.calculateBudgets();
+        const dashboard = document.getElementById('budgets-dashboard');
+        const reviewBoard = document.getElementById('design-review-board');
+
+        if (dashboard) {
+            const massFillClass = budgets.massMarginKg < 0 ? 'danger' : (budgets.massMarginPct < 15 ? 'warning' : '');
+            const volumeFillClass = budgets.volumeMarginM3 < 0 ? 'danger' : '';
+            const powerFillClass = budgets.powerMarginW < 0 ? 'danger' : (budgets.powerMarginPct < 15 ? 'warning' : '');
+
+            const massPctClamped = Math.max(0, Math.min(100, Math.round((budgets.totalWetMassKg / budgets.launcherCapacityKg) * 100)));
+            const volPctClamped = Math.max(0, Math.min(100, Math.round((budgets.totalVolumeM3 / budgets.fairingVolumeM3) * 100)));
+            const powerPctClamped = Math.max(0, Math.min(100, Math.round((budgets.continuousPowerDrawW / budgets.powerGenerationW) * 100)));
+
+            dashboard.innerHTML = `
+                <!-- Mass Budget -->
+                <div class="budget-row">
+                    <div class="budget-header">
+                        <span>MASS BUDGET (WET / CAPACITY)</span>
+                        <strong>${budgets.totalWetMassKg} kg / ${budgets.launcherCapacityKg} kg (${budgets.massMarginPct}% Margin)</strong>
+                    </div>
+                    <div class="budget-bar-track">
+                        <div class="budget-bar-fill ${massFillClass}" style="width: ${massPctClamped}%;"></div>
+                    </div>
+                </div>
+
+                <!-- Volume Budget -->
+                <div class="budget-row">
+                    <div class="budget-header">
+                        <span>FAIRING VOLUME ENVELOPE</span>
+                        <strong>${budgets.totalVolumeM3.toFixed(1)} m³ / ${budgets.fairingVolumeM3} m³ (${budgets.volumeMarginPct}% Margin)</strong>
+                    </div>
+                    <div class="budget-bar-track">
+                        <div class="budget-bar-fill ${volumeFillClass}" style="width: ${volPctClamped}%;"></div>
+                    </div>
+                </div>
+
+                <!-- Power Budget -->
+                <div class="budget-row">
+                    <div class="budget-header">
+                        <span>POWER BUDGET (LOAD / GENERATION)</span>
+                        <strong>${budgets.continuousPowerDrawW} W / +${budgets.powerGenerationW} W (${budgets.powerMarginPct}% Margin)</strong>
+                    </div>
+                    <div class="budget-bar-track">
+                        <div class="budget-bar-fill ${powerFillClass}" style="width: ${powerPctClamped}%;"></div>
+                    </div>
+                </div>
+
+                <!-- Comms & Cost Metrics -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: var(--font-mono); font-size: 0.85rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px;">
+                    <div>Comms Coverage: <strong style="color: var(--clean);">${budgets.comms.coveragePercent}% (${budgets.comms.latencyMs}ms)</strong></div>
+                    <div>Radar Warning Range: <strong style="color: var(--accent-cyan);">×${budgets.comms.radarRangeBonus}</strong></div>
+                    <div>Delta-V Propellant Pool: <strong style="color: var(--salvage);">${budgets.prop.fuelCapacityL} L</strong></div>
+                    <div>Total Hardware Cost: <strong style="color: var(--salvage);">${budgets.totalCostScrap} Scrap</strong></div>
+                </div>
+            `;
+        }
+
+        if (reviewBoard) {
+            let bannerClass = 'pass';
+            let bannerText = 'DESIGN REVIEW: PASS [FLIGHT AUTHORIZED]';
+
+            if (budgets.reviewStatus === 'FAIL') {
+                bannerClass = 'fail';
+                bannerText = 'DESIGN REVIEW: FAIL [LAUNCH BLOCKED]';
+            } else if (budgets.reviewStatus === 'WARNING') {
+                bannerClass = 'warning';
+                bannerText = 'DESIGN REVIEW: WARNING [MARGINS TIGHT]';
+            }
+
+            let checkListHtml = '';
+            budgets.checks.forEach(chk => {
+                const iconClass = !chk.isPass ? 'fail' : (chk.isWarning ? 'warning' : 'pass');
+                const iconSymbol = !chk.isPass ? '[X]' : (chk.isWarning ? '[!]' : '[√]');
+                checkListHtml += `
+                    <div class="check-item">
+                        <span class="status-icon ${iconClass}">${iconSymbol}</span>
+                        <span style="flex: 1;"><strong>${chk.name}:</strong> ${chk.actual}</span>
+                    </div>
+                `;
+            });
+
+            const failNotice = budgets.failureReason ? `
+                <div style="background: #380b0f; border: 1px solid var(--danger); color: #fca5a5; font-family: var(--font-mono); font-size: 0.82rem; padding: 8px; margin-top: 8px;">
+                    <strong>CRITICAL DEFICIT:</strong> ${budgets.failureReason}
+                </div>
+            ` : '';
+
+            reviewBoard.innerHTML = `
+                <div class="review-banner ${bannerClass}">${bannerText}</div>
+                <div class="review-check-list">${checkListHtml}</div>
+                ${failNotice}
+            `;
+        }
+
+        // Update Launch Button appearance and state based on formal review gateway
+        if (this.launchMissionBtn) {
+            const isBlocked = budgets.reviewStatus === 'FAIL';
+            this.launchMissionBtn.disabled = false; // Always keep clickable so user receives helpful alert explaining deficits!
+            this.launchMissionBtn.style.opacity = isBlocked ? '0.75' : '1.0';
+            this.launchMissionBtn.style.cursor = 'pointer';
+            this.launchMissionBtn.style.background = isBlocked ? '#451a1a' : '';
+            this.launchMissionBtn.style.borderColor = isBlocked ? 'var(--danger)' : '';
+            this.launchMissionBtn.innerText = isBlocked ? '⚠️ [DEFICIT DETECTED - CLICK TO REVIEW]' : '🚀 LAUNCH ORBITAL INSERTION';
+        }
+    }
+
+    /**
+     * Design Sharing Code (Deterministic compact string)
+     */
+    generateDesignCode() {
+        const lvlStr = this.selectedLevelId.toString().padStart(2, '0');
+        return `OC2-M${lvlStr}-CLI_${this.selectedClientId}-LV_${this.selectedLaunchVehicleId}-BUS_${this.selectedBusId}-PRP_${this.selectedPropulsionId}-PWR_${this.selectedPowerId}-EQ_${this.selectedEquipmentId}-COM_${this.selectedGroundCommsId}`;
+    }
+
+    parseAndApplyDesignCode(codeStr) {
+        if (!codeStr || !codeStr.startsWith('OC2-')) return false;
+
+        try {
+            const parts = codeStr.split('-');
+            parts.forEach(part => {
+                if (part.startsWith('M')) {
+                    const num = parseInt(part.replace('M', ''), 10);
+                    if (num >= 1 && num <= 8) this.selectedLevelId = num;
+                } else if (part.startsWith('CLI_')) {
+                    const val = part.replace('CLI_', '');
+                    if (PARTS_DATA.clients[val]) this.selectedClientId = val;
+                } else if (part.startsWith('LV_')) {
+                    const val = part.replace('LV_', '');
+                    if (PARTS_DATA.launchVehicles[val]) this.selectedLaunchVehicleId = val;
+                } else if (part.startsWith('BUS_')) {
+                    const val = part.replace('BUS_', '');
+                    if (PARTS_DATA.buses[val]) {
+                        this.selectedBusId = val;
+                        this.selectedShipId = val;
+                    }
+                } else if (part.startsWith('PRP_')) {
+                    const val = part.replace('PRP_', '');
+                    if (PARTS_DATA.propulsionTanks[val]) this.selectedPropulsionId = val;
+                } else if (part.startsWith('PWR_')) {
+                    const val = part.replace('PWR_', '');
+                    if (PARTS_DATA.powerSystems[val]) this.selectedPowerId = val;
+                } else if (part.startsWith('EQ_')) {
+                    const val = part.replace('EQ_', '');
+                    if (PARTS_DATA.equipment[val]) this.selectedEquipmentId = val;
+                } else if (part.startsWith('COM_')) {
+                    const val = part.replace('COM_', '');
+                    if (PARTS_DATA.groundComms[val]) this.selectedGroundCommsId = val;
+                }
+            });
+
+            this.save.selectedShip = this.selectedBusId;
+            this.save.selectedEquipment = this.selectedEquipmentId;
+            this.save.selectedClientId = this.selectedClientId;
+            this.save.selectedLaunchVehicleId = this.selectedLaunchVehicleId;
+            this.save.selectedPropulsionId = this.selectedPropulsionId;
+            this.save.selectedPowerId = this.selectedPowerId;
+            this.save.selectedGroundCommsId = this.selectedGroundCommsId;
+            OrbitalStorage.save(this.save);
+
+            this.renderStep4PointDesign();
+            return true;
+        } catch (err) {
+            console.error('Error parsing design code:', err);
+            return false;
+        }
+    }
+
+    loadQuickDemoPreset() {
+        // Quick Demo loads verified balanced preset for Sector 1 and immediately launches live mission!
+        this.selectedLevelId = 1;
+        this.adoptArchitecture('balanced');
+        window.soundSystem?.playCollect(3);
+        this.launchConfiguredMission();
+    }
+
+    openShareCodeModal() {
+        const modal = this.screens.shareCodeModal;
+        const input = document.getElementById('share-code-input');
+        const status = document.getElementById('share-code-status');
+        if (!modal) return;
+
+        if (input) input.value = this.generateDesignCode();
+        if (status) status.innerHTML = '';
+        modal.classList.remove('hidden');
+        window.soundSystem?.playUiClick();
+    }
+
+    /**
+     * Render Persistent Hangar Shop
+     */
+    renderHangarShop() {
+        this.save = OrbitalStorage.load();
+        const creditsElem = document.getElementById('hangar-credits-val');
+        if (creditsElem) {
+            creditsElem.innerText = this.save.credits.toLocaleString();
+        }
+
+        const shopContainer = document.getElementById('hangar-upgrades-list');
+        if (!shopContainer) return;
+        shopContainer.innerHTML = '';
+
+        Object.values(GAME_DATA.UPGRADES).forEach(upg => {
+            const currentLevel = this.save.upgrades[upg.id] || 0;
+            const isMax = currentLevel >= upg.maxLevel;
+            const cost = isMax ? null : upg.costPerLevel[currentLevel];
+            const canAfford = !isMax && this.save.credits >= cost;
+
+            const div = document.createElement('div');
+            div.className = 'upgrade-row';
+            div.innerHTML = `
+                <div class="upgrade-info">
+                    <div class="upgrade-title">${upg.name} <span class="upgrade-lvl">TIER ${currentLevel}/${upg.maxLevel}</span></div>
+                    <div class="upgrade-desc">${upg.description}</div>
+                    <div class="upgrade-effect">Bonus: ${upg.effectDesc}</div>
+                </div>
+                <div class="upgrade-action">
+                    ${isMax ? '<button class="btn-upgrade maxed" disabled>MAX TIER</button>' : 
+                        `<button class="btn-upgrade ${canAfford ? 'affordable' : 'unaffordable'}" ${!canAfford ? 'disabled' : ''}>
+                            UPGRADE (${cost} SCRAP)
+                         </button>`
+                    }
+                </div>
+            `;
+
+            const btn = div.querySelector('.btn-upgrade');
+            if (btn && canAfford) {
+                btn.addEventListener('click', () => {
+                    this.save.credits -= cost;
+                    this.save.upgrades[upg.id] = currentLevel + 1;
+                    OrbitalStorage.save(this.save);
+                    window.soundSystem?.playCollect(3);
+                    this.renderHangarShop();
+                });
+            }
+
+            shopContainer.appendChild(div);
+        });
+    }
+
+    /**
+     * Render Leaderboard & Career Stats (Real Players Only)
+     */
+    async renderLeaderboard() {
+        this.save = OrbitalStorage.load();
+
+        const sDebris = document.getElementById('stat-total-debris');
+        if (sDebris) sDebris.innerText = (this.save.totalDebrisRecycled || 0).toLocaleString();
+        const sMass = document.getElementById('stat-total-mass');
+        if (sMass) sMass.innerText = ((this.save.totalMassDeorbitedKg || 0) / 1000).toFixed(1) + ' t';
+        const sMissions = document.getElementById('stat-total-missions');
+        if (sMissions) sMissions.innerText = this.save.missionsCompleted || 0;
+        const sCredits = document.getElementById('stat-total-credits');
+        if (sCredits) sCredits.innerText = (this.save.credits || 0).toLocaleString();
+
+        const activeName = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || this.save.commanderName || 'Cadet';
+        const pilotPill = document.getElementById('leaderboard-current-pilot');
+        if (pilotPill) pilotPill.innerText = activeName.toUpperCase();
+
+        const tbody = document.getElementById('leaderboard-tbody');
+        if (!tbody) return;
+
+        let records = [];
+        let isLive = false;
+
+        if (window.LeaderboardService) {
+            try {
+                const res = await window.LeaderboardService.fetchTopScores();
+                records = (res && Array.isArray(res.records)) ? res.records : [];
+                isLive = !!res.isLive;
+            } catch (e) {
+                console.warn('[UI] Leaderboard fetch error:', e);
+            }
+        }
+
+        // Fallback to local save if service returned empty or not available
+        if (records.length === 0 && Array.isArray(this.save.leaderboard)) {
+            records = this.save.leaderboard.filter(e => e && e.date !== 'Archive Record' && e.name !== 'Cmdr. Shepard' && e.name !== 'Dr. Ryan Stone' && e.name !== 'Capt. Cooper' && e.name !== 'Aegis Vanguard');
+        }
+
+        // Retroactively attribute runs logged as 'Commander' or 'Cadet' to the real active commander
+        if (activeName && activeName !== 'Cadet' && activeName !== 'Commander') {
+            let updated = false;
+            records.forEach(entry => {
+                if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                    entry.name = activeName;
+                    updated = true;
+                }
+            });
+            if (updated && Array.isArray(this.save.leaderboard)) {
+                this.save.leaderboard.forEach(entry => {
+                    if (entry && (entry.name === 'Commander' || entry.name === 'Cadet' || !entry.name)) {
+                        entry.name = activeName;
+                    }
+                });
+                OrbitalStorage.save(this.save);
+            }
+        }
+
+        // Apply sorting (Score vs Debris)
+        this.leaderboardSortKey = this.leaderboardSortKey || 'score';
+        if (this.leaderboardSortKey === 'debris') {
+            records.sort((a, b) => (b.debris || 0) - (a.debris || 0));
+        } else {
+            records.sort((a, b) => (b.score || 0) - (a.score || 0));
+        }
+
+        // Update Sort UI indicators
+        const iconScore = document.getElementById('sort-icon-score');
+        const iconDebris = document.getElementById('sort-icon-debris');
+        const btnScore = document.getElementById('btn-sort-score');
+        const btnDebris = document.getElementById('btn-sort-debris');
+
+        if (iconScore) iconScore.innerText = this.leaderboardSortKey === 'score' ? '▼' : '↕';
+        if (iconDebris) iconDebris.innerText = this.leaderboardSortKey === 'debris' ? '▼' : '↕';
+        if (btnScore) {
+            btnScore.style.color = this.leaderboardSortKey === 'score' ? 'var(--accent-cyan)' : '#94a3b8';
+            btnScore.innerText = `SCORE ${this.leaderboardSortKey === 'score' ? '▼' : '↕'}`;
+        }
+        if (btnDebris) {
+            btnDebris.style.color = this.leaderboardSortKey === 'debris' ? 'var(--accent-cyan)' : '#94a3b8';
+            btnDebris.innerText = `DEBRIS ${this.leaderboardSortKey === 'debris' ? '▼' : '↕'}`;
+        }
+
+        // Update Pilot Career Best pill
+        const bestPill = document.getElementById('leaderboard-pilot-best');
+        if (bestPill) {
+            const myRuns = records.filter(r => r.name && activeName && r.name.toLowerCase() === activeName.toLowerCase());
+            if (myRuns.length > 0) {
+                const maxScore = Math.max(...myRuns.map(r => r.score || 0));
+                const maxDebris = Math.max(...myRuns.map(r => r.debris || 0));
+                bestPill.innerText = `// BEST: ${maxScore.toLocaleString()} PTS (${maxDebris} DEBRIS)`;
+            } else {
+                bestPill.innerText = '';
+            }
+        }
+
+        const netStatus = document.getElementById('leaderboard-network-status');
+        if (netStatus) {
+            netStatus.innerHTML = isLive
+                ? '🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>'
+                : '💻 <span style="color: var(--accent-cyan);">LOCAL PILOT RECORDS</span>';
+        }
+
+        tbody.innerHTML = '';
+        if (records.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 32px; font-family: var(--font-mono); color: var(--ink-muted);">
+                        NO REAL FLIGHT RECORDS RECORDED YET.<br><br>
+                        <span style="font-size: 0.85rem; color: var(--accent-cyan);">
+                            Enlist your Callsign and launch a mission to take the #01 rank!
+                        </span>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        records.forEach((entry, idx) => {
+            const row = document.createElement('tr');
+            const statusTag = entry.status === 'FAILED' ? ' <span style="color: var(--danger); font-size: 0.72rem;">[FAILED]</span>' : '';
+            const isMe = (activeName && entry.name && activeName.toLowerCase() === entry.name.toLowerCase());
+            if (isMe) {
+                row.style.background = 'rgba(0, 243, 255, 0.08)';
+            }
+            row.innerHTML = `
+                <td>#${idx < 9 ? '0' : ''}${idx + 1}</td>
+                <td><strong style="color: ${isMe ? 'var(--accent-cyan)' : '#fff'};">${entry.name || 'Commander'}</strong>${isMe ? ' <span style="font-size: 0.7rem; color: var(--salvage); margin-left: 4px;">[YOU]</span>' : ''}</td>
+                <td>${(entry.mission || 'LEO Corridor').trim()}${statusTag}</td>
+                <td style="font-weight: ${this.leaderboardSortKey === 'debris' ? 'bold; color: var(--salvage)' : 'normal'};">${entry.debris || 0}</td>
+                <td class="score-cell" style="font-weight: ${this.leaderboardSortKey === 'score' ? 'bold' : 'normal'};">${(entry.score || 0).toLocaleString()} PTS</td>
+                <td>${entry.date || 'Recent'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    /**
+     * Commander Authentication & Callsign Registry UI
+     */
+    initAuthUi() {
+        this.authMode = 'login';
+        this.leaderboardSortKey = 'score';
+        this.updateAuthDisplay();
+
+        // Listen for global auth changes
+        window.addEventListener('orbital_auth_changed', () => {
+            this.updateAuthDisplay();
+            this.renderLeaderboard();
+        });
+
+        // Switch commander button in Main Menu
+        document.getElementById('btn-auth-switch')?.addEventListener('click', () => {
+            this.openAuthModal();
+        });
+
+        // Enlist / switch button in Leaderboard screen
+        document.getElementById('btn-leaderboard-auth')?.addEventListener('click', () => {
+            this.openAuthModal();
+        });
+
+        // Claim previous local runs as active commander
+        document.getElementById('btn-leaderboard-claim')?.addEventListener('click', () => {
+            const currentCallsign = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser().callsign) || this.save.commanderName || 'Cadet';
+            if (currentCallsign === 'Cadet' || currentCallsign === 'Commander') {
+                alert('Please ENLIST or LOGIN with your custom Commander Callsign first before claiming runs!');
+                this.openAuthModal();
+                return;
+            }
+            if (window.LeaderboardService) {
+                const count = window.LeaderboardService.claimLocalRuns(currentCallsign);
+                window.soundSystem?.playCollect?.();
+                alert(`✓ Successfully claimed ${count} flight record(s) under Commander ${currentCallsign}!`);
+                this.renderLeaderboard();
+            }
+        });
+
+        // Clear local runs button
+        document.getElementById('btn-leaderboard-clear')?.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear your local leaderboard flight records?')) {
+                if (window.LeaderboardService) {
+                    window.LeaderboardService.clearLocalRuns();
+                }
+                window.soundSystem?.playExplosion?.();
+                this.renderLeaderboard();
+            }
+        });
+
+        // Sorting buttons & column headers
+        const setSort = (key) => {
+            this.leaderboardSortKey = key;
+            window.soundSystem?.playUiClick?.();
+            this.renderLeaderboard();
+        };
+
+        document.getElementById('btn-sort-score')?.addEventListener('click', () => setSort('score'));
+        document.getElementById('btn-sort-debris')?.addEventListener('click', () => setSort('debris'));
+        document.getElementById('th-sort-score')?.addEventListener('click', () => setSort('score'));
+        document.getElementById('th-sort-debris')?.addEventListener('click', () => setSort('debris'));
+
+        // Refresh Leaderboard button
+        document.getElementById('btn-refresh-leaderboard')?.addEventListener('click', () => {
+            window.soundSystem?.playUiClick();
+            this.renderLeaderboard();
+        });
+
+        // Auth modal close button
+        document.getElementById('btn-close-auth-modal')?.addEventListener('click', () => {
+            this.closeAuthModal();
+        });
+
+        // Tab: Login vs Register
+        const tabLogin = document.getElementById('tab-auth-login');
+        const tabRegister = document.getElementById('tab-auth-register');
+        const btnSubmit = document.getElementById('btn-auth-submit');
+        const statusMsg = document.getElementById('auth-status-msg');
+
+        tabLogin?.addEventListener('click', () => {
+            this.authMode = 'login';
+            tabLogin.classList.add('active');
+            tabRegister?.classList.remove('active');
+            if (btnSubmit) btnSubmit.innerText = 'AUTHENTICATE & LOG IN 🚀';
+            if (statusMsg) statusMsg.innerText = '';
+            window.soundSystem?.playUiClick();
+        });
+
+        tabRegister?.addEventListener('click', () => {
+            this.authMode = 'register';
+            tabRegister.classList.add('active');
+            tabLogin?.classList.remove('active');
+            if (btnSubmit) btnSubmit.innerText = 'ENLIST NEW CALLSIGN 🚀';
+            if (statusMsg) statusMsg.innerText = '';
+            window.soundSystem?.playUiClick();
+        });
+
+        // Submit form
+        btnSubmit?.addEventListener('click', async () => {
+            const callsignInput = document.getElementById('input-auth-callsign');
+            const pinInput = document.getElementById('input-auth-pin');
+            const callsign = (callsignInput?.value || '').trim();
+            const pin = (pinInput?.value || '').trim();
+
+            if (!callsign) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ Please enter a Commander Callsign.';
+                }
+                return;
+            }
+            if (!pin || pin.length < 4) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ Security PIN must be at least 4 digits.';
+                }
+                return;
+            }
+
+            if (statusMsg) {
+                statusMsg.style.color = 'var(--accent-cyan)';
+                statusMsg.innerText = 'Connecting to orbital registry...';
+            }
+
+            try {
+                if (!window.OrbitalAuth) throw new Error('Auth service initializing...');
+                let res;
+                if (this.authMode === 'register') {
+                    res = await window.OrbitalAuth.register(callsign, pin);
+                } else {
+                    res = await window.OrbitalAuth.login(callsign, pin);
+                }
+
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--clean)';
+                    statusMsg.innerText = '✓ ' + (res.message || 'Authenticated successfully!');
+                }
+                window.soundSystem?.playCollect?.();
+
+                setTimeout(() => {
+                    this.closeAuthModal();
+                    this.updateAuthDisplay();
+                    this.renderLeaderboard();
+                }, 800);
+            } catch (err) {
+                if (statusMsg) {
+                    statusMsg.style.color = 'var(--danger)';
+                    statusMsg.innerText = '⚠️ ' + err.message;
+                }
+                window.soundSystem?.playWarning?.();
+            }
+        });
+
+        // Guest button
+        document.getElementById('btn-auth-guest')?.addEventListener('click', () => {
+            if (window.OrbitalAuth) {
+                window.OrbitalAuth.setGuest();
+            }
+            if (statusMsg) {
+                statusMsg.style.color = 'var(--salvage)';
+                statusMsg.innerText = 'Logged in as temporary Guest Cadet.';
+            }
+            window.soundSystem?.playUiClick();
+            setTimeout(() => {
+                this.closeAuthModal();
+                this.updateAuthDisplay();
+            }, 500);
+        });
+    }
+
+    openAuthModal() {
+        const modal = document.getElementById('modal-auth');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        const statusMsg = document.getElementById('auth-status-msg');
+        if (statusMsg) statusMsg.innerText = '';
+        window.soundSystem?.playUiClick();
+    }
+
+    closeAuthModal() {
+        const modal = document.getElementById('modal-auth');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        window.soundSystem?.playUiClick();
+    }
+
+    updateAuthDisplay() {
+        const user = (window.OrbitalAuth && window.OrbitalAuth.getCurrentUser()) || { callsign: 'Cadet', isGuest: true };
+        const nameElem = document.getElementById('auth-current-callsign');
+        if (nameElem) nameElem.innerText = user.callsign.toUpperCase();
+
+        const pilotPill = document.getElementById('leaderboard-current-pilot');
+        if (pilotPill) pilotPill.innerText = user.callsign.toUpperCase();
+
+        const netElem = document.getElementById('auth-network-indicator');
+        if (netElem) {
+            if (user.isGuest) {
+                netElem.innerText = 'GUEST';
+                netElem.style.borderColor = 'var(--salvage)';
+                netElem.style.color = 'var(--salvage)';
+            } else {
+                netElem.innerText = 'ENLISTED';
+                netElem.style.borderColor = 'var(--clean)';
+                netElem.style.color = 'var(--clean)';
+            }
+        }
+    }
+
+    /**
+     * Render Persistent Campaign Mission Board (Phase 8a)
+     */
+    renderMissionBoard() {
+        try {
+            this.save = OrbitalStorage.load();
+            if (!this.save.availableContracts || !Array.isArray(this.save.availableContracts) || this.save.availableContracts.length === 0) {
+                if (typeof CampaignManager !== 'undefined') {
+                    this.save.availableContracts = CampaignManager.generateContractPool(this.save);
+                    OrbitalStorage.save(this.save);
+                }
+            }
+
+            // 1. Campaign Standing Bar
+            const seedEl = document.getElementById('board-campaign-seed');
+            if (seedEl) seedEl.innerText = `SEED-${this.save.campaignSeed || '000000'}`;
+
+            const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
+            const repAgencyBar = document.getElementById('board-rep-agency-bar');
+            const repAgencyVal = document.getElementById('board-rep-agency-val');
+            if (repAgencyBar) repAgencyBar.style.width = `${rep.agency || 50}%`;
+            if (repAgencyVal) repAgencyVal.innerText = `${rep.agency || 50}%`;
+
+            const repCommBar = document.getElementById('board-rep-commercial-bar');
+            const repCommVal = document.getElementById('board-rep-commercial-val');
+            if (repCommBar) repCommBar.style.width = `${rep.commercial || 50}%`;
+            if (repCommVal) repCommVal.innerText = `${rep.commercial || 50}%`;
+
+            const repPubBar = document.getElementById('board-rep-public-bar');
+            const repPubVal = document.getElementById('board-rep-public-val');
+            if (repPubBar) repPubBar.style.width = `${rep.public || 50}%`;
+            if (repPubVal) repPubVal.innerText = `${rep.public || 50}%`;
+
+            const creditsEl = document.getElementById('board-credits-val');
+            if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
+
+            // Phase 8c: World Clock & Solar Status
+            if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.getFormattedDate === 'function') {
+                const clock = CampaignManager.getFormattedDate(this.save);
+                const clockEl = document.getElementById('board-epoch-clock');
+                if (clockEl) clockEl.innerText = clock.fullString;
+                const solarBadge = document.getElementById('board-solar-badge');
+                if (solarBadge) {
+                    solarBadge.innerText = `[${clock.solarStatus}]`;
+                    solarBadge.className = clock.solarLevel === 'HIGH' ? 'badge-solar-storm' : (clock.solarLevel === 'MODERATE' ? 'badge-solar-elevated' : 'badge-solar-quiet');
+                }
+            }
+
+            // 1b. Render Active Storylet Dilemma (Phase 8b)
+            this.renderStoryletDilemma();
+
+            // 2. Render Contract Cards
+            const grid = document.getElementById('contracts-card-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const contracts = (this.save && Array.isArray(this.save.availableContracts)) ? this.save.availableContracts : [];
+            if (contracts.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--ink-muted); font-family: var(--font-mono);">
+                        NO ACTIVE CONTRACTS IN LOCAL REGISTER.<br><br>
+                        <button type="button" class="btn-primary" id="btn-empty-solicit" style="margin-top: 12px; padding: 10px 20px;">
+                            SOLICIT NEW CONTRACTS (-50 SCRAP)
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-empty-solicit')?.addEventListener('click', () => this.rerollContracts());
+                return;
+            }
+
+            contracts.forEach(contract => {
+                if (!contract) return;
+                const card = document.createElement('div');
+                card.className = 'contract-card';
+
+                const risk = contract.risk || 'Moderate';
+                const riskClass = `risk-${risk.toLowerCase()}`;
+                const sKey = contract.sectorKey || `sector_0${contract.sectorId || 1}`;
+                const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined)
+                    ? this.save.sectorHealth[sKey]
+                    : (contract.sectorHealth || 70);
+                const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+                const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+
+                // Modifiers badges
+                let modsHtml = '';
+                if (contract.modifiers && Array.isArray(contract.modifiers) && contract.modifiers.length > 0) {
+                    contract.modifiers.forEach(mKey => {
+                        const m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
+                        if (m) {
+                            modsHtml += `<span class="modifier-badge" title="${m.desc}">${m.icon} ${m.badge}</span>`;
+                        }
+                    });
+                } else {
+                    modsHtml = `<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>`;
+                }
+
+                // Objective badge
+                const objKey = contract.objective || 'quota';
+                const obj = contract.objectiveData || ((typeof CONTRACT_OBJECTIVES !== 'undefined') ? CONTRACT_OBJECTIVES[objKey] : null) || { name: 'QUOTA', badge: 'QUOTA', icon: '🎯' };
+
+                // Material chips
+                let matsHtml = '';
+                if (contract.materialsReward) {
+                    if (contract.materialsReward.metal) matsHtml += `<span class="mat-chip">🔩 +${contract.materialsReward.metal}</span>`;
+                    if (contract.materialsReward.cells) matsHtml += `<span class="mat-chip">🔋 +${contract.materialsReward.cells}</span>`;
+                    if (contract.materialsReward.chips) matsHtml += `<span class="mat-chip">💾 +${contract.materialsReward.chips}</span>`;
+                }
+
+                const client = contract.client || { icon: '🌐', name: 'Orbital Authority' };
+                const title = contract.title || `${contract.sectorName || 'Orbital Sector'} // ${obj.name?.toUpperCase() || 'QUOTA'}`;
+                const targetText = `${contract.targetQuota || 6} ${objKey === 'passivate' ? 'Stages' : (objKey === 'recover' ? 'Core' : 'Items')}`;
+                const suggestedBus = contract.requirements?.suggestedBus || 'SCOUT';
+                const timeLimit = contract.timeLimit || 120;
+                const scrapPayout = contract.scrapPayout || 500;
+                const scoreBounty = contract.scoreBounty || 1000;
+                const desc = contract.description || 'Cleanse orbital hazard cluster in designated orbital lane.';
+
+                card.innerHTML = `
+                    <div class="contract-card-header">
+                        <div>
+                            <div class="contract-client">${client.icon} ${client.name}</div>
+                            <div class="contract-title">${title}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="objective-badge ${objKey}">${obj.icon} ${obj.badge}</span>
+                            <div class="contract-risk-tag ${riskClass}">RISK: ${risk.toUpperCase()}</div>
+                        </div>
+                    </div>
+
+                    <div class="contract-modifiers-row">
+                        ${modsHtml}
+                    </div>
+
+                    <p class="contract-desc">${desc}</p>
+
+                    <div class="contract-sector-health">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 3px; font-family: var(--font-mono);">
+                            <span>ORBITAL SECTOR INTEGRITY:</span>
+                            <span style="color: ${healthColor};">${sHealth}% HEALTH</span>
+                        </div>
+                        <div class="campaign-health-bar">
+                            <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                        </div>
+                        ${carryover > 0 ? `<div style="font-size: 0.72rem; color: var(--danger); margin-top: 3px;">⚠️ ${carryover} residual fragments tracked in orbit.</div>` : ''}
+                    </div>
+
+                    <div class="contract-metrics-grid">
+                        <div class="metric-cell">
+                            <span class="metric-lbl">TARGET:</span>
+                            <span class="metric-v">${targetText}</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">TIME WINDOW:</span>
+                            <span class="metric-v">${timeLimit}s</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">SUGGESTED BUS:</span>
+                            <span class="metric-v" style="text-transform: uppercase;">${suggestedBus}</span>
+                        </div>
+                        <div class="metric-cell">
+                            <span class="metric-lbl">PAYOUT:</span>
+                            <span class="metric-v" style="color: var(--salvage); font-weight: bold;">+${scrapPayout} Scrap</span>
+                        </div>
+                    </div>
+
+                    <div class="contract-card-footer">
+                        <div class="contract-rewards-summary">
+                            ${matsHtml}
+                            <span style="font-size: 0.75rem; color: var(--accent-cyan);">+${scoreBounty} Score</span>
+                        </div>
+                        <button type="button" class="btn-primary btn-accept-contract" data-contract-id="${contract.id || ''}" style="padding: 8px 16px; font-size: 0.85rem;">
+                            ACCEPT CONTRACT 🚀
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        } catch (err) {
+            console.error('[UIController] Error rendering mission board:', err);
+        }
+    }
+
+    /**
+     * Solicit / Refresh Mission Board contracts (-50 Scrap fee, discounted with Smithsonian endowment)
+     */
+    rerollContracts() {
+        if (this._isRerolling) return;
+        this._isRerolling = true;
+        setTimeout(() => { this._isRerolling = false; }, 300);
+
+        this.save = OrbitalStorage.load();
+        const cost = (this.save.campaignFlags && this.save.campaignFlags.smithsonian_endowed) ? 25 : 50;
+        if ((this.save.credits || 0) < cost) {
+            window.soundSystem?.playExplosion?.();
+            alert(`INSUFFICIENT SCRAP FUNDS\n\nSoliciting a new roster of orbital contracts requires ${cost} Scrap.`);
+            return;
+        }
+
+        this.save.credits -= cost;
+        this.save.contractRerolls = (this.save.contractRerolls || 0) + 1;
+        if (typeof CampaignManager !== 'undefined') {
+            this.save.availableContracts = CampaignManager.generateContractPool(this.save);
+        }
+        OrbitalStorage.save(this.save);
+        window.soundSystem?.playUiClick?.();
+        this.renderMissionBoard();
+    }
+
+    /**
+     * Render Active Storylet Dilemma (Phase 8b)
+     */
+    renderStoryletDilemma() {
+        const container = document.getElementById('board-dilemma-container');
+        if (!container) return;
+
+        if (typeof StoryletManager === 'undefined') {
+            container.classList.add('hidden');
+            return;
+        }
+
+        const eligible = StoryletManager.getEligibleStorylet(this.save);
+        if (!eligible) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        const assets = StoryletManager.getAssetRegistry(this.save);
+        const asset = assets[eligible.assetId] || { name: 'Orbital Asset', status: 'nominal' };
+        const statusClass = `status-${(asset.status || 'nominal').toLowerCase()}`;
+
+        let choicesHtml = '';
+        eligible.choices.forEach(c => {
+            const canAfford = c.canAfford(this.save);
+            choicesHtml += `
+                <button type="button" class="dilemma-choice-btn" data-storylet="${eligible.id}" data-choice="${c.id}" ${canAfford ? '' : 'disabled'}>
+                    <div class="dilemma-choice-title">${c.label}</div>
+                    <div class="dilemma-choice-desc">${c.desc}</div>
+                    <div class="dilemma-choice-stakes">${c.stakes}</div>
+                </button>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="dilemma-header">
+                <span class="dilemma-badge">⚠️ [${eligible.tag}]</span>
+                <span class="dilemma-asset-badge">🛰️ ASSET: <strong>${asset.name}</strong> <span class="asset-status-pill ${statusClass}">[${asset.status}]</span></span>
+            </div>
+            <div class="dilemma-title">${eligible.title}</div>
+            <div class="dilemma-dossier">${eligible.dossier}</div>
+            <div class="dilemma-choices-grid">
+                ${choicesHtml}
+            </div>
+        `;
+        container.classList.remove('hidden');
+
+        // Wire choice buttons
+        container.querySelectorAll('.dilemma-choice-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sId = btn.getAttribute('data-storylet');
+                const cId = btn.getAttribute('data-choice');
+                this.resolveStoryletChoice(sId, cId);
+            });
+        });
+    }
+
+    /**
+     * Resolve a storylet dilemma choice
+     */
+    resolveStoryletChoice(storyletId, choiceId) {
+        if (typeof StoryletManager === 'undefined') return;
+        const res = StoryletManager.resolveStorylet(this.save, storyletId, choiceId);
+        if (!res.success) {
+            alert(res.error || 'Failed to resolve dilemma choice.');
+            return;
+        }
+
+        window.soundSystem?.playSuccess?.();
+        this.renderMissionBoard();
+    }
+
+    /**
+     * Render and Open Asset Registry Modal
+     */
+    openAssetRegistryModal() {
+        const modal = document.getElementById('modal-asset-registry');
+        const list = document.getElementById('asset-registry-list');
+        if (!modal || !list) return;
+
+        this.save = OrbitalStorage.load();
+        const registry = (typeof StoryletManager !== 'undefined') ? StoryletManager.getAssetRegistry(this.save) : (this.save.assetRegistry || {});
+
+        list.innerHTML = '';
+        Object.values(registry).forEach(asset => {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            const statusClass = `status-${(asset.status || 'nominal').toLowerCase()}`;
+            card.innerHTML = `
+                <div class="asset-card-header">
+                    <div>
+                        <div class="asset-card-title">${asset.name}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--accent-cyan);">SECTOR 0${asset.sectorId} // ${(asset.type || 'SATELLITE').toUpperCase()}</div>
+                    </div>
+                    <span class="asset-status-pill ${statusClass}">${asset.status}</span>
+                </div>
+                <div class="asset-meta-row">
+                    <span>FACTION: <strong>${(asset.faction || 'CIVIL').toUpperCase()}</strong></span>
+                    <span>MASS: <strong>${(asset.massKg || 0).toLocaleString()} kg</strong></span>
+                    <span>WORTH: <strong>${asset.value || 0} SCRAP</strong></span>
+                </div>
+                <div class="asset-desc">${asset.desc}</div>
+            `;
+            list.appendChild(card);
+        });
+
+        modal.classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // PHASE 8c: INTERACTIVE CAMPAIGN MAP
+    // =========================================================================
+    openCampaignMap() {
+        this.switchScreen('campaignMap');
+        this.renderCampaignMap();
+    }
+
+    renderCampaignMap() {
+        this.save = OrbitalStorage.load();
+        if (typeof CampaignManager !== 'undefined' && typeof CampaignManager.getFormattedDate === 'function') {
+            const clock = CampaignManager.getFormattedDate(this.save);
+            const clockEl = document.getElementById('map-epoch-clock');
+            if (clockEl) clockEl.innerText = clock.fullString;
+            const solarBadge = document.getElementById('map-solar-badge');
+            if (solarBadge) {
+                solarBadge.innerText = `[${clock.solarStatus}]`;
+                solarBadge.className = clock.solarLevel === 'HIGH' ? 'badge-solar-storm' : (clock.solarLevel === 'MODERATE' ? 'badge-solar-elevated' : 'badge-solar-quiet');
+            }
+        }
+
+        const rep = this.save.reputation || { agency: 50, commercial: 50, public: 50 };
+        const repAgencyEl = document.getElementById('map-rep-agency-val');
+        if (repAgencyEl) repAgencyEl.innerText = `${rep.agency || 50}%`;
+        const repCommEl = document.getElementById('map-rep-commercial-val');
+        if (repCommEl) repCommEl.innerText = `${rep.commercial || 50}%`;
+        const repPubEl = document.getElementById('map-rep-public-val');
+        if (repPubEl) repPubEl.innerText = `${rep.public || 50}%`;
+        const creditsEl = document.getElementById('map-credits-val');
+        if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
+
+        const list = document.getElementById('campaign-map-sectors-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const missions = (typeof MISSIONS_DATA !== 'undefined' && Array.isArray(MISSIONS_DATA) && MISSIONS_DATA.length > 0)
+            ? MISSIONS_DATA
+            : ((typeof GAME_DATA !== 'undefined' && Array.isArray(GAME_DATA.LEVELS)) ? GAME_DATA.LEVELS : []);
+
+        const activeContracts = this.save.availableContracts || [];
+        const assets = this.save.assetRegistry || {};
+
+        missions.forEach((sector, idx) => {
+            const sKey = `sector_0${sector.id}`;
+            const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined) ? this.save.sectorHealth[sKey] : 70;
+            const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+            const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+
+            const sectorAssets = Object.values(assets).filter(a => a.sectorId === sector.id || a.sectorKey === sKey);
+            const sectorContract = activeContracts.find(c => c.sectorId === sector.id);
+
+            const card = document.createElement('div');
+            card.className = `sector-node-card ${idx === (this.selectedMapSectorIdx || 0) ? 'selected' : ''}`;
+            card.dataset.sectorId = sector.id;
+
+            card.innerHTML = `
+                <div class="sector-node-header">
+                    <span class="sector-node-name">${sector.name}</span>
+                    <span class="sector-node-alt">${sector.altitudeKm || 400} KM // ${sector.inclination || 'LEO'}</span>
+                </div>
+                <div class="campaign-health-bar" style="margin: 4px 0;">
+                    <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                </div>
+                <div class="sector-node-metrics">
+                    <span style="color: ${healthColor}; font-weight: bold;">${sHealth}% INTEGRITY</span>
+                    <span>${sectorAssets.length} Assets Tracked</span>
+                    ${sectorContract ? `<span style="color: var(--accent-cyan); font-weight: bold;">⚡ CONTRACT READY</span>` : ''}
+                    ${carryover > 0 ? `<span style="color: var(--danger);">⚠️ ${carryover} Debris</span>` : ''}
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                this.selectedMapSectorIdx = idx;
+                document.querySelectorAll('.sector-node-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.renderSectorInspector(sector);
+            });
+
+            list.appendChild(card);
+        });
+
+        const initialSector = missions[this.selectedMapSectorIdx || 0] || missions[0];
+        if (initialSector) {
+            this.renderSectorInspector(initialSector);
+        }
+    }
+
+    renderSectorInspector(sector) {
+        const inspector = document.getElementById('campaign-sector-inspector');
+        if (!inspector || !sector) return;
+
+        const sKey = `sector_0${sector.id}`;
+        const sHealth = (this.save.sectorHealth && this.save.sectorHealth[sKey] !== undefined) ? this.save.sectorHealth[sKey] : 70;
+        const carryover = (this.save.carryoverDebris && this.save.carryoverDebris[sKey]) || 0;
+        const healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+
+        const assets = this.save.assetRegistry || {};
+        const sectorAssets = Object.values(assets).filter(a => a.sectorId === sector.id || a.sectorKey === sKey);
+        const activeContracts = this.save.availableContracts || [];
+        const sectorContract = activeContracts.find(c => c.sectorId === sector.id);
+
+        let assetsHtml = '';
+        if (sectorAssets.length > 0) {
+            assetsHtml = '<div style="margin-top: 8px;"><strong style="font-family: var(--font-pixel); font-size: 0.75rem; color: var(--accent-cyan);">STATIONED ORBITAL ASSETS:</strong><div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">';
+            sectorAssets.forEach(a => {
+                const statusCls = `status-${(a.status || 'nominal').toLowerCase()}`;
+                assetsHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 4px 8px; font-family: var(--font-mono); font-size: 0.72rem;">
+                        <span>${a.name} (${Math.round(a.massKg || 100)} kg)</span>
+                        <span class="asset-status-pill ${statusCls}">${(a.status || 'nominal').toUpperCase()}</span>
+                    </div>
+                `;
+            });
+            assetsHtml += '</div></div>';
+        }
+
+        let actionBtnHtml = '';
+        if (sectorContract) {
+            actionBtnHtml = `
+                <button type="button" class="btn-primary" id="btn-inspector-launch-contract" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold; background: var(--salvage); border-color: #d97706; color: #000;">
+                    🚀 LAUNCH CONTRACT: ${sectorContract.title}
+                </button>
+            `;
+        } else {
+            actionBtnHtml = `
+                <button type="button" class="btn-primary" id="btn-inspector-launch-patrol" style="width: 100%; padding: 12px; margin-top: 10px; font-weight: bold;">
+                    🚀 LAUNCH PATROL (SECTOR 0${sector.id})
+                </button>
+            `;
+        }
+
+        inspector.innerHTML = `
+            <div>
+                <div class="inspector-title">${sector.name.toUpperCase()}</div>
+                <div class="inspector-subtitle">${sector.subtitle || ''} // ${sector.altitudeKm || 400} KM ALTITUDE // ${sector.inclination || 'LEO'}</div>
+            </div>
+
+            <div style="background: rgba(16, 24, 39, 0.8); border: 1px solid var(--border); padding: 10px; font-family: var(--font-mono); font-size: 0.78rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>SECTOR INTEGRITY:</span>
+                    <strong style="color: ${healthColor};">${sHealth}% [${sHealth >= 65 ? 'NOMINAL' : (sHealth >= 40 ? 'DEGRADED' : 'CRITICAL CASCADE RISK')}]</strong>
+                </div>
+                <div class="campaign-health-bar">
+                    <div class="health-fill" style="width: ${sHealth}%; background: ${healthColor};"></div>
+                </div>
+                ${carryover > 0 ? `<div style="color: var(--danger); margin-top: 6px;">⚠️ ${carryover} untracked kinetic fragments adrift in this corridor.</div>` : ''}
+            </div>
+
+            <div style="font-family: var(--font-body); font-size: 0.9rem; color: #cbd5e1; line-height: 1.4; border-left: 2px solid var(--accent-cyan); padding-left: 8px;">
+                ${sector.briefing || sector.objective || ''}
+            </div>
+
+            ${assetsHtml}
+
+            <div style="margin-top: auto;">
+                ${actionBtnHtml}
+            </div>
+        `;
+
+        document.getElementById('btn-inspector-launch-contract')?.addEventListener('click', () => {
+            if (sectorContract) {
+                this.acceptContractAndLaunch(sectorContract.id);
+            }
+        });
+
+        document.getElementById('btn-inspector-launch-patrol')?.addEventListener('click', () => {
+            this.selectedLevelId = sector.id;
+            this.switchScreen('missionDesign');
+            this.switchDesignStep(1);
+        });
+    }
+
+    // =========================================================================
+    // PHASE 8c: TECH RESEARCH MODAL & PROGRESSION
+    // =========================================================================
+    openTechTreeModal() {
+        this.save = OrbitalStorage.load();
+        const modal = document.getElementById('modal-tech-research');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        this.renderTechTree();
+    }
+
+    renderTechTree() {
+        this.save = OrbitalStorage.load();
+        if (!this.save.techTree) {
+            this.save.techTree = { capture: 1, sensors: 1, power: 1, shielding: 1, communications: 1, propulsion: 1 };
+        }
+
+        const resBar = document.getElementById('tech-resources-bar');
+        if (resBar) {
+            const mats = this.save.materials || { metal: 0, cells: 0, chips: 0 };
+            resBar.innerHTML = `
+                <span>FUNDS: <strong style="color: var(--salvage);">${(this.save.credits || 0).toLocaleString()} Scrap</strong></span>
+                <span>🔩 METAL: <strong>${mats.metal || 0}</strong></span>
+                <span>🔋 CELLS: <strong>${mats.cells || 0}</strong></span>
+                <span>💾 CHIPS: <strong>${mats.chips || 0}</strong></span>
+            `;
+        }
+
+        const grid = document.getElementById('tech-paths-grid');
+        if (!grid || typeof TECH_PATHS === 'undefined') return;
+        grid.innerHTML = '';
+
+        Object.keys(TECH_PATHS).forEach(pathKey => {
+            const path = TECH_PATHS[pathKey];
+            const currentTier = this.save.techTree[pathKey] || 1;
+            const isMax = currentTier >= 3;
+            const currentTierData = path.tiers[currentTier - 1];
+            const nextTierData = !isMax ? path.tiers[currentTier] : null;
+
+            const card = document.createElement('div');
+            card.className = `tech-card ${isMax ? 'tier-max' : ''}`;
+
+            let nextHtml = '';
+            if (!isMax && nextTierData) {
+                const cost = nextTierData.cost;
+                const canAfford = (this.save.credits || 0) >= cost.credits &&
+                    (this.save.materials?.metal || 0) >= cost.metal &&
+                    (this.save.materials?.cells || 0) >= cost.cells &&
+                    (this.save.materials?.chips || 0) >= cost.chips;
+
+                const costStr = `${cost.credits} Scrap` +
+                    (cost.metal ? `, ${cost.metal} Metal` : '') +
+                    (cost.cells ? `, ${cost.cells} Cells` : '') +
+                    (cost.chips ? `, ${cost.chips} Chips` : '');
+
+                nextHtml = `
+                    <div style="border-top: 1px dotted var(--border); padding-top: 8px; margin-top: 8px;">
+                        <div style="font-family: var(--font-pixel); font-size: 0.72rem; color: #a855f7;">NEXT: TIER ${nextTierData.tier} - ${nextTierData.name}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-muted); margin: 2px 0;">${nextTierData.desc}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--clean); margin-bottom: 6px;">BONUS: ${nextTierData.bonuses}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--salvage); margin-bottom: 6px;">COST: ${costStr}</div>
+                        <button type="button" class="btn-primary btn-upgrade-tech" data-path="${pathKey}" ${canAfford ? '' : 'disabled'} style="width: 100%; padding: 6px 10px; font-size: 0.78rem; ${canAfford ? 'background: #a855f7; border-color: #9333ea;' : 'opacity: 0.5; cursor: not-allowed;'}">
+                            ${canAfford ? `RESEARCH &amp; DEPLOY TIER ${nextTierData.tier}` : 'INSUFFICIENT RESOURCES'}
+                        </button>
+                    </div>
+                `;
+            } else {
+                nextHtml = `
+                    <div style="border-top: 1px solid #a855f7; padding-top: 8px; margin-top: 8px; text-align: center; font-family: var(--font-mono); font-size: 0.75rem; color: #a855f7; font-weight: bold;">
+                        ✓ MAXIMUM TECHNOLOGY TIER ACTIVE
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="tech-header">
+                        <span class="tech-name">${path.icon} ${path.name}</span>
+                        <span class="tech-tier-badge ${isMax ? 'max' : ''}">TIER ${currentTier} / 3</span>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); margin: 4px 0 8px 0;">${path.desc}</div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 8px; font-family: var(--font-mono); font-size: 0.72rem;">
+                        <strong style="color: var(--ink);">${currentTierData.name}</strong>
+                        <div style="color: #94a3b8; font-size: 0.7rem;">${currentTierData.desc}</div>
+                        <div style="color: var(--accent-cyan); margin-top: 4px;">ACTIVE: ${currentTierData.bonuses}</div>
+                    </div>
+                </div>
+                ${nextHtml}
+            `;
+
+            grid.appendChild(card);
+        });
+
+        grid.querySelectorAll('.btn-upgrade-tech').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const pathKey = e.currentTarget.dataset.path;
+                if (!pathKey || typeof CampaignManager === 'undefined') return;
+                const result = CampaignManager.unlockTech(this.save, pathKey);
+                if (result.success) {
+                    window.soundSystem?.playMissionSuccess?.();
+                    this.renderTechTree();
+                } else {
+                    window.soundSystem?.playExplosion?.();
+                    alert(`TECH RESEARCH FAILED\n\n${result.reason}`);
+                }
+            });
+        });
+    }
+
+    // =========================================================================
+    // PHASE 8c: CAMPAIGN ENDINGS & CLIMAX
+    // =========================================================================
+    openCampaignEndingModal() {
+        this.save = OrbitalStorage.load();
+        const modal = document.getElementById('modal-campaign-ending');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        let ending = null;
+        if (typeof CampaignManager !== 'undefined') {
+            ending = CampaignManager.evaluateCampaignEnding(this.save);
+        }
+
+        const body = document.getElementById('ending-content-body');
+        if (!body) return;
+
+        if (!ending) {
+            body.innerHTML = `
+                <div style="text-align: center; padding: 20px; font-family: var(--font-mono);">
+                    <div style="font-family: var(--font-pixel); font-size: 1.1rem; color: var(--salvage); margin-bottom: 8px;">
+                        CAMPAIGN IN PROGRESS // THRESHOLD NOT REACHED
+                    </div>
+                    <p style="color: var(--ink-muted); font-size: 0.9rem; max-width: 600px; margin: 0 auto 16px auto;">
+                        Your orbital campaign is actively developing. Endings evaluate overall sector health, faction reputations, and decisions made across orbital missions.
+                    </p>
+                    <div class="ending-recap-box">
+                        <div><strong>Missions Completed:</strong> ${this.save.missionsCompleted || 0}</div>
+                        <div><strong>World Epoch:</strong> Day ${this.save.worldEpochDay || 1}</div>
+                        <div><strong>Total Debris Recycled:</strong> ${this.save.totalDebrisRecycled || 0} units</div>
+                        <div><strong>Mass Deorbited:</strong> ${(this.save.totalMassDeorbitedKg || 0).toLocaleString()} kg</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 12px;">
+                        Tip: Reach 8+ completed missions or push any faction reputation ≥ 70% or maintain average sector health ≥ 75% to achieve specific historical verdicts!
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        this.save.campaignEndingAchieved = ending.id;
+        OrbitalStorage.save(this.save);
+
+        body.innerHTML = `
+            <div style="text-align: center; margin-bottom: 16px;">
+                <span class="ending-badge ${ending.badgeClass}">${ending.icon} ${ending.badge}</span>
+                <h3 style="font-family: var(--font-pixel); font-size: 1.25rem; color: var(--ink); margin: 6px 0;">${ending.title}</h3>
+                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-cyan);">${ending.subtitle}</div>
+            </div>
+
+            <div style="background: rgba(16, 24, 39, 0.9); border: 2px solid var(--border); padding: 16px; margin: 14px 0; font-family: var(--font-body); font-size: 1.05rem; line-height: 1.7; color: #f1f5f9;">
+                <p><strong>NARRATIVE EPILOGUE:</strong></p>
+                <p>${ending.epilogue}</p>
+            </div>
+
+            <div class="ending-recap-box">
+                <div><strong>Campaign Seed:</strong> SEED-${this.save.campaignSeed || '000000'}</div>
+                <div><strong>Epoch Days Elapsed:</strong> ${this.save.worldEpochDay || 1} Days</div>
+                <div><strong>Missions Completed:</strong> ${this.save.missionsCompleted || 0}</div>
+                <div><strong>Debris Recycled:</strong> ${this.save.totalDebrisRecycled || 0} units</div>
+                <div><strong>Total Mass De-orbited:</strong> ${(this.save.totalMassDeorbitedKg || 0).toLocaleString()} kg</div>
+                <div><strong>Scrap Surplus:</strong> ${(this.save.credits || 0).toLocaleString()} Scrap</div>
+            </div>
+        `;
+    }
+
+    // =========================================================================
+    // PHASE 8c: SAFE NEW CAMPAIGN MANAGEMENT
+    // =========================================================================
+    openNewCampaignModal() {
+        const modal = document.getElementById('modal-new-campaign');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    confirmNewCampaign() {
+        this.save = OrbitalStorage.load();
+        if (typeof CampaignManager !== 'undefined') {
+            this.save = CampaignManager.startNewCampaign(this.save);
+        }
+        document.getElementById('modal-new-campaign')?.classList.add('hidden');
+        document.getElementById('modal-campaign-ending')?.classList.add('hidden');
+        window.soundSystem?.playMissionSuccess?.();
+        alert(`NEW CAMPAIGN INITIALIZED\n\nWelcome Commander. Fresh orbital campaign seed SEED-${this.save.campaignSeed} established at Epoch Day 001. Your prior campaign was safely archived.`);
+        this.switchScreen('contracts');
+        this.renderMissionBoard();
+    }
+
+    // =========================================================================
+    // PHASE 8c: CASCADE SURVIVAL MODE
+    // =========================================================================
+    startCascadeSurvival() {
+        this.save = OrbitalStorage.load();
+        const survivalMission = {
+            id: 8,
+            name: 'Cascade Survival: Ground Zero',
+            subtitle: 'Infinite Orbital Avalanche Simulation',
+            altitudeKm: 850,
+            inclination: '98.8° Polar Intersection',
+            orbitalPeriodMin: 102.0,
+            objective: 'SURVIVE INFINITE CASCADE: Collect fragments and endure escalating debris waves.',
+            targetQuota: 999,
+            timeLimit: 9999,
+            worldSize: { width: 3600, height: 3600 },
+            debrisTypes: ['fragment', 'solar', 'cubesat', 'booster', 'core'],
+            initialDebrisCount: 22,
+            respawnRate: 2400,
+            hazardRate: 6500,
+            hazardTypes: ['hidden_debris', 'venting_rocket'],
+            maxHazards: 4,
+            basePayout: 1000,
+            isSurvival: true
+        };
+
+        this.selectedLevelId = 8;
+        this.switchScreen('gameHud');
+
+        if (this.currentGame) {
+            this.currentGame.destroy(true);
+            this.currentGame = null;
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelArt: true,
+            roundPixels: true,
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { x: 0, y: 0 }, debug: false }
+            },
+            scene: [OrbitalGameScene]
+        };
+
+        this.currentGame = new Phaser.Game(config);
+        const budgets = this.calculateBudgets();
+
+        this.currentGame.scene.start('OrbitalGameScene', {
+            level: survivalMission,
+            isSurvivalMode: true,
+            client: budgets.client,
+            launchVehicle: budgets.lv,
+            bus: budgets.bus,
+            propulsion: budgets.prop,
+            power: budgets.power,
+            equipment: budgets.eq,
+            groundComms: budgets.comms,
+            budgets: budgets,
+            designCode: this.generateDesignCode(),
+            shipId: this.selectedBusId || 'collector',
+            equipmentId: this.selectedEquipmentId || 'net',
+            payloadId: 'armored'
+        });
+
+        window.soundSystem?.resume();
+    }
+
+    /**
+     * Accept a contract and route to Mission Design
+     */
+    acceptContractAndLaunch(contractId) {
+        if (typeof CampaignManager === 'undefined') return;
+        const contract = CampaignManager.acceptContract(contractId);
+        if (!contract) return;
+
+        this.selectedLevelId = contract.sectorId;
+        this.save = OrbitalStorage.load();
+
+        if (window.soundSystem) window.soundSystem.playUiClick();
+        this.switchScreen('missionDesign');
+        this.switchDesignStep(1);
+    }
+
+    /**
+     * Launch the Phaser Game with selected configuration
+     */
+    launchConfiguredMission() {
+        const level = GAME_DATA.LEVELS.find(l => l.id === this.selectedLevelId) || GAME_DATA.LEVELS[0];
+        const budgets = this.calculateBudgets();
+
+        // Hide menus, show HUD
+        this.switchScreen('gameHud');
+
+        // Destroy prior Phaser instance if active
+        if (this.currentGame) {
+            this.currentGame.destroy(true);
+            this.currentGame = null;
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelArt: true,
+            roundPixels: true,
+            render: {
+                pixelArt: true,
+                antialias: false,
+                roundPixels: true
+            },
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { x: 0, y: 0 },
+                    debug: false
+                }
+            },
+            scene: [OrbitalGameScene]
+        };
+
+        this.currentGame = new Phaser.Game(config);
+
+        // Pass full point design parameters to scene
+        this.currentGame.scene.start('OrbitalGameScene', {
+            level: level,
+            client: budgets.client,
+            launchVehicle: budgets.lv,
+            bus: budgets.bus,
+            propulsion: budgets.prop,
+            power: budgets.power,
+            equipment: budgets.eq,
+            groundComms: budgets.comms,
+            budgets: budgets,
+            designCode: this.generateDesignCode(),
+            // Legacy fallbacks
+            shipId: this.selectedBusId,
+            equipmentId: this.selectedEquipmentId,
+            payloadId: 'balanced'
+        });
+
+        window.soundSystem?.resume();
+    }
+
+    /**
+     * Initialize Minimap Radar
+     */
+    initMinimap() {
+        this.minimapCtx = this.hud.minimapCanvas?.getContext('2d');
+    }
+
+    updateMinimap(scene) {
+        if (!this.minimapCtx) return;
+        const ctx = this.minimapCtx;
+        const w = this.hud.minimapCanvas.width;
+        const h = this.hud.minimapCanvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Radar Reticle Crosshair
+        ctx.strokeStyle = '#1f293d';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+        ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+        ctx.arc(w / 2, h / 2, w * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const worldW = scene.missionConfig.worldSize.width;
+        const worldH = scene.missionConfig.worldSize.height;
+
+        const toMapX = (x) => (x / worldW) * w;
+        const toMapY = (y) => (y / worldH) * h;
+
+        // Station (Clean green square)
+        if (scene.station) {
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(toMapX(scene.station.x) - 4, toMapY(scene.station.y) - 4, 8, 8);
+        }
+
+        // Debris (Salvage amber / cyan dots)
+        if (scene.debrisGroup) {
+            ctx.fillStyle = '#38bdf8';
+            scene.debrisGroup.getChildren().forEach(d => {
+                if (d && d.active && !d.isPendingCollection && typeof d.x === 'number') {
+                    ctx.fillRect(toMapX(d.x) - 1.5, toMapY(d.y) - 1.5, 3, 3);
+                }
+            });
+        }
+
+        // Hazards (Crisp danger red dots)
+        if (scene.hazardGroup) {
+            ctx.fillStyle = '#ef4444';
+            scene.hazardGroup.getChildren().forEach(haz => {
+                if (haz && haz.active && typeof haz.x === 'number') {
+                    ctx.fillRect(toMapX(haz.x) - 2.5, toMapY(haz.y) - 2.5, 5, 5);
+                }
+            });
+        }
+
+        // Player (High-contrast white arrow)
+        if (scene.player && typeof scene.player.x === 'number') {
+            ctx.save();
+            ctx.translate(toMapX(scene.player.x), toMapY(scene.player.y));
+            ctx.rotate(scene.player.rotation || 0);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(-4, -4);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+}
+
+// ============================================================================
+// GLOBAL UI INITIALIZATION & TELEMETRY HOOKS
+// ============================================================================
+
+function initUIController() {
+    if (window.uiController) return window.uiController;
+    try {
+        window.uiController = new UIController();
+    } catch (e) {
+        console.error('[UIController] Failed to initialize UIController:', e);
+    }
+    return window.uiController;
+}
+window.initUI = initUIController;
+window.initUIController = initUIController;
+
+/**
+ * Universal safe helper to navigate to the Mission Board
+ */
+window.openMissionBoard = function() {
+    if (!window.uiController && typeof initUIController === 'function') {
+        initUIController();
+    }
+    if (window.uiController) {
+        window.uiController.switchScreen('contracts');
+    } else {
+        document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(s => s.classList.add('hidden'));
+        const mb = document.getElementById('screen-mission-board');
+        if (mb) mb.classList.remove('hidden');
+    }
+};
+
+/**
+ * Global F3 Tactical & System Telemetry Overlay Toggle
+ */
+window.toggleTelemetryOverlay = function() {
+    const el = document.getElementById('hud-f3-debug');
+    if (!el) return;
+
+    if (window.uiController && window.uiController.currentScene && window.uiController.currentScene.director) {
+        window.uiController.currentScene.director.toggleDebugOverlay();
+        return;
+    }
+
+    // Out-of-mission / Menu telemetry
+    const isHidden = el.classList.toggle('hidden');
+    if (!isHidden) {
+        const save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+        const diff = save?.selectedDifficulty || 'standard';
+        const seed = save?.campaignSeed || 'N/A';
+        const agencyRep = save?.reputation?.agency ?? 50;
+        const commRep = save?.reputation?.commercial ?? 50;
+        const pubRep = save?.reputation?.public ?? 50;
+        const credits = (save?.credits || 0).toLocaleString();
+        const activeScr = window.uiController?.currentScreenName || 'MENU';
+
+        el.innerHTML = `
+            <div class="f3-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>SYSTEM &amp; ENGINE TELEMETRY</span>
+                <button type="button" class="btn-close-telemetry" style="background: none; border: 1px solid var(--border-bright); color: var(--accent-cyan); font-size: 0.65rem; padding: 1px 6px; cursor: pointer;" onclick="window.toggleTelemetryOverlay();">✕ CLOSE</button>
+            </div>
+            <div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>
+            <div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">${activeScr.toUpperCase()}</strong></div>
+            <div class="f3-row"><span>DIFFICULTY:</span> <strong style="color: #f59e0b;">${diff.toUpperCase()}</strong></div>
+            <div class="f3-row"><span>CAMPAIGN SEED:</span> <strong>SEED-${seed}</strong></div>
+            <div class="f3-row"><span>REPUTATION:</span> <strong>AGY ${agencyRep}% | COM ${commRep}% | PUB ${pubRep}%</strong></div>
+            <div class="f3-row"><span>CREDITS:</span> <strong>${credits} SCRAP</strong></div>
+            <div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>
+        `;
+    }
+};
+
+// Global key listener for F3 (prevents Chrome browser Find bar interception)
+// Attach Global Telemetry Hotkey Listener (Guarded to prevent duplicate attachment)
+if (typeof window !== 'undefined' && !window._telemetryKeyHandlerAttached) {
+    window._telemetryKeyHandlerAttached = true;
+    window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+        const isF3 = e.key === 'F3' || e.code === 'F3' || e.keyCode === 114;
+        const isBacktick = e.key === '`' || e.code === 'Backquote' || e.keyCode === 192 || e.key === '~';
+        const isKeyT = e.key === 't' || e.key === 'T' || e.code === 'KeyT' || e.keyCode === 84;
+        if (isF3 || isBacktick || isKeyT) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            if (typeof window.toggleTelemetryOverlay === 'function') {
+                window.toggleTelemetryOverlay();
+            }
+        }
+    }, true);
+}
+
+// Execute UIController initialization immediately if document ready, or on DOMContentLoaded
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUIController);
+        window.addEventListener('DOMContentLoaded', initUIController);
+    } else {
+        initUIController();
+    }
+}
+
+// Scene ready callback
+window.onGameSceneReady = (scene) => {
+    if (window.uiController) {
+        window.uiController.currentScene = scene;
+    }
+};
+
+// Live HUD update loop
+window.updateGameHUD = (scene) => {
+        if (!window.uiController || !window.uiController.hud) return;
+        const hud = window.uiController.hud;
+
+        // Fuel
+        const maxFuel = scene.maxFuel || 100;
+        const fuelPct = Math.max(0, ((scene.fuel || 0) / maxFuel) * 100);
+        if (hud.fuelBar) {
+            hud.fuelBar.style.width = `${fuelPct}%`;
+            hud.fuelBar.classList.toggle('low', fuelPct < 25);
+        }
+        if (hud.fuelText) hud.fuelText.innerText = `${Math.round(fuelPct)}%`;
+
+        // Battery
+        const maxBat = scene.maxBattery || 100;
+        const batPct = Math.max(0, ((scene.battery || 0) / maxBat) * 100);
+        if (hud.batteryBar) hud.batteryBar.style.width = `${batPct}%`;
+        if (hud.batteryText) hud.batteryText.innerText = `${Math.round(batPct)}%`;
+
+        // Hull
+        const maxHull = scene.maxHull || 100;
+        const hullPct = Math.max(0, ((scene.hull || 0) / maxHull) * 100);
+        if (hud.hullBar) {
+            hud.hullBar.style.width = `${hullPct}%`;
+            hud.hullBar.classList.toggle('critical', hullPct < 30);
+        }
+        if (hud.hullText) hud.hullText.innerText = `${Math.round(hullPct)}%`;
+
+        // Cargo
+        if (hud.cargoCount) hud.cargoCount.innerText = `${scene.cargo ? scene.cargo.length : 0}/${scene.cargoCapacity || 3}`;
+        if (hud.cargoSlots) {
+            let slotHtml = '';
+            for (let i = 0; i < (scene.cargoCapacity || 3); i++) {
+                const isFilled = scene.cargo && i < scene.cargo.length;
+                slotHtml += `<span class="cargo-slot ${isFilled ? 'filled' : ''}"></span>`;
+            }
+            hud.cargoSlots.innerHTML = slotHtml;
+        }
+
+        // Score & Quota
+        if (hud.scoreText) hud.scoreText.innerText = (scene.score || 0).toLocaleString();
+        if (hud.quotaText) {
+            if (scene.contractObjective === 'passivate') {
+                hud.quotaText.innerText = `${scene.passivatedStagesCount || 0} / ${scene.debrisTargetQuota || 0} STAGES`;
+            } else if (scene.contractObjective === 'recover') {
+                hud.quotaText.innerText = scene.priorityCoreDelivered ? `1 / 1 CORE SECURED` : (scene.cargo && scene.cargo.some(c => c.isPriorityCore) ? `CORE IN CARGO` : `LOCATE CORE`);
+            } else if (scene.contractObjective === 'survive') {
+                hud.quotaText.innerText = `SURVIVE CLUSTER`;
+            } else {
+                hud.quotaText.innerText = `${scene.debrisDeliveredCount || 0} / ${scene.debrisTargetQuota || 0}`;
+            }
+        }
+        if (hud.missionName) hud.missionName.innerText = scene.missionConfig ? scene.missionConfig.name : '';
+
+        // Timer
+        const mTime = Math.max(0, scene.missionTime || 0);
+        const mins = Math.floor(mTime / 60);
+        const secs = Math.floor(mTime % 60);
+        if (hud.timerText) hud.timerText.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        // Kessler Risk Meter
+        if (hud.kesslerFill && hud.kesslerVal) {
+            const kRisk = Math.min(100, Math.max(0, Math.round(scene.kesslerRisk || 0)));
+            hud.kesslerFill.style.width = `${kRisk}%`;
+            hud.kesslerFill.classList.toggle('fill-critical', kRisk > 70);
+            hud.kesslerFill.classList.toggle('fill-elevated', kRisk >= 35 && kRisk <= 70);
+            hud.kesslerFill.classList.toggle('fill-low', kRisk < 35);
+            const riskLabel = kRisk > 70 ? 'CASCADE DANGER' : (kRisk >= 35 ? 'ELEVATED' : 'NOMINAL');
+            hud.kesslerVal.innerText = `${kRisk}% [${riskLabel}]`;
+            hud.kesslerVal.className = kRisk > 70 ? 'kessler-crit' : (kRisk >= 35 ? 'kessler-elevated' : 'kessler-low');
+        }
+
+        // Mission Stage Badge
+        if (hud.missionStage && scene.director) {
+            const stg = scene.director.currentStage || 'CALM';
+            hud.missionStage.textContent = stg;
+            hud.missionStage.className = `hud-stage-badge stage-${stg.toLowerCase()}`;
+        }
+
+        // Phase 7 Orbital Lane Indicator (Behind GAME_DATA.features.orbitalLanes flag)
+        if (hud.laneIndicator) {
+            const lanesFeature = typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.orbitalLanes;
+            if (lanesFeature && scene.player) {
+                hud.laneIndicator.style.display = 'inline-block';
+                const py = scene.player.y;
+                if (py >= 2100) {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-low';
+                    hud.laneIndicator.textContent = 'LANE 1: LOW PERIGEE [+35 KM/H REL]';
+                } else if (py <= 1100) {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-high';
+                    hud.laneIndicator.textContent = 'LANE 3: HIGH APOGEE [-35 KM/H REL]';
+                } else {
+                    hud.laneIndicator.className = 'hud-lane-badge lane-mid';
+                    hud.laneIndicator.textContent = 'LANE 2: CO-ORBITAL [STATION SYNC]';
+                }
+            } else {
+                hud.laneIndicator.style.display = 'none';
+            }
+        }
+
+        // Phase 7 Space Weather Banner (NASA/CCMC DONKI & Storm Season Hazard)
+        if (hud.weatherBanner) {
+            const weatherFeature = typeof GAME_DATA !== 'undefined' && GAME_DATA.features && GAME_DATA.features.spaceWeather;
+            const isStormActive = weatherFeature && Boolean(scene.activeSpaceWeather || scene.isStormSeason);
+            if (isStormActive) {
+                const sw = scene.activeSpaceWeather || {
+                    eventID: 'STORM-SEASON-ACTIVE',
+                    severity: 'G4 - Severe Geomagnetic Storm',
+                    description: 'High-speed solar wind & coronal plasma EMP surges active across orbital sector.',
+                    source: 'NOAA SWPC / NASA DONKI'
+                };
+                hud.weatherBanner.classList.remove('hidden');
+                if (hud.weatherId) hud.weatherId.textContent = sw.eventID || 'DONKI-STORM';
+                if (hud.weatherDate) {
+                    const dStr = sw.eventTime ? sw.eventTime.slice(0, 10) : 'LIVE-ORBIT';
+                    hud.weatherDate.textContent = `(${dStr})`;
+                }
+                if (hud.weatherDesc) {
+                    const sev = sw.severity || 'ACTIVE STORM HAZARD';
+                    hud.weatherDesc.innerHTML = `<strong style="color: #ef4444;">⚡ HAZARD:</strong> ${sev} // DRAG SURGE & CORONAL EMP // SHELTER IN DEPOT`;
+                }
+                if (hud.weatherSource) {
+                    hud.weatherSource.textContent = `Source: ${sw.source || 'NASA/CCMC DONKI'}`;
+                }
+                if (hud.weatherSimLabel) {
+                    hud.weatherSimLabel.classList.toggle('hidden', !sw.isSimulated);
+                }
+            } else {
+                hud.weatherBanner.classList.add('hidden');
+            }
+        }
+
+        // Salvage Materials session counters
+        const mats = scene.materialsSession || { metal: 0, cells: 0, chips: 0 };
+        if (hud.matMetal) hud.matMetal.innerText = mats.metal || 0;
+        if (hud.matCells) hud.matCells.innerText = mats.cells || 0;
+        if (hud.matChips) hud.matChips.innerText = mats.chips || 0;
+
+        // Warnings & Prompts (Collision Warnings & Scripted Tactical Advisories)
+        if (hud.warningBanner) {
+            if (scene.activeEventAlert) {
+                hud.warningBanner.textContent = scene.activeEventAlert;
+                hud.warningBanner.classList.add('active');
+            } else {
+                hud.warningBanner.textContent = '[ALERT] COLLISION WARNING - EVASIVE MANEUVER OR [Q] NUDGE';
+                hud.warningBanner.classList.toggle('active', !!scene.warningActive);
+            }
+        }
+
+        if (scene.station && scene.player) {
+            const distToStation = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, scene.station.x, scene.station.y);
+            const inDockRange = distToStation <= (scene.stationDockingRadius || 180);
+            if (hud.dockingPrompt) {
+                hud.dockingPrompt.classList.toggle('active', inDockRange && !scene.isDocked);
+            }
+        }
+
+        // Minimap
+        window.uiController.updateMinimap(scene);
+    };
+
+    // Results Modal / Debrief v2 Hook
+    window.showMissionResultsModal = (results) => {
+        const modal = document.getElementById('modal-results');
+        if (!modal) return;
+
+        const headline = document.getElementById('results-headline');
+        const reason = document.getElementById('results-reason');
+        const starsContainer = document.getElementById('res-stars');
+        const auditTbody = document.getElementById('debrief-audit-tbody');
+        const timelineView = document.getElementById('debrief-timeline-view');
+        const logStream = document.getElementById('debrief-flight-log');
+        const recPanel = document.getElementById('debrief-recommendations-panel');
+        const shareCodeText = document.getElementById('debrief-share-code');
+        const debriefMetal = document.getElementById('debrief-mat-metal');
+        const debriefCells = document.getElementById('debrief-mat-cells');
+        const debriefChips = document.getElementById('debrief-mat-chips');
+        const debriefKessler = document.getElementById('debrief-kessler-risk');
+
+        // Populate Materials Harvested & Kessler Status
+        const mats = results.materialsSession || { metal: 0, cells: 0, chips: 0 };
+        if (debriefMetal) debriefMetal.innerText = `+${mats.metal || 0} units`;
+        if (debriefCells) debriefCells.innerText = `+${mats.cells || 0} units`;
+        if (debriefChips) debriefChips.innerText = `+${mats.chips || 0} units`;
+        if (debriefKessler) {
+            const risk = Math.round(results.finalKesslerRisk || 0);
+            const status = risk > 70 ? 'CASCADE DANGER' : (risk >= 35 ? 'ELEVATED' : 'NOMINAL');
+            debriefKessler.innerText = `${risk}% [${status}]`;
+            debriefKessler.style.color = risk > 70 ? 'var(--danger)' : (risk >= 35 ? 'var(--salvage)' : 'var(--clean)');
+        }
+
+        // Headline & Stars
+        headline.innerText = results.isVictory ? 'MISSION ACCOMPLISHED // FLIGHT DEBRIEF' : 'MISSION FAILED // INCIDENT REPORT';
+        headline.className = `results-title ${results.isVictory ? 'victory' : 'defeat'}`;
+        reason.innerText = results.reason;
+
+        const starCount = results.stars;
+        starsContainer.innerText = '★'.repeat(starCount) + '☆'.repeat(3 - starCount);
+
+        // 1. Requirements Audit Table
+        if (auditTbody && results.requirementsAudit) {
+            auditTbody.innerHTML = '';
+            results.requirementsAudit.forEach(req => {
+                const tr = document.createElement('tr');
+                const verdictClass = req.isPass ? 'color: var(--clean);' : 'color: var(--danger);';
+                const verdictText = req.isPass ? '[PASS]' : '[FAIL]';
+                tr.innerHTML = `
+                    <td><strong>${req.name}</strong></td>
+                    <td>${req.target}</td>
+                    <td>${req.actual}</td>
+                    <td style="${verdictClass} font-weight: bold;">${verdictText}</td>
+                `;
+                auditTbody.appendChild(tr);
+            });
+        }
+
+        // 2. CONOPS Timeline Comparison
+        if (timelineView && results.timelineComparison) {
+            timelineView.innerHTML = '';
+            results.timelineComparison.forEach(stage => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.padding = '3px 0';
+                div.style.borderBottom = '1px dotted #162030';
+                div.innerHTML = `
+                    <span>• <strong>${stage.name}:</strong> ${stage.status}</span>
+                    <span style="color: var(--accent-cyan);">${stage.timestamp}</span>
+                `;
+                timelineView.appendChild(div);
+            });
+        }
+
+        // 3. Flight Telemetry Event Log Stream
+        if (logStream && results.flightEvents) {
+            logStream.innerHTML = '';
+            results.flightEvents.forEach(evt => {
+                const div = document.createElement('div');
+                div.className = `log-entry ${evt.status || ''}`;
+                div.innerHTML = `[T+${evt.time}s] [${evt.tag}] ${evt.message}`;
+                logStream.appendChild(div);
+            });
+            logStream.scrollTop = logStream.scrollHeight;
+        }
+
+        // 4. Redesign Recommendations & Architecture Rating
+        if (recPanel) {
+            recPanel.innerHTML = `
+                <div style="font-family: var(--font-pixel); font-size: 0.75rem; color: var(--salvage); margin-bottom: 4px;">
+                    SYSTEMS REDESIGN RECOMMENDATION &amp; ANALYSIS:
+                </div>
+                <p style="color: var(--ink); margin: 0;">${results.redesignRecommendation}</p>
+                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-cyan); margin-top: 6px;">
+                    Contract Performance: <strong>${results.clientVerdict}</strong> | Total Reward: <strong>+${results.creditsEarned} Scrap</strong>
+                </div>
+            `;
+        }
+
+        // 5. Campaign Consequences & Persistent Orbital Impact (Phase 8a)
+        if (typeof CampaignManager !== 'undefined') {
+            const consequence = CampaignManager.applyMissionOutcome(
+                results.scene || {
+                    missionConfig: { id: results.levelId, name: `Sector 0${results.levelId}` },
+                    collisionsCount: results.collisions || 0,
+                    kesslerRisk: results.finalKesslerRisk || 0,
+                    debrisDeliveredCount: results.debrisCount || 0,
+                    debrisTargetQuota: results.targetQuota || 6,
+                    materialsSession: results.materialsSession,
+                    creditsEarned: results.creditsEarned || 200,
+                    creditsAlreadyAwarded: true
+                },
+                results.isVictory,
+                results.reason
+            );
+
+            const healthFill = document.getElementById('debrief-sector-health-fill');
+            const healthText = document.getElementById('debrief-sector-health-text');
+            const carryoverText = document.getElementById('debrief-carryover-text');
+            const repShiftsRow = document.getElementById('debrief-reputation-shifts');
+            const narrativeBox = document.getElementById('debrief-consequence-narrative');
+
+            if (healthFill) {
+                healthFill.style.width = `${consequence.newHealth}%`;
+                healthFill.style.background = consequence.newHealth >= 65 ? 'var(--clean)' : (consequence.newHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+            }
+            if (healthText) {
+                const deltaSign = consequence.healthDelta >= 0 ? '+' : '';
+                healthText.innerText = `${deltaSign}${consequence.healthDelta}% DELTA (CURRENT HEALTH: ${consequence.newHealth}%)`;
+            }
+            if (carryoverText) {
+                if (consequence.newDebris === 0) {
+                    carryoverText.className = 'campaign-stat-val val-green';
+                    carryoverText.innerText = '0 FRAGMENTS REMAINING [CLEAR]';
+                } else {
+                    carryoverText.className = 'campaign-stat-val val-red';
+                    carryoverText.innerText = `${consequence.newDebris} RESIDUAL FRAGMENTS IN ORBIT`;
+                }
+            }
+            if (repShiftsRow && consequence.repShifts) {
+                const aSign = consequence.repShifts.agency >= 0 ? '+' : '';
+                const cSign = consequence.repShifts.commercial >= 0 ? '+' : '';
+                const pSign = consequence.repShifts.public >= 0 ? '+' : '';
+                repShiftsRow.innerHTML = `
+                    <span class="rep-chip rep-agency">AGY ${aSign}${consequence.repShifts.agency}</span>
+                    <span class="rep-chip rep-commercial">COM ${cSign}${consequence.repShifts.commercial}</span>
+                    <span class="rep-chip rep-public">PUB ${pSign}${consequence.repShifts.public}</span>
+                `;
+            }
+            if (narrativeBox) {
+                narrativeBox.innerText = consequence.narrative;
+            }
+        }
+
+        // 6. Design Code
+        if (shareCodeText) {
+            shareCodeText.innerText = results.designCode || window.uiController.generateDesignCode();
+        }
+
+        const nextBtn = document.getElementById('btn-results-next');
+        if (nextBtn) {
+            nextBtn.style.display = results.isVictory ? 'inline-block' : 'none';
+        }
+
+        modal.classList.remove('hidden');
+    };

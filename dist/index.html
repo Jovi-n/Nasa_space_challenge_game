@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORBITAL CLEANUP: MISSION ZERO</title>
+    <!-- Phaser 3.80 Game Engine with multi-CDN fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script>
+        if (typeof Phaser === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (typeof Phaser === 'undefined') {
+            document.write('<script src="https://unpkg.com/phaser@3.80.1/dist/phaser.min.js"><\/script>');
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Bulletproof Global Navigation & F3 Handlers (Zero Cache & Zero Latency Dependency)
+        window.openMissionBoard = function() {
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('contracts');
+                return;
+            }
+            if (typeof window.initUI === 'function') {
+                try { window.initUI(); } catch (e) {}
+            }
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('contracts');
+                return;
+            }
+            // Direct DOM Fallback
+            document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(function(s) { s.classList.add('hidden'); });
+            var mb = document.getElementById('screen-mission-board');
+            if (mb) {
+                mb.classList.remove('hidden');
+                if (typeof window.renderMissionBoardFallback === 'function') {
+                    window.renderMissionBoardFallback();
+                }
+            }
+        };
+
+        window.returnToMainMenu = function() {
+            if (window.uiController && typeof window.uiController.switchScreen === 'function') {
+                window.uiController.switchScreen('mainMenu');
+                return;
+            }
+            document.querySelectorAll('.screen-layer, .hud-layer, .modal-layer').forEach(function(s) { s.classList.add('hidden'); });
+            var mm = document.getElementById('screen-main-menu');
+            if (mm) mm.classList.remove('hidden');
+        };
+
+        window._lastTelemetryToggle = 0;
+        window.toggleTelemetryOverlay = function() {
+            var now = Date.now();
+            if (now - (window._lastTelemetryToggle || 0) < 250) {
+                return;
+            }
+            window._lastTelemetryToggle = now;
+
+            var el = document.getElementById('hud-f3-debug');
+            if (!el) return;
+            if (window.uiController && window.uiController.currentScene && window.uiController.currentScene.director) {
+                window.uiController.currentScene.director.toggleDebugOverlay();
+                return;
+            }
+            var isHidden = el.classList.toggle('hidden');
+            if (!isHidden) {
+                var save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+                var diff = save && save.selectedDifficulty ? save.selectedDifficulty : 'standard';
+                var seed = save && save.campaignSeed ? save.campaignSeed : 'N/A';
+                var rep = (save && save.reputation) ? save.reputation : { agency: 50, commercial: 50, public: 50 };
+                var credits = (save && save.credits ? save.credits : 0).toLocaleString();
+                var activeScr = (window.uiController && window.uiController.currentScreenName) ? window.uiController.currentScreenName : 'MENU';
+
+                el.innerHTML = [
+                    '<div class="f3-title" style="display: flex; justify-content: space-between; align-items: center;">',
+                    '  <span>SYSTEM &amp; ENGINE TELEMETRY</span>',
+                    '  <button type="button" onclick="window.toggleTelemetryOverlay();" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: var(--danger); font-family: var(--font-mono); font-size: 0.7rem; padding: 2px 6px; cursor: pointer; border-radius: 2px;">✕ CLOSE</button>',
+                    '</div>',
+                    '<div class="f3-row"><span>STATUS:</span> <strong style="color: var(--clean);">SYSTEM READY</strong></div>',
+                    '<div class="f3-row"><span>ACTIVE SCREEN:</span> <strong style="color: var(--accent-cyan);">' + activeScr.toUpperCase() + '</strong></div>',
+                    '<div class="f3-row"><span>DIFFICULTY:</span> <strong style="color: #f59e0b;">' + diff.toUpperCase() + '</strong></div>',
+                    '<div class="f3-row"><span>CAMPAIGN SEED:</span> <strong>SEED-' + seed + '</strong></div>',
+                    '<div class="f3-row"><span>REPUTATION:</span> <strong>AGY ' + (rep.agency || 50) + '% | COM ' + (rep.commercial || 50) + '% | PUB ' + (rep.public || 50) + '%</strong></div>',
+                    '<div class="f3-row"><span>CREDITS:</span> <strong>' + credits + ' SCRAP</strong></div>',
+                    '<div class="f3-row"><span>FLIGHT DIRECTOR:</span> <strong style="color: var(--ink-muted);">STANDBY (LAUNCH FOR LIVE)</strong></div>',
+                    '<div style="margin-top: 8px; font-size: 0.7rem; color: var(--ink-muted); border-top: 1px dotted var(--border); padding-top: 4px; text-align: center;">Hotkey: Press [T] or [F3] to toggle</div>'
+                ].join('');
+            }
+        };
+
+        window.renderMissionBoardFallback = function() {
+            try {
+                if (window.uiController && typeof window.uiController.renderMissionBoard === 'function') {
+                    window.uiController.renderMissionBoard();
+                    return;
+                }
+                var save = window.OrbitalStorage ? window.OrbitalStorage.load() : null;
+                if (!save) return;
+                var seedEl = document.getElementById('board-campaign-seed');
+                if (seedEl) seedEl.innerText = 'SEED-' + (save.campaignSeed || '000000');
+                var rep = save.reputation || { agency: 50, commercial: 50, public: 50 };
+                var aBar = document.getElementById('board-rep-agency-bar');
+                var aVal = document.getElementById('board-rep-agency-val');
+                if (aBar) aBar.style.width = (rep.agency || 50) + '%';
+                if (aVal) aVal.innerText = (rep.agency || 50) + '%';
+                var cBar = document.getElementById('board-rep-commercial-bar');
+                var cVal = document.getElementById('board-rep-commercial-val');
+                if (cBar) cBar.style.width = (rep.commercial || 50) + '%';
+                if (cVal) cVal.innerText = (rep.commercial || 50) + '%';
+                var pBar = document.getElementById('board-rep-public-bar');
+                var pVal = document.getElementById('board-rep-public-val');
+                if (pBar) pBar.style.width = (rep.public || 50) + '%';
+                if (pVal) pVal.innerText = (rep.public || 50) + '%';
+                var credEl = document.getElementById('board-credits-val');
+                if (credEl) credEl.innerText = (save.credits || 0).toLocaleString() + ' SCRAP';
+
+                var grid = document.getElementById('contracts-card-grid');
+                if (!grid) return;
+                var contracts = save.availableContracts;
+                if ((!contracts || contracts.length === 0) && typeof CampaignManager !== 'undefined') {
+                    contracts = CampaignManager.generateContractPool(save);
+                    save.availableContracts = contracts;
+                    OrbitalStorage.save(save);
+                }
+                if (contracts && contracts.length > 0) {
+                    grid.innerHTML = '';
+                    contracts.forEach(function(contract) {
+                        var card = document.createElement('div');
+                        card.className = 'contract-card';
+                        var risk = contract.risk || 'Moderate';
+                        var sKey = contract.sectorKey || ('sector_0' + (contract.sectorId || 1));
+                        var sHealth = (save.sectorHealth && save.sectorHealth[sKey] !== undefined) ? save.sectorHealth[sKey] : 70;
+                        var healthColor = sHealth >= 65 ? 'var(--clean)' : (sHealth >= 40 ? 'var(--salvage)' : 'var(--danger)');
+                        var carryover = (save.carryoverDebris && save.carryoverDebris[sKey]) || 0;
+
+                        var modsHtml = '';
+                        if (contract.modifiers && Array.isArray(contract.modifiers)) {
+                            contract.modifiers.forEach(function(mKey) {
+                                var m = (typeof CONTRACT_MODIFIERS !== 'undefined') ? CONTRACT_MODIFIERS[mKey] : null;
+                                if (m) modsHtml += '<span class="modifier-badge" title="' + m.desc + '">' + m.icon + ' ' + m.badge + '</span>';
+                            });
+                        }
+
+                        card.innerHTML = [
+                            '<div class="contract-card-header">',
+                            '  <div>',
+                            '    <div class="contract-client-tag">' + contract.clientAgency + ' // ' + contract.clientName + '</div>',
+                            '    <div class="contract-title">' + contract.title + '</div>',
+                            '  </div>',
+                            '  <span class="contract-risk-tag risk-' + risk.toLowerCase() + '">' + risk.toUpperCase() + ' RISK</span>',
+                            '</div>',
+                            '<div class="contract-sector-badge">' + contract.sectorName + ' (Alt: ' + contract.altitudeKm + ' km)</div>',
+                            '<div class="contract-modifiers-row">' + (modsHtml || '<span class="modifier-badge standard">STANDARD FLIGHT COND.</span>') + '</div>',
+                            '<div class="contract-desc">' + contract.description + '</div>',
+                            '<div class="contract-reqs-box">',
+                            '  <div class="contract-req-row"><span>Objective:</span> <strong>' + (contract.objective || 'Quota').toUpperCase() + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Target:</span> <strong>' + contract.targetDesc + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Sector Health:</span> <strong style="color: ' + healthColor + ';">' + sHealth + '%' + (carryover > 0 ? ' (' + carryover + ' residual fragments)' : '') + '</strong></div>',
+                            '  <div class="contract-req-row"><span>Time Window:</span> <strong>' + contract.timeLimit + 's</strong></div>',
+                            '</div>',
+                            '<div class="contract-payout-box">',
+                            '  <div>',
+                            '    <div class="payout-amount">+' + contract.payoutScrap + ' SCRAP</div>',
+                            '    <div class="payout-advance">Advance Budget: ' + contract.budgetScrap + ' Scrap</div>',
+                            '  </div>',
+                            '  <button type="button" class="btn-primary btn-accept-contract" data-contract-id="' + contract.id + '" onclick="if(window.uiController){window.uiController.acceptContractAndLaunch(\'' + contract.id + '\');}">ACCEPT &amp; LAUNCH</button>',
+                            '</div>'
+                        ].join('');
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (e) {
+                console.error('Fallback render error:', e);
+            }
+        };
+
+        function handleTelemetryHotkeys(e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+            var isF3 = e.key === 'F3' || e.code === 'F3' || e.keyCode === 114;
+            var isBacktick = e.key === '`' || e.code === 'Backquote' || e.keyCode === 192 || e.key === '~';
+            var isKeyT = e.key === 't' || e.key === 'T' || e.code === 'KeyT' || e.keyCode === 84;
+
+            if (isF3 || isBacktick || isKeyT) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') {
+                    e.stopImmediatePropagation();
+                }
+                window.toggleTelemetryOverlay();
+            }
+        }
+
+        if (!window._telemetryKeyHandlerAttached) {
+            window._telemetryKeyHandlerAttached = true;
+            window.addEventListener('keydown', handleTelemetryHotkeys, true);
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            try { document.body.focus(); } catch (e) {}
+        });
+    </script>
+</head>
+<body tabindex="0">
+
+    <!-- Global Floating Telemetry Button (Instant access on any screen, no Fn key required) -->
+    <button type="button" id="btn-global-telemetry" class="global-telemetry-btn" title="Toggle Tactical Telemetry [Press T or F3]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [T / F3]</button>
+
+    <!-- Phaser 3 Game Container -->
+    <div id="game-container"></div>
+
+    <!-- ====================================================================
+         1. MAIN MENU SCREEN
+         ==================================================================== -->
+    <div id="screen-main-menu" class="screen-layer">
+        <div class="menu-container">
+            <h1 class="game-title">ORBITAL CLEANUP</h1>
+            <div class="game-subtitle">MISSION ZERO // KESSLER DEFENSE INITIATIVE</div>
+            <p class="mission-lore" style="font-size: 0.95rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px;">
+                Cleanse Earth's orbit of hazardous debris, evade kinetic strikes, and recycle salvage at the Aegis Depot before cascade collapse.
+            </p>
+
+            <!-- Active Commander Profile Badge -->
+            <div id="user-auth-badge" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 auto 16px; background: rgba(15, 23, 42, 0.85); border: 1px solid var(--accent-cyan); padding: 6px 14px; border-radius: 4px; max-width: 420px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">👨‍🚀</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 0.68rem; color: #94a3b8; font-family: var(--font-mono); letter-spacing: 0.5px;">ACTIVE COMMANDER:</div>
+                        <strong id="auth-current-callsign" style="font-family: var(--font-heading); color: var(--accent-cyan); font-size: 0.95rem;">CADET</strong>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span id="auth-network-indicator" style="font-family: var(--font-mono); font-size: 0.68rem; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--clean); color: var(--clean);">ONLINE</span>
+                    <button type="button" id="btn-auth-switch" class="btn-secondary" style="font-size: 0.72rem; padding: 4px 8px; border-color: var(--salvage); color: var(--salvage);">LOGIN / SWITCH</button>
+                </div>
+            </div>
+            <div class="menu-buttons">
+                <!-- Primary Modes -->
+                <button type="button" id="btn-menu-contracts" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700; font-size: 1.05rem;" onclick="window.openMissionBoard();">
+                    📋 MISSION BOARD &amp; CAMPAIGN
+                </button>
+                <button type="button" id="btn-menu-survival" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: 700; font-size: 1rem;" onclick="if(window.uiController){window.uiController.startCascadeSurvival();}else{alert('Starting Cascade Survival...');}">
+                    ⚡ CASCADE SURVIVAL MODE
+                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" id="btn-menu-campaign-map" class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-size: 0.85rem; padding: 10px;" onclick="if(window.uiController){window.uiController.openCampaignMap();}">
+                        🗺️ CAMPAIGN MAP
+                    </button>
+                    <button id="btn-menu-start" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🛠️ CUSTOM STUDIO
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button id="btn-menu-hangar" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🔬 FLEET HANGAR
+                    </button>
+                    <button id="btn-menu-leaderboard" class="btn-secondary" style="font-size: 0.85rem; padding: 10px;">
+                        🏆 TOP RECORDS
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px;">
+                    <button id="btn-menu-help" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px;">
+                        📖 HOW TO PLAY
+                    </button>
+                    <button type="button" id="btn-menu-telemetry" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px; border-color: var(--accent-cyan); color: var(--accent-cyan);" onclick="window.toggleTelemetryOverlay();">
+                        📡 TELEMETRY [T]
+                    </button>
+                    <button id="btn-menu-sources" class="btn-secondary" style="font-size: 0.78rem; padding: 8px 4px;">
+                        ℹ️ SOURCES
+                    </button>
+                </div>
+                <button id="btn-menu-credits" class="btn-secondary" style="display: none;">MISSION CREDITS</button>
+            </div>
+            <div class="audio-controls" style="margin-top: 14px;">
+                <button id="btn-toggle-sfx" class="btn-audio active">SFX: ON</button>
+                <button id="btn-toggle-music" class="btn-audio active">MUSIC: ON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         1B. MISSION BOARD & CAMPAIGN CONTRACTS SCREEN (PHASE 8a)
+         ==================================================================== -->
+    <div id="screen-mission-board" class="screen-layer hidden">
+        <div class="contracts-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">MISSION BOARD // CAMPAIGN CONTRACTS</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        ACTIVE CONTRACTS // ORBITAL STABILITY &amp; REPUTATION
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-board-campaign-map" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">🗺️ CAMPAIGN MAP</button>
+                    <button type="button" id="btn-board-tech-tree" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #a855f7; color: #a855f7;">🔬 TECH RESEARCH</button>
+                    <button type="button" id="btn-board-assets" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">🛰️ ASSET REGISTRY</button>
+                    <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
+                    <button type="button" id="btn-board-new-campaign" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #eab308; color: #eab308;">➕ NEW CAMPAIGN</button>
+                    <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
+                </div>
+            </div>
+
+            <!-- Campaign Standing & Telemetry Bar -->
+            <div class="campaign-standing-bar">
+                <div class="standing-group">
+                    <span class="standing-label">CAMPAIGN SEED:</span>
+                    <strong id="board-campaign-seed" style="font-family: var(--font-mono); color: var(--accent-cyan);">SEED-000000</strong>
+                </div>
+                <div class="standing-group">
+                    <span class="standing-label">WORLD CLOCK:</span>
+                    <strong id="board-epoch-clock" style="font-family: var(--font-mono); color: var(--clean);">DAY 001 // 2054-04-12</strong>
+                    <span id="board-solar-badge" class="badge-solar-quiet" style="font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--clean); color: var(--clean); border-radius: 2px;">[QUIET SUN]</span>
+                </div>
+                <div class="standing-meters">
+                    <div class="standing-meter-box">
+                        <span class="rep-label">AGENCY:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-agency-bar" class="rep-fill fill-agency" style="width: 50%;"></div></div>
+                        <span id="board-rep-agency-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">COMMERCIAL:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-commercial-bar" class="rep-fill fill-commercial" style="width: 50%;"></div></div>
+                        <span id="board-rep-commercial-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">PUBLIC:</span>
+                        <div class="rep-mini-bar"><div id="board-rep-public-bar" class="rep-fill fill-public" style="width: 50%;"></div></div>
+                        <span id="board-rep-public-val" class="rep-val">50%</span>
+                    </div>
+                </div>
+                <div class="standing-funds">
+                    <span>FUNDS: <strong id="board-credits-val" style="color: var(--salvage);">200 SCRAP</strong></span>
+                </div>
+            </div>
+
+            <!-- Phase 8b Active Storylet Dilemma Container -->
+            <div id="board-dilemma-container" class="board-dilemma-container hidden"></div>
+
+            <!-- 3 Available Contracts Grid -->
+            <div id="contracts-card-grid" class="contracts-card-grid">
+                <!-- Dynamically populated contract cards -->
+            </div>
+
+            <div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-muted);">
+                    Select an operational contract above, or configure a custom flight.
+                </div>
+                <button type="button" id="btn-board-custom-design" class="btn-secondary" style="font-size: 0.85rem;">CUSTOM MISSION STUDIO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         1C. INTERACTIVE ORBITAL CAMPAIGN MAP (PHASE 8c)
+         ==================================================================== -->
+    <div id="screen-campaign-map" class="screen-layer hidden">
+        <div class="contracts-container" style="max-width: 1200px;">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">ORBITAL CAMPAIGN TACTICAL MAP</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        ORBITAL SHELLS // REAL-TIME HAZARD &amp; INFRASTRUCTURE STATUS
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-map-board" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--salvage); color: var(--salvage);">📋 MISSION BOARD</button>
+                    <button type="button" id="btn-map-tech" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #a855f7; color: #a855f7;">🔬 TECH RESEARCH</button>
+                    <button type="button" id="btn-map-evaluate" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: #eab308; color: #eab308;">🏆 EVALUATE ENDING</button>
+                    <button type="button" id="btn-map-new-campaign" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;">➕ NEW CAMPAIGN</button>
+                    <button type="button" id="btn-map-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
+                </div>
+            </div>
+
+            <!-- Campaign Standing & Telemetry Bar -->
+            <div class="campaign-standing-bar">
+                <div class="standing-group">
+                    <span class="standing-label">ORBITAL EPOCH:</span>
+                    <strong id="map-epoch-clock" style="font-family: var(--font-mono); color: var(--clean);">DAY 001 // 2054-04-12</strong>
+                    <span id="map-solar-badge" class="badge-solar-quiet" style="font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--clean); color: var(--clean); border-radius: 2px;">[QUIET SUN]</span>
+                </div>
+                <div class="standing-meters">
+                    <div class="standing-meter-box">
+                        <span class="rep-label">AGY:</span>
+                        <span id="map-rep-agency-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">COM:</span>
+                        <span id="map-rep-commercial-val" class="rep-val">50%</span>
+                    </div>
+                    <div class="standing-meter-box">
+                        <span class="rep-label">PUB:</span>
+                        <span id="map-rep-public-val" class="rep-val">50%</span>
+                    </div>
+                </div>
+                <div class="standing-funds">
+                    <span>FUNDS: <strong id="map-credits-val" style="color: var(--salvage);">0 SCRAP</strong></span>
+                </div>
+            </div>
+
+            <!-- Two-Column Tactical Map Interface -->
+            <div class="campaign-map-grid">
+                <!-- Left: 8 Orbital Shells Node Grid -->
+                <div class="campaign-sectors-column">
+                    <div style="font-family: var(--font-pixel); font-size: 0.8rem; color: var(--accent-cyan); margin-bottom: 8px; letter-spacing: 1px;">
+                        TRACKED ORBITAL ALTITUDE SHELLS (LEO 420 KM ➔ GEO 35,986 KM):
+                    </div>
+                    <div id="campaign-map-sectors-list" class="campaign-sectors-list">
+                        <!-- Populated dynamically with 8 sector nodes -->
+                    </div>
+                </div>
+
+                <!-- Right: Focused Sector Tactical Dossier Inspector -->
+                <div class="campaign-inspector-column">
+                    <div id="campaign-sector-inspector" class="sector-inspector-panel">
+                        <!-- Populated with selected sector details, stationed assets, active contracts & launch button -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         2. MISSION DESIGN MODE SCREEN (4-STEP SYSTEMS ENGINEERING FLOW)
+         ==================================================================== -->
+    <div id="screen-mission-design" class="screen-layer hidden">
+        <div class="design-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">MISSION DESIGN STUDIO v2</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        SYSTEMS ENGINEERING: CONTRACT // CONOPS // TRADE STUDY // POINT DESIGN
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <button type="button" class="btn-primary btn-quick-launch-direct" style="padding: 8px 16px;">🚀 LAUNCH</button>
+                    <button type="button" id="btn-quick-demo" class="btn-secondary" style="border-color: var(--clean); color: var(--clean);">⚡ QUICK DEMO</button>
+                    <button type="button" id="btn-design-tutorial" class="btn-secondary">TUTORIAL</button>
+                    <button type="button" id="btn-design-share" class="btn-secondary">SHARE CODE</button>
+                    <button type="button" class="btn-secondary btn-back-to-menu">MAIN MENU</button>
+                </div>
+            </div>
+
+            <!-- 4-Step Navigation Tabs -->
+            <div class="design-step-tabs">
+                <button type="button" class="step-tab-btn active" data-step="1">
+                    <span class="step-num">01</span>
+                    <span class="step-text">MISSION &amp; CRAFT</span>
+                </button>
+                <button type="button" class="step-tab-btn" data-step="2">
+                    <span class="step-num">02</span>
+                    <span class="step-text">CONCEPT &amp; CONOPS</span>
+                </button>
+                <button type="button" class="step-tab-btn" data-step="3">
+                    <span class="step-num">03</span>
+                    <span class="step-text">TRADE STUDY</span>
+                </button>
+                <button type="button" class="step-tab-btn" data-step="4">
+                    <span class="step-num">04</span>
+                    <span class="step-text">POINT DESIGN &amp; BUDGETS</span>
+                </button>
+            </div>
+
+            <!-- STEP 1: NEED & GOALS -->
+            <div id="design-step-1" class="design-step-view active">
+                <div class="section-label">A. MISSION FLIGHT DIFFICULTY PROFILE</div>
+                <div id="design-difficulty-select" class="difficulty-cards-row">
+                    <div class="difficulty-card" data-difficulty="cadet">
+                        <div class="diff-header">🟢 CADET</div>
+                        <div class="diff-desc">Guided flight. -30% fuel burn, -35% impact damage, +25% time limit margin.</div>
+                    </div>
+                    <div class="difficulty-card active" data-difficulty="standard">
+                        <div class="diff-header">🔵 STANDARD</div>
+                        <div class="diff-desc">Standard NASA ODPO parameters, standard hazard velocities, and balanced margins.</div>
+                    </div>
+                    <div class="difficulty-card" data-difficulty="veteran">
+                        <div class="diff-header">🔴 VETERAN</div>
+                        <div class="diff-desc">Hardcore deep-space salvage. +25% fuel burn, +40% damage, -15% time, +50% score.</div>
+                    </div>
+                </div>
+
+                <div class="section-label">B. SELECT TARGET ORBIT &amp; MISSION SECTOR</div>
+                <div id="design-level-select" class="level-cards-grid"></div>
+
+                <div class="section-label">C. SELECT CLIENT / CONTRACT STAKEHOLDER</div>
+                <div id="design-client-select" class="client-cards-grid"></div>
+
+                <div class="section-label">D. SELECT SPACECRAFT AIRFRAME BUS</div>
+                <div id="design-step1-bus-select" class="cards-row-horizontal"></div>
+
+                <div class="section-label" style="margin-top: 16px;">E. SELECT CAPTURE &amp; RETRIEVAL EQUIPMENT</div>
+                <div id="design-step1-equipment-select" class="cards-row-horizontal"></div>
+
+                <div class="section-label" style="margin-top: 16px;">F. CONTRACT SPECIFICATION &amp; MEASURABLE REQUIREMENTS</div>
+                <div id="design-requirements-dossier" class="mission-dossier-box"></div>
+
+                <div class="step-nav-bar">
+                    <button type="button" class="btn-secondary btn-next-step" data-target="2">
+                        📋 CONOPS &amp; TIMELINE (STEP 2) →
+                    </button>
+                    <button type="button" class="btn-secondary btn-next-step" data-target="4">
+                        ⚙️ FULL POINT DESIGN (STEP 4) →
+                    </button>
+                    <button type="button" class="btn-primary btn-quick-launch-direct" style="font-size: 1.15rem; padding: 12px 28px;">
+                        🚀 LAUNCH MISSION
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: CONCEPT OF OPERATIONS (CONOPS) -->
+            <div id="design-step-2" class="design-step-view">
+                <div class="conops-grid">
+                    <!-- Left: Timeline Sequence -->
+                    <div>
+                        <div class="section-label">A. MISSION PHASE TIMELINE SEQUENCE</div>
+                        <div class="conops-timeline">
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 01</div>
+                                <div class="stage-title">LAUNCH &amp; ASCENT</div>
+                                <div class="stage-desc">Suborbital staging, fairing jettison above atmosphere, booster disposal.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 02</div>
+                                <div class="stage-title">ORBITAL INSERTION &amp; PHASING</div>
+                                <div class="stage-desc">Circularization burn at target altitude. Hohmann phasing transfer to match debris orbital plane.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 03</div>
+                                <div class="stage-title">PROXIMITY RENDEZVOUS</div>
+                                <div class="stage-desc">Relative navigation radar acquisition within 2 km. Relative velocity reduction to &lt; 2 m/s.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 04</div>
+                                <div class="stage-title">PROXIMITY CAPTURE OPERATIONS</div>
+                                <div class="stage-desc">Deployment of Grapple Tether, Expanding Mesh Net, or Magnetic Cone. Secure payload into intake bay.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 05</div>
+                                <div class="stage-title">DEPOT DOCKING &amp; RECYCLING</div>
+                                <div class="stage-desc">Approach Aegis Station perimeter. Autonomous soft docking and cargo transfer into orbital smelter.</div>
+                            </div>
+                            <div class="conops-stage-card">
+                                <div class="stage-tag">STAGE 06</div>
+                                <div class="stage-title">CONTROLLED DISPOSAL &amp; DE-ORBIT</div>
+                                <div class="stage-desc">Retro-grade burn shedding perigee into South Pacific Ocean Uninhabited Area (SPOUA) or graveyard boost.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Orbit Diagram & Risks -->
+                    <div>
+                        <div class="section-label">B. ORBIT GEOMETRY &amp; TRAJECTORY PROFILE</div>
+                        <div class="orbit-diagram-card">
+                            <div id="orbit-diagram-container" class="orbit-canvas-wrapper">
+                                <canvas id="orbit-canvas" width="460" height="240"></canvas>
+                            </div>
+                            <div id="orbit-telemetry-meta" class="orbit-meta-bar"></div>
+                        </div>
+
+                        <div class="section-label" style="margin-top: 18px;">C. ORBITAL RISK ASSESSMENT &amp; MITIGATION MATRIX</div>
+                        <div class="risk-matrix-table-wrap">
+                            <table class="risk-matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th>IDENTIFIED RISK</th>
+                                        <th>LIKELIHOOD</th>
+                                        <th>SEVERITY</th>
+                                        <th>ENGINEERING MITIGATION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Hypervelocity Fragment Strike</strong></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td><span class="risk-badge high">HIGH</span></td>
+                                        <td>Whipple bumper shielding &amp; proactive radar tracking</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Eclipse Battery Depletion</strong></td>
+                                        <td><span class="risk-badge high">HIGH</span></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td>Deployable dual-tracking arrays or supercapacitor reserve</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Propellant Starvation Drift</strong></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td><span class="risk-badge crit">CRIT</span></td>
+                                        <td>High-Isp Ion drives or titanium auxiliary bladders</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tether Recoil / Mechanical Snag</strong></td>
+                                        <td><span class="risk-badge low">LOW</span></td>
+                                        <td><span class="risk-badge med">MED</span></td>
+                                        <td>Redundant pyrotechnic guillotine cable cutters</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-nav-bar">
+                    <button type="button" class="btn-secondary btn-prev-step" data-target="1">← BACK TO MISSION &amp; CRAFT (STEP 1)</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-secondary btn-next-step" data-target="4">POINT DESIGN (STEP 4) →</button>
+                        <button type="button" class="btn-primary btn-next-step" data-target="3">PROCEED TO TRADE STUDY (STEP 3) →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: TRADE STUDY -->
+            <div id="design-step-3" class="design-step-view">
+                <div class="section-label">SPACECRAFT ARCHITECTURE TRADE STUDY (LEAN vs BALANCED vs ROBUST)</div>
+                <p style="color: var(--ink-muted); font-size: 0.95rem; margin-bottom: 16px;">
+                    Compare systems architectures across mass envelope, lifecycle cost, delta-V endurance, and operational risk. Select an architecture to automatically configure Step 4 point design presets.
+                </p>
+                <div id="trade-architectures-grid" class="trade-grid"></div>
+
+                <div class="step-nav-bar">
+                    <button type="button" class="btn-secondary btn-prev-step" data-target="2">← BACK TO CONOPS (STEP 2)</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-secondary btn-prev-step" data-target="1">STEP 1</button>
+                        <button type="button" class="btn-primary btn-next-step" data-target="4">PROCEED TO POINT DESIGN (STEP 4) →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: POINT DESIGN & LIVE BUDGETS -->
+            <div id="design-step-4" class="design-step-view">
+                <div class="point-design-layout">
+                    <!-- Left: Subsystem Selectors -->
+                    <div class="subsystems-column">
+                        <div class="section-label">1. LAUNCH VEHICLE ALLOTMENT</div>
+                        <div id="select-launch-vehicle" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">2. SPACECRAFT AIRFRAME BUS</div>
+                        <div id="select-spacecraft-bus" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">3. PROPULSION &amp; PROPELLANT TANK</div>
+                        <div id="select-propulsion" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">4. ELECTRICAL POWER SUBSYSTEM (EPS)</div>
+                        <div id="select-power" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">5. RETRIEVAL &amp; CAPTURE PAYLOAD</div>
+                        <div id="select-equipment" class="subsystem-selector-row"></div>
+
+                        <div class="section-label">6. COMMUNICATIONS &amp; GROUND RELAY</div>
+                        <div id="select-ground-comms" class="subsystem-selector-row"></div>
+                    </div>
+
+                    <!-- Right: Live Budgets & Design Review Board -->
+                    <div class="budgets-column">
+                        <div class="section-label">LIVE ENGINEERING BUDGETS &amp; MARGINS</div>
+                        <div id="budgets-dashboard" class="budgets-card"></div>
+
+                        <div class="section-label" style="margin-top: 18px;">FORMAL DESIGN REVIEW (GATEWAY)</div>
+                        <div id="design-review-board" class="review-board-card"></div>
+                    </div>
+                </div>
+
+                <div class="step-nav-bar" style="margin-top: 24px;">
+                    <button type="button" class="btn-secondary btn-prev-step" data-target="1">← BACK TO MISSION &amp; CRAFT (STEP 1)</button>
+                    <button type="button" id="btn-launch-mission" class="btn-primary" style="font-size: 1.25rem; padding: 16px 40px;">
+                        🚀 LAUNCH ORBITAL INSERTION
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         3. HANGAR & UPGRADES SCREEN
+         ==================================================================== -->
+    <div id="screen-hangar" class="screen-layer hidden">
+        <div class="hangar-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">ORBITAL HANGAR & WORKSHOP</h2>
+                    <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.9rem;">
+                        ENGINEERING UPGRADES & SPACECRAFT RETROFITS
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="scrap-badge">SCRAP: <span id="hangar-credits-val">0</span></span>
+                    <button class="btn-secondary btn-back-to-menu">RETURN</button>
+                </div>
+            </div>
+
+            <!-- Upgrades List -->
+            <div id="hangar-upgrades-list"></div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         4. HOW TO PLAY & FLIGHT MANUAL
+         ==================================================================== -->
+    <div id="screen-how-to-play" class="screen-layer hidden">
+        <div class="guide-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">AEGIS OPERATIONS MANUAL</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem; letter-spacing: 1px;">
+                        FLIGHT PROCEDURES // CAPTURE SYSTEMS // HAZARD DEFENSE
+                    </div>
+                </div>
+                <button class="btn-secondary btn-back-to-menu">RETURN</button>
+            </div>
+
+            <!-- Quick 4-Step Loop Banner -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 12px 0 16px; background: rgba(0, 243, 255, 0.04); border: 1px solid rgba(0, 243, 255, 0.3); padding: 10px 14px; border-radius: 4px;">
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--accent-cyan); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">01</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">THRUST &amp; PILOT</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Burn <span class="kbd">W</span> to accelerate; steer with <span class="kbd">A</span>/<span class="kbd">D</span>. Retro-brake with <span class="kbd">S</span>.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--salvage); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">02</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">RETRIEVE DEBRIS</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Press <span class="kbd">SPACE</span> to fire Grapple, Net, or hold Tractor Beam to capture debris.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--danger); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">03</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">EVADE &amp; DEFLECT</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Dodge threats or press <span class="kbd">Q</span> Laser Nudge to push away meteors.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--clean); font-weight: bold; font-family: var(--font-mono); font-size: 1rem;">04</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">DOCK &amp; RECYCLE</strong>
+                        <div style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.3;">Return to Depot and press <span class="kbd">E</span> to cash in Scrap, repair hull &amp; refuel.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guide-tabs">
+                <button class="tab-btn active" data-tab="controls">FLIGHT CONTROLS</button>
+                <button class="tab-btn" data-tab="equipment">EQUIPMENT OPERATION</button>
+                <button class="tab-btn" data-tab="debris">DEBRIS &amp; RECYCLING</button>
+                <button class="tab-btn" data-tab="hazards">ORBITAL HAZARDS</button>
+            </div>
+
+            <!-- Controls Tab -->
+            <div id="tab-content-controls" class="tab-content active">
+                <div class="guide-keybinds" style="margin-top: 10px;">
+                    <div class="key-card">
+                        <div><span class="kbd">W</span> or <span class="kbd">▲</span></div>
+                        <strong>Main Propulsion Thruster:</strong> Fires main engine forward. Burns fuel.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">A</span> / <span class="kbd">D</span> or <span class="kbd">◄</span> / <span class="kbd">►</span></div>
+                        <strong>RCS Yaw Steering:</strong> Rotates craft left or right.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">S</span> or <span class="kbd">▼</span></div>
+                        <strong>Retro-Braking:</strong> Counter-thrusters to shed orbital velocity.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">SPACEBAR</span></div>
+                        <strong>Activate Equipment:</strong> Fires Grapple Arm, deploys Capture Net, or holds Tractor Beam.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">Q</span></div>
+                        <strong>Laser Nudge:</strong> Deflects incoming hazards and debris (consumes 12 battery).
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">E</span> (At Depot)</div>
+                        <strong>Dock &amp; Recycle:</strong> Offloads debris for 100% Score &amp; Scrap Credits, restores hull &amp; fuel.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">R</span> (At Depot)</div>
+                        <strong>Strip Materials:</strong> Converts cargo into Metal, Cells, and Chips for tech research.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">T</span> or <span class="kbd">F3</span></div>
+                        <strong>Telemetry Monitor:</strong> Real-time collision radar, physics metrics &amp; mission timers.
+                    </div>
+                    <div class="key-card">
+                        <div><span class="kbd">P</span> or <span class="kbd">ESC</span></div>
+                        <strong>Pause Mission:</strong> Pauses mission and displays abort / audio options.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Tab -->
+            <div id="tab-content-equipment" class="tab-content">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px;">
+                    <div class="key-card" style="border-left: 3px solid var(--accent-cyan);">
+                        <strong style="color: var(--accent-cyan); font-size: 0.95rem;">🦾 Robotic Grapple Arm</strong>
+                        <div style="font-size: 0.78rem; color: var(--salvage); margin: 4px 0;">+35% SCRAP BONUS // LOW BATTERY DRAIN</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Fires a mechanical harpoon cable forward. Clamps onto a single debris item and reels it in.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid var(--salvage);">
+                        <strong style="color: var(--salvage); font-size: 0.95rem;">🕸️ Wide-Angle Capture Net</strong>
+                        <div style="font-size: 0.78rem; color: var(--accent-cyan); margin: 4px 0;">AREA OF EFFECT // HIGH VOLUME CLEARANCE</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Launches an expanding electromagnetic mesh that snares all nearby fragments simultaneously.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #a855f7;">
+                        <strong style="color: #a855f7; font-size: 0.95rem;">🧲 Magnetic Tractor Beam</strong>
+                        <div style="font-size: 0.78rem; color: #eab308; margin: 4px 0;">CONTINUOUS CONE // HIGH BATTERY DRAIN</div>
+                        <p style="font-size: 0.85rem; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                            Hold SPACEBAR to emit a continuous graviton cone that drags all metallic salvage toward your intake.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debris Tab -->
+            <div id="tab-content-debris" class="tab-content">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+                    <div class="key-card">
+                        <strong style="color: #fff;">🔩 Structural Bolt &amp; Shards (15 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Fast-moving metallic fragments. Quick capture yield.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🔋 Broken Solar Array (45 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Photovoltaic panels rich in rare cells and materials.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">💾 Research Cubesat (75 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Miniaturized satellite chassis containing high-value microchips.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🚀 Spent Upper Stage (220 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Massive propellant tank. High scrap payout upon safe recovery.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">🛰️ Derelict Comms Satellite (380 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Heavy telecommunication platform with intact avionics.</div>
+                    </div>
+                    <div class="key-card">
+                        <strong style="color: #fff;">⚡ Prototype Fusion Core (160 kg)</strong>
+                        <div style="font-size: 0.82rem; color: #cbd5e1;">Rare experimental module yielding maximum credit bounties.</div>
+                    </div>
+                </div>
+                <div style="margin-top: 12px; background: rgba(0, 243, 255, 0.05); border: 1px solid var(--accent-cyan); padding: 10px 14px; border-radius: 3px; font-size: 0.85rem; color: #cbd5e1;">
+                    🎯 <strong>Recycling Tip:</strong> When cargo hold is full, return to Aegis Depot and press <span class="kbd">E</span> to cash in scrap and repair hull, or <span class="kbd">R</span> to strip for metal, cells, and chips.
+                </div>
+            </div>
+
+            <!-- Hazards Tab -->
+            <div id="tab-content-hazards" class="tab-content">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px;">
+                    <div class="key-card" style="border-left: 3px solid var(--danger);">
+                        <strong style="color: var(--danger); font-size: 0.95rem;">☄️ Kinetic Micrometeoroids</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Hypersonic projectiles crossing orbit. Severe impact damage. Evade with thrusters or deflect with <span class="kbd">Q</span> Laser Nudge.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #f97316;">
+                        <strong style="color: #f97316; font-size: 0.95rem;">💥 Volatile Hydrazine Tanks</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Pressurized propellant tanks. Detonate violently on ramming. Grapple carefully from distance.
+                        </p>
+                    </div>
+                    <div class="key-card" style="border-left: 3px solid #eab308;">
+                        <strong style="color: #eab308; font-size: 0.95rem;">☢️ Defunct RTG Nuclear Cores</strong>
+                        <p style="font-size: 0.84rem; color: #cbd5e1; margin: 4px 0; line-height: 1.4;">
+                            Cold War nuclear satellites emitting radiation fields that rapidly drain craft battery reserves.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         5. LEADERBOARD & CAREER STATS SCREEN
+         ==================================================================== -->
+    <div id="screen-leaderboard" class="screen-layer hidden">
+        <div class="hangar-container">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">CAREER STATISTICS &amp; LEADERBOARD</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.82rem; letter-spacing: 1px;">
+                        REAL PLAYER FLIGHT RECORDS // ORBITAL DEFENSE INITIATIVE
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-refresh-leaderboard" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--clean); color: var(--clean);">
+                        🔄 REFRESH
+                    </button>
+                    <button class="btn-secondary btn-back-to-menu">RETURN</button>
+                </div>
+            </div>
+
+            <div class="career-stats-grid">
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">DEBRIS RECYCLED</div>
+                    <div id="stat-total-debris" class="val">0</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">MASS DE-ORBITED</div>
+                    <div id="stat-total-mass" class="val">0.0 t</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">MISSIONS CLEARED</div>
+                    <div id="stat-total-missions" class="val">0</div>
+                </div>
+                <div class="career-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">TOTAL SCRAP</div>
+                    <div id="stat-total-credits" class="val">0</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <div class="section-label" style="margin: 0;">TOP FLIGHT RECORDS (REAL PLAYERS ONLY)</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                        Individual mission sorties. Career totals (Debris, Mass, Scrap) tracked in top telemetry cards.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #94a3b8;">
+                        SORT BY: 
+                        <button type="button" id="btn-sort-score" style="background: none; border: none; color: var(--accent-cyan); cursor: pointer; font-family: var(--font-mono); font-weight: bold; text-decoration: underline;">SCORE ▼</button> | 
+                        <button type="button" id="btn-sort-debris" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-family: var(--font-mono); text-decoration: underline;">DEBRIS ↕</button>
+                    </div>
+                    <div id="leaderboard-network-status" style="font-family: var(--font-mono); font-size: 0.75rem;">
+                        🟢 <span style="color: var(--clean);">LIVE SERVER NETWORK</span>
+                    </div>
+                </div>
+            </div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>RANK</th>
+                        <th>COMMANDER</th>
+                        <th>SECTOR</th>
+                        <th id="th-sort-debris" style="cursor: pointer; user-select: none;" title="Click to sort by Debris">
+                            DEBRIS <span id="sort-icon-debris">↕</span>
+                        </th>
+                        <th id="th-sort-score" style="cursor: pointer; user-select: none;" title="Click to sort by Score">
+                            SCORE <span id="sort-icon-score">▼</span>
+                        </th>
+                        <th>DATE</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-tbody"></tbody>
+            </table>
+
+            <div style="margin-top: 14px; padding: 10px 14px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #cbd5e1;">
+                    👨‍🚀 LOGGED IN AS: <strong id="leaderboard-current-pilot" style="color: var(--accent-cyan);">CADET</strong>
+                    <span id="leaderboard-pilot-best" style="margin-left: 8px; color: var(--salvage); font-weight: bold;"></span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-leaderboard-claim" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--accent-cyan); color: var(--accent-cyan);" title="Attribute all previous local runs to your active callsign">
+                        ⚡ CLAIM RUNS AS PILOT
+                    </button>
+                    <button type="button" id="btn-leaderboard-auth" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--salvage); color: var(--salvage);">
+                        ENLIST / SWITCH CALLSIGN
+                    </button>
+                    <button type="button" id="btn-leaderboard-clear" class="btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; border-color: var(--danger); color: var(--danger);" title="Clear local leaderboard records">
+                        CLEAR RUNS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         6. IN-GAME HUD OVERLAY
+         ==================================================================== -->
+    <div id="hud-overlay" class="hud-layer hidden">
+        <!-- Top Telemetry Bar -->
+        <div class="hud-top-bar">
+            <!-- Resource Gauges (Left) -->
+            <div class="hud-panel hud-gauges">
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>FUEL</span>
+                        <span id="hud-fuel-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-fuel-fill" class="gauge-fill fill-fuel"></div>
+                    </div>
+                </div>
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>BATTERY</span>
+                        <span id="hud-battery-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-battery-fill" class="gauge-fill fill-battery"></div>
+                    </div>
+                </div>
+                <div class="gauge-row">
+                    <div class="gauge-label">
+                        <span>HULL INTEGRITY</span>
+                        <span id="hud-hull-text">100%</span>
+                    </div>
+                    <div class="gauge-bar-bg">
+                        <div id="hud-hull-fill" class="gauge-fill fill-hull"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Center Status & Kessler Meter -->
+            <div class="hud-panel hud-mission-status">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div id="hud-mission-name" class="hud-title">MISSION 01: LEO CORRIDOR</div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button type="button" id="btn-toggle-f3-hud" class="hud-f3-btn" title="Toggle Flight Telemetry [T / F3]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [T / F3]</button>
+                        <div id="hud-lane-indicator" class="hud-lane-badge lane-mid">LANE 2: CO-ORBITAL [SYNC]</div>
+                        <div id="hud-mission-stage" class="hud-stage-badge stage-calm">CALM</div>
+                    </div>
+                </div>
+                <div class="hud-counters">
+                    <div class="hud-counter-item">
+                        QUOTA: <span id="hud-quota-val" class="val-green">0 / 8</span>
+                    </div>
+                    <div class="hud-counter-item">
+                        SCORE: <span id="hud-score-val" class="val-amber">0</span>
+                    </div>
+                    <div class="hud-counter-item">
+                        TIMER: <span id="hud-timer-val">02:30</span>
+                    </div>
+                </div>
+                <div class="hud-kessler-container">
+                    <div class="hud-kessler-label">
+                        <span>KESSLER RISK</span>
+                        <span id="hud-kessler-val" class="kessler-low">0% [NOMINAL]</span>
+                    </div>
+                    <div class="gauge-bar-bg kessler-bar-bg">
+                        <div id="hud-kessler-fill" class="gauge-fill fill-kessler fill-low" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cargo Hold Status & Salvage Materials (Right) -->
+            <div class="hud-panel hud-cargo-panel">
+                <div class="hud-cargo-header">
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">
+                        CARGO (<span id="hud-cargo-count">0/3</span>):
+                    </div>
+                    <div id="hud-cargo-slots" class="cargo-slots-container"></div>
+                </div>
+                <div class="hud-materials-container">
+                    <span class="mat-label">SALVAGE:</span>
+                    <span class="mat-pill"><span class="mat-icon">🔩</span> <strong id="hud-mat-metal">0</strong></span>
+                    <span class="mat-pill"><span class="mat-icon">🔋</span> <strong id="hud-mat-cells">0</strong></span>
+                    <span class="mat-pill"><span class="mat-icon">💾</span> <strong id="hud-mat-chips">0</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Collision Warning Banner -->
+        <div id="hud-warning-banner" class="hud-warning-banner">
+            [ALERT] COLLISION WARNING - EVASIVE MANEUVER REQUIRED
+        </div>
+
+        <!-- Space Weather Alert Banner (NASA/CCMC DONKI) -->
+        <div id="hud-weather-banner" class="hud-weather-banner hidden">
+            <div class="weather-alert-head">
+                <span class="weather-alert-tag">[SPACE WEATHER ALERT]</span>
+                <span id="hud-weather-id">2024-05-10T17:00:00-GST-001</span>
+                <span id="hud-weather-date">(2024-05-10)</span>
+            </div>
+            <div class="weather-alert-body">
+                <span id="hud-weather-desc">G5 EXTREME GEOMAGNETIC STORM</span> // 
+                <span id="hud-weather-source">Source: NASA/CCMC DONKI</span>
+            </div>
+            <div id="hud-weather-sim-label" class="weather-sim-label hidden">
+                [SIMULATED DATA - AEROSPACE TRAINING MODEL]
+            </div>
+        </div>
+
+        <!-- Docking Station Notification (Recycle vs Strip & Material Repairs) -->
+        <div id="hud-docking-prompt" class="hud-docking-prompt">
+            <div class="dock-title">[AEGIS DEPOT REACHED - FUEL &amp; BATTERY REFILLED]</div>
+            <div class="dock-actions">
+                <button type="button" id="btn-dock-recycle" class="dock-action-btn"><span class="kbd">E</span> RECYCLE (100% SCORE/SCRAP)</button>
+                <span class="dock-divider">|</span>
+                <button type="button" id="btn-dock-strip" class="dock-action-btn"><span class="kbd">R</span> STRIP (50% SCORE + MATERIALS)</button>
+                <span class="dock-divider">|</span>
+                <button type="button" id="btn-dock-repair" class="dock-action-btn dock-repair-btn"><span class="kbd">H</span> REPAIR HULL (-1 METAL, +35 HP)</button>
+            </div>
+        </div>
+
+        <!-- Bottom Bar: Controls & Minimap -->
+        <div class="hud-bottom-bar">
+            <div class="hud-controls-hint">
+                <span class="kbd">W/A/S/D</span> Thrust &amp; Yaw &nbsp;|&nbsp; 
+                <span class="kbd">SPACE</span> Collect &nbsp;|&nbsp; 
+                <span class="kbd">Q</span> Nudge &nbsp;|&nbsp; 
+                <span class="kbd">E</span> Recycle &nbsp;|&nbsp; 
+                <span class="kbd">R</span> Strip &nbsp;|&nbsp; 
+                <span class="kbd">H</span> Repair &nbsp;|&nbsp; 
+                <span class="kbd-btn" id="btn-f3-hint" title="Toggle Telemetry" onclick="window.toggleTelemetryOverlay();" style="cursor: pointer;"><span class="kbd">T</span> / <span class="kbd">F3</span> Telemetry</span> &nbsp;|&nbsp; 
+                <span class="kbd">P</span> Pause
+            </div>
+
+            <!-- Minimap Radar -->
+            <div class="hud-minimap-container">
+                <canvas id="hud-minimap-canvas" width="140" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         7. MISSION DEBRIEF v2 MODAL (CONTRACT AUDIT & FLIGHT TELEMETRY)
+         ==================================================================== -->
+    <div id="modal-results" class="modal-layer hidden">
+        <div class="results-box debrief-box">
+            <div class="debrief-header">
+                <div>
+                    <div id="results-headline" class="results-title victory">MISSION ACCOMPLISHED</div>
+                    <div id="results-reason" class="results-reason">ORBITAL ZONE SUCCESSFULLY CLEANSED</div>
+                </div>
+                <div id="res-stars" class="results-stars">★★★</div>
+            </div>
+
+            <!-- Debrief Body Grid -->
+            <div class="debrief-grid">
+                <!-- Requirements Audit -->
+                <div class="debrief-panel">
+                    <div class="panel-sub-title">1. CONTRACT REQUIREMENTS AUDIT</div>
+                    <table class="debrief-table">
+                        <thead>
+                            <tr>
+                                <th>REQUIREMENT</th>
+                                <th>TARGET</th>
+                                <th>ACTUAL</th>
+                                <th>VERDICT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="debrief-audit-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Timeline Comparison -->
+                <div class="debrief-panel">
+                    <div class="panel-sub-title">2. CONOPS PLANNED VS ACTUAL TIMELINE</div>
+                    <div id="debrief-timeline-view" class="debrief-timeline-box"></div>
+                </div>
+            </div>
+
+            <!-- Flight Telemetry Events Log -->
+            <div class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">3. FLIGHT TELEMETRY LOG (CHRONOLOGICAL)</div>
+                <div id="debrief-flight-log" class="flight-log-stream"></div>
+            </div>
+
+            <!-- Salvage Materials & Kessler Audit -->
+            <div id="debrief-materials-panel" class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">4. ORBITAL SALVAGE & KESSLER MITIGATION AUDIT</div>
+                <div class="debrief-materials-grid">
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🔩</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">METAL HARVESTED</span>
+                            <span id="debrief-mat-metal" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🔋</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">CELLS HARVESTED</span>
+                            <span id="debrief-mat-cells" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">💾</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">CHIPS HARVESTED</span>
+                            <span id="debrief-mat-chips" class="mat-card-val">+0 units</span>
+                        </div>
+                    </div>
+                    <div class="mat-card">
+                        <span class="mat-card-icon">🌐</span>
+                        <div class="mat-card-info">
+                            <span class="mat-card-title">KESSLER RISK</span>
+                            <span id="debrief-kessler-risk" class="mat-card-val">12% [NOMINAL]</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Campaign Consequences & Orbital Impact Audit (Phase 8a) -->
+            <div id="debrief-campaign-panel" class="debrief-panel" style="margin-top: 14px;">
+                <div class="panel-sub-title">5. CAMPAIGN CONSEQUENCES &amp; ORBITAL IMPACT</div>
+                <div class="debrief-campaign-grid">
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">SECTOR ORBITAL HEALTH</span>
+                        <div class="campaign-health-bar">
+                            <div id="debrief-sector-health-fill" class="health-fill" style="width: 75%;"></div>
+                        </div>
+                        <span id="debrief-sector-health-text" class="campaign-stat-val">+15% CLEARED (HEALTH: 75%)</span>
+                    </div>
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">RESIDUAL CARRYOVER DEBRIS</span>
+                        <span id="debrief-carryover-text" class="campaign-stat-val val-green">0 FRAGMENTS REMAINING</span>
+                    </div>
+                    <div class="campaign-stat-box">
+                        <span class="campaign-stat-label">REPUTATION SHIFTS</span>
+                        <div id="debrief-reputation-shifts" class="reputation-shifts-row">
+                            <span class="rep-chip rep-agency">AGY +6</span>
+                            <span class="rep-chip rep-commercial">COM +4</span>
+                            <span class="rep-chip rep-public">PUB +8</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="debrief-consequence-narrative" class="campaign-narrative-card">
+                    Clean orbital clearance in Sector 1 has stabilized ISS operations. Insurers have lowered contract liability premiums for your next flight.
+                </div>
+            </div>
+
+            <!-- Redesign Recommendations & Architecture Rating -->
+            <div id="debrief-recommendations-panel" class="debrief-recommendations-card"></div>
+
+            <!-- Design Sharing Code -->
+            <div class="share-code-display-bar">
+                <span class="share-label">SPACECRAFT DESIGN CODE:</span>
+                <code id="debrief-share-code" class="share-code-text">OC2-M01-ESA-F9-COL-HYP-WNG-NET-TDR</code>
+                <button id="btn-copy-debrief-code" class="btn-secondary" style="padding: 6px 14px; font-size: 0.8rem;">COPY CODE</button>
+            </div>
+
+            <div class="results-actions">
+                <button id="btn-results-board" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: 700;">MISSION BOARD</button>
+                <button id="btn-results-next" class="btn-primary">NEXT MISSION</button>
+                <button id="btn-results-redesign" class="btn-secondary">REDESIGN IN STUDIO</button>
+                <button id="btn-results-retry" class="btn-secondary">REPLAY MISSION</button>
+                <button id="btn-results-hangar" class="btn-secondary">UPGRADE HANGAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         8. PAUSE MODAL
+         ==================================================================== -->
+    <div id="modal-pause" class="modal-layer hidden">
+        <div class="results-box" style="max-width: 440px;">
+            <div class="results-title victory" style="font-size: 1.8rem; margin-bottom: 20px;">MISSION PAUSED</div>
+            <div class="menu-buttons">
+                <button id="btn-pause-resume" class="btn-primary">RESUME MISSION</button>
+                <button id="btn-pause-restart" class="btn-secondary">RESTART MISSION</button>
+                <button id="btn-pause-abort" class="btn-secondary">ABORT TO MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         9. SYSTEMS DESIGN TUTORIAL MODAL
+         ==================================================================== -->
+    <div id="modal-tutorial" class="modal-layer hidden">
+        <div class="results-box modal-content-box">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">SYSTEMS ENGINEERING MISSION DESIGN TUTORIAL</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-tutorial">CLOSE</button>
+            </div>
+            <div class="tutorial-body">
+                <div class="tutorial-step">
+                    <h4>STEP 1: NEED &amp; GOALS</h4>
+                    <p>Every space mission begins with client requirements. Select your orbital sector and review the contract stakeholder (ESA, NASA, or Commercial). Note the strict limits: collision tolerances, required quota, and fuel return reserves.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 2: CONCEPT OF OPERATIONS (CONOPS)</h4>
+                    <p>Plan the 6-stage flight sequence from launch to controlled de-orbit. Review orbital geometry (inclination, altitude) and identify top mission hazards to size your protective subsystems accordingly.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 3: ARCHITECTURE TRADE STUDY</h4>
+                    <p>Compare Lean (fast, low mass), Balanced (versatile workhorse), and Robust (heavy industrial) architectures. You can adopt any baseline preset with one click to seed your point design.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h4>STEP 4: POINT DESIGN &amp; LIVE BUDGETS</h4>
+                    <p>Select specific subsystems (Launcher, Bus, Propulsion, EPS Power, Capture Tool, and Comms). Monitor live Mass Margin, Fairing Volume Margin, and Power Generation vs Draw. Ensure your design achieves a <strong>PASS</strong> status before launching!</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-primary btn-close-modal" data-modal="modal-tutorial">UNDERSTOOD // RETURN TO STUDIO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         10. DATA & AEROSPACE SOURCES MODAL
+         ==================================================================== -->
+    <div id="modal-sources" class="modal-layer hidden">
+        <div class="results-box modal-content-box">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">AEROSPACE DATA &amp; SOURCES (VERIFIED HERITAGE)</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-sources">CLOSE</button>
+            </div>
+            <div class="sources-list">
+                <div class="source-item">
+                    <div class="source-name">NASA Johnson Space Center - Orbital Debris Program Office (ODPO)</div>
+                    <div class="source-ref">Reference: NASA Technical Standard NASA-STD-8719.14 // Limiting Orbital Debris</div>
+                    <div class="source-desc">Orbital debris density profiles, Kessler Syndrome cascading models, and 25-year post-mission disposal guidelines. [ESTIMATE used for arcade debris fragment sizing].</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">ESA Clean Space Office &amp; ClearSpace-1 Initiative</div>
+                    <div class="source-ref">Reference: ESA Active Debris Removal (ADR) Roadmap &amp; VESPA Upper Stage Capture</div>
+                    <div class="source-desc">European Code of Conduct for Space Debris Mitigation, robotic arm capture dynamics, and net capture concepts verified through ClearSpace-1 mission architecture.</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">Rocket Lab Electron &amp; SpaceX Falcon 9 Flight Manuals</div>
+                    <div class="source-ref">Reference: Commercial Launch Vehicle User Guides (Payload Planner Handbooks)</div>
+                    <div class="source-desc">Launch vehicle payload capacities to 500km LEO (Electron ~300kg, Falcon 9 normalized mission allotments, Ariane 64 heavy payload envelopes). [ESTIMATE applied to fairing internal volume allotments].</div>
+                </div>
+                <div class="source-item">
+                    <div class="source-name">NASA Space Network // Tracking and Data Relay Satellite System (TDRSS)</div>
+                    <div class="source-ref">Reference: Space Communications and Navigation (SCaN) Program</div>
+                    <div class="source-desc">Geostationary orbital inter-satellite relay architecture providing continuous high-bandwidth telemetry and low-latency tracking. [ESTIMATE applied to radar early-warning bonus].</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-secondary btn-close-modal" data-modal="modal-sources">RETURN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         11. CREDITS MODAL
+         ==================================================================== -->
+    <div id="modal-credits" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 580px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL CLEANUP: MISSION ZERO CREDITS</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-credits">CLOSE</button>
+            </div>
+            <div class="credits-body" style="font-family: var(--font-body); line-height: 1.8; font-size: 1.05rem;">
+                <p><strong>ORBITAL CLEANUP: MISSION ZERO</strong><br><span style="color: var(--ink-muted); font-size: 0.9rem;">Systems Engineering &amp; Space Flight Architecture Edition</span></p>
+                <div style="margin: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 12px 0;">
+                    <div><strong>Game Engine:</strong> Phaser 3.80.1 (Arcade Physics)</div>
+                    <div><strong>Architecture:</strong> Vanilla JavaScript, HTML5 Canvas, Web Audio API</div>
+                    <div><strong>Pixel Art Typography:</strong> Silkscreen (Jason Kottke, Google Fonts / OFL)</div>
+                    <div><strong>Telemetry Typography:</strong> Share Tech Mono &amp; Rajdhani</div>
+                    <div><strong>Sound FX Synthesis:</strong> Custom Web Audio procedural oscillator synthesis</div>
+                    <div><strong>Orbital Mechanics Modeling:</strong> Simplified 2D Cartesian Keplerian translation</div>
+                </div>
+                <p style="color: var(--clean); font-family: var(--font-mono); font-size: 0.85rem;">MISSION READY // STANDING BY FOR ORBITAL INSERTION</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-secondary btn-close-modal" data-modal="modal-credits">RETURN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         12. DESIGN SHARING CODE MODAL (IMPORT / EXPORT)
+         ==================================================================== -->
+    <div id="modal-share-code" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 560px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.25rem;">SPACECRAFT CONFIGURATION SHARING CODE</h2>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-share-code">CLOSE</button>
+            </div>
+            <div style="margin-bottom: 18px;">
+                <p style="color: var(--ink-muted); font-size: 0.95rem; margin-bottom: 10px;">
+                    Share your custom spacecraft point design or paste a mission code from another commander:
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="share-code-input" class="share-code-input" placeholder="Paste design code here (e.g. OC2-M01-ESA-F9-COL-HYP-WNG-NET-TDR)" />
+                    <button id="btn-import-code" class="btn-primary" style="padding: 10px 18px;">IMPORT</button>
+                </div>
+                <div id="share-code-status" style="font-family: var(--font-mono); font-size: 0.85rem; margin-top: 8px; min-height: 20px;"></div>
+            </div>
+            <div style="text-align: center; border-top: 1px solid var(--border); padding-top: 14px;">
+                <button id="btn-copy-current-code" class="btn-secondary">COPY CURRENT DESIGN CODE</button>
+                <button class="btn-secondary btn-close-modal" data-modal="modal-share-code" style="margin-left: 10px;">RETURN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         13. ORBITAL ASSET REGISTRY MODAL (PHASE 8b)
+         ==================================================================== -->
+    <div id="modal-asset-registry" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 900px; max-height: 85vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL INFRASTRUCTURE &amp; ASSET REGISTRY</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.8rem;">
+                        TRACKED INFRASTRUCTURE, SCIENTIFIC SATELLITES &amp; HIGH-VALUE DERELICTS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-asset-modal" data-modal="modal-asset-registry" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+            <div id="asset-registry-list" class="asset-registry-grid"></div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         14. TECHNOLOGY RESEARCH & UPGRADES MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-tech-research" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 960px; max-height: 85vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 14px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL TECHNOLOGY R&amp;D // SUBSYSTEM BLUEPRINTS</h2>
+                    <div style="font-family: var(--font-mono); color: #a855f7; font-size: 0.8rem;">
+                        ADVANCE SPACECRAFT SYSTEMS ACROSS 6 SUBSYSTEM RESEARCH PATHS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-tech-modal" data-modal="modal-tech-research" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+
+            <!-- Tech Funds & Materials Bar -->
+            <div class="tech-resources-bar" id="tech-resources-bar" style="display: flex; gap: 16px; flex-wrap: wrap; background: rgba(16, 24, 39, 0.8); border: 1px solid var(--border); padding: 8px 14px; margin-bottom: 14px; font-family: var(--font-mono); font-size: 0.85rem;">
+                <!-- Populated dynamically with Scrap & Materials -->
+            </div>
+
+            <!-- 6 Tech Paths Cards Grid -->
+            <div id="tech-paths-grid" class="tech-paths-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         15. CAMPAIGN ENDING & EPILOGUE MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-campaign-ending" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 820px; max-height: 88vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" id="ending-modal-header" style="font-size: 1.3rem;">CAMPAIGN CLIMAX // ORBITAL EVALUATION REPORT</h2>
+                    <div id="ending-modal-subtitle" style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.85rem;">
+                        GLOBAL ORBITAL STABILITY VERDICT
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-campaign-ending" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+
+            <div id="ending-content-body">
+                <!-- Populated dynamically with Ending Badge, Title, Epilogue and Stats Recap -->
+            </div>
+
+            <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; flex-wrap: wrap;">
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-campaign-ending">RESUME PLAYING (FREE ROAM)</button>
+                <button type="button" id="btn-ending-new-campaign" class="btn-primary" style="background: var(--salvage); border-color: #d97706; color: #000; font-weight: bold;">START NEW CAMPAIGN 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         16. NEW CAMPAIGN CONFIRMATION & ARCHIVE MODAL (PHASE 8c)
+         ==================================================================== -->
+    <div id="modal-new-campaign" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 600px;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <h2 class="panel-title" style="font-size: 1.2rem; color: #eab308;">INITIALIZE NEW CAMPAIGN</h2>
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-new-campaign">✕ CANCEL</button>
+            </div>
+            <div style="font-family: var(--font-body); font-size: 1rem; line-height: 1.6; margin-bottom: 18px;">
+                <p>Are you sure you want to initialize a fresh orbital campaign?</p>
+                <div style="background: rgba(16, 24, 39, 0.7); border: 1px solid var(--border); padding: 12px; margin: 12px 0; font-family: var(--font-mono); font-size: 0.85rem;">
+                    <div>• <strong>Current Campaign Archive:</strong> Progress will be safely archived to Local Storage.</div>
+                    <div>• <strong>Career Records Preserved:</strong> High scores and lifetime leaderboard records remain intact.</div>
+                    <div>• <strong>Fresh Seed:</strong> A new orbital campaign seed, reset world clock (Epoch Day 1), and pristine sector status will be established.</div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 14px;">
+                <button type="button" class="btn-secondary btn-close-modal" data-modal="modal-new-campaign">CANCEL &amp; RESUME</button>
+                <button type="button" id="btn-confirm-new-campaign" class="btn-primary" style="background: #dc2626; border-color: #ef4444; color: #fff; font-weight: bold;">CONFIRM: ARCHIVE &amp; START NEW</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         17. COMMANDER AUTHENTICATION & PILOT REGISTRY MODAL
+         ==================================================================== -->
+    <div id="modal-auth" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 480px; text-align: left;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.15rem; color: var(--accent-cyan);">COMMANDER AUTHENTICATION</h2>
+                    <div style="font-family: var(--font-mono); color: #94a3b8; font-size: 0.76rem; letter-spacing: 0.5px;">
+                        AEGIS PERSONNEL REGISTRY // ORBITAL FLIGHT CREDENTIALS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-auth-modal" data-modal="modal-auth" style="padding: 4px 10px;">✕</button>
+            </div>
+
+            <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                <button type="button" id="tab-auth-login" class="tab-btn active" style="flex: 1; padding: 8px; font-size: 0.75rem;">PILOT LOGIN</button>
+                <button type="button" id="tab-auth-register" class="tab-btn" style="flex: 1; padding: 8px; font-size: 0.75rem;">NEW ENLISTMENT</button>
+            </div>
+
+            <form id="form-auth-pilot" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label style="display: block; font-family: var(--font-mono); font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                        COMMANDER CALLSIGN / NAME (REAL PLAYERS ONLY):
+                    </label>
+                    <input type="text" id="input-auth-callsign" placeholder="e.g. Phoenix, Astra, Orion" maxlength="16" autocomplete="username" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-bright); color: #fff; font-family: var(--font-mono); font-size: 0.95rem; border-radius: 3px;" />
+                </div>
+
+                <div>
+                    <label style="display: block; font-family: var(--font-mono); font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                        SECURITY PIN / PASSCODE (4+ DIGITS TO PROTECT YOUR SCORES):
+                    </label>
+                    <input type="password" id="input-auth-pin" placeholder="Enter 4-8 digit PIN" maxlength="12" autocomplete="current-password" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-bright); color: #fff; font-family: var(--font-mono); font-size: 0.95rem; border-radius: 3px;" />
+                </div>
+
+                <div id="auth-status-msg" style="min-height: 20px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-cyan); line-height: 1.4;"></div>
+
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <button type="button" id="btn-auth-submit" class="btn-primary" style="flex: 2; padding: 12px; font-weight: bold; background: var(--salvage); border-color: #d97706; color: #000;">
+                        AUTHENTICATE CALLSIGN 🚀
+                    </button>
+                    <button type="button" id="btn-auth-guest" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 0.8rem;">
+                        GUEST
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
+    <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
+
+    <!-- Core Game Scripts (Cache-Busting Enabled) -->
+    <script src="data/parts.js?v=9.1"></script>
+    <script src="data/missions.js?v=9.1"></script>
+    <script src="data/donki-snapshot.js?v=9.1"></script>
+    <script src="data/storylets.js?v=9.1"></script>
+    <script src="js/campaign.js?v=9.1"></script>
+    <script src="js/audio.js?v=9.1"></script>
+    <script src="js/data.js?v=9.1"></script>
+    <script src="js/leaderboard-service.js?v=9.1"></script>
+    <script src="js/director.js?v=9.1"></script>
+    <script src="js/graphics.js?v=9.1"></script>
+    <script src="js/game.js?v=9.1"></script>
+    <script src="js/ui.js?v=9.1"></script>
+</body>
+</html>
