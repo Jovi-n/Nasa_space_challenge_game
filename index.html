@@ -171,7 +171,7 @@
         };
 
         window.addEventListener('keydown', function(e) {
-            if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114) {
+            if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114 || e.key === '`' || e.code === 'Backquote' || e.keyCode === 192) {
                 e.preventDefault();
                 e.stopPropagation();
                 window.toggleTelemetryOverlay();
@@ -180,6 +180,9 @@
     </script>
 </head>
 <body>
+
+    <!-- Global Floating Telemetry Button (Instant access on any screen, no Fn key required) -->
+    <button type="button" id="btn-global-telemetry" class="global-telemetry-btn" title="Toggle Tactical Telemetry [F3 or ` key]" onclick="window.toggleTelemetryOverlay();">📡 TELEMETRY [F3 / `]</button>
 
     <!-- Phaser 3 Game Container -->
     <div id="game-container"></div>

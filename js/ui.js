@@ -1928,7 +1928,7 @@ window.toggleTelemetryOverlay = function() {
 
 // Global key listener for F3 (prevents Chrome browser Find bar interception)
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114) {
+    if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114 || e.key === '`' || e.code === 'Backquote' || e.keyCode === 192) {
         e.preventDefault();
         e.stopPropagation();
         window.toggleTelemetryOverlay();

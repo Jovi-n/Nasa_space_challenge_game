@@ -236,7 +236,16 @@ async function runTests() {
     assert(!elements['hud-f3-debug'].classList.contains('hidden'), 'Clicking #btn-toggle-f3-hud should open F3 overlay');
     elements['btn-f3-hint'].click();
     assert(elements['hud-f3-debug'].classList.contains('hidden'), 'Clicking #btn-f3-hint should close F3 overlay');
-    console.log('[PASS] Test 7: HUD F3 button & controls hint work as interactive toggles');
+
+    // Test 7b: Backtick (`) key & Global Telemetry button
+    const backtickEvent = { key: '`', code: 'Backquote', keyCode: 192, defaultPrevented: false, preventDefault: () => { backtickEvent.defaultPrevented = true; }, stopPropagation: () => {} };
+    if (global.window._listeners && global.window._listeners['keydown']) {
+        global.window._listeners['keydown'].forEach(fn => fn(backtickEvent));
+    }
+    assert(!elements['hud-f3-debug'].classList.contains('hidden'), 'Pressing ` (backtick) should toggle telemetry without Fn key');
+    assert(backtickEvent.defaultPrevented, 'Backtick event should have defaultPrevented');
+    global.window.toggleTelemetryOverlay();
+    console.log('[PASS] Test 7: HUD F3 button, controls hint & backtick (`) key work as interactive toggles');
 
     // Test 8: F3 Telemetry with active Flight Director
     const mockScene = {
