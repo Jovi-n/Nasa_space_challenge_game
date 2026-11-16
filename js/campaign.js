@@ -417,6 +417,18 @@ class CampaignManager {
         save.consequencesHistory.unshift(consequenceRecord);
         if (save.consequencesHistory.length > 20) save.consequencesHistory.pop();
 
+        // Check for new storylets triggered by this mission outcome or sector health changes
+        if (typeof StoryletManager !== 'undefined' && typeof StoryletManager.onMissionCompleted === 'function') {
+            const nextStorylet = StoryletManager.onMissionCompleted(save, scene, victory);
+            if (nextStorylet) {
+                consequenceRecord.triggeredStorylet = {
+                    id: nextStorylet.id,
+                    title: nextStorylet.title,
+                    tag: nextStorylet.tag
+                };
+            }
+        }
+
         // Clear active contract and refresh Mission Board
         save.activeContract = null;
         save.availableContracts = CampaignManager.generateContractPool(save);

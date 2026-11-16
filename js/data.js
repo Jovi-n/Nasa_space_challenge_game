@@ -465,6 +465,10 @@ class OrbitalStorage {
                 sector_08: 0
             },
             campaignFlags: {},
+            assetRegistry: (typeof ASSET_REGISTRY !== 'undefined') ? JSON.parse(JSON.stringify(ASSET_REGISTRY)) : {},
+            resolvedStorylets: [],
+            decisionHistory: [],
+            activeDilemmaId: null,
             availableContracts: [],
             activeContract: null,
             consequencesHistory: [],
@@ -501,6 +505,7 @@ class OrbitalStorage {
 
     static migrateToV2(data, defaultSave) {
         console.log('[OrbitalStorage] Migrating legacy save to Save Version 2 (Campaign & Contracts)...');
+        defaultSave = defaultSave || this.getDefaultSave();
         data.saveVersion = 2;
         if (!data.campaignSeed) {
             data.campaignSeed = Math.floor(Math.random() * 900000) + 100000;
@@ -516,6 +521,18 @@ class OrbitalStorage {
         }
         if (!data.campaignFlags || typeof data.campaignFlags !== 'object') {
             data.campaignFlags = {};
+        }
+        if (!data.assetRegistry || typeof data.assetRegistry !== 'object') {
+            data.assetRegistry = (typeof ASSET_REGISTRY !== 'undefined') ? JSON.parse(JSON.stringify(ASSET_REGISTRY)) : (defaultSave.assetRegistry || {});
+        }
+        if (!Array.isArray(data.resolvedStorylets)) {
+            data.resolvedStorylets = [];
+        }
+        if (!Array.isArray(data.decisionHistory)) {
+            data.decisionHistory = [];
+        }
+        if (data.activeDilemmaId === undefined) {
+            data.activeDilemmaId = null;
         }
         if (!Array.isArray(data.consequencesHistory)) {
             data.consequencesHistory = [];
@@ -567,6 +584,18 @@ class OrbitalStorage {
             }
             if (!merged.carryoverDebris || typeof merged.carryoverDebris !== 'object') {
                 merged.carryoverDebris = Object.assign({}, defaultSave.carryoverDebris);
+            }
+            if (!merged.assetRegistry || typeof merged.assetRegistry !== 'object') {
+                merged.assetRegistry = (typeof ASSET_REGISTRY !== 'undefined') ? JSON.parse(JSON.stringify(ASSET_REGISTRY)) : {};
+            }
+            if (!Array.isArray(merged.resolvedStorylets)) {
+                merged.resolvedStorylets = [];
+            }
+            if (!Array.isArray(merged.decisionHistory)) {
+                merged.decisionHistory = [];
+            }
+            if (!merged.campaignFlags || typeof merged.campaignFlags !== 'object') {
+                merged.campaignFlags = {};
             }
             if (!merged.commanderName) merged.commanderName = 'Commander';
             if (!merged.selectedDifficulty) merged.selectedDifficulty = 'standard';

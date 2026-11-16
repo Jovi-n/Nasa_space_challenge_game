@@ -2508,3 +2508,180 @@ button,
     line-height: 1.45;
     font-family: var(--font-mono);
 }
+
+/* ==========================================================================
+   PHASE 8b: STORYLETS & ORBITAL ASSET REGISTRY
+   ========================================================================== */
+.board-dilemma-container {
+    background: rgba(15, 23, 42, 0.95);
+    border: 2px solid var(--accent-cyan);
+    box-shadow: 0 0 16px rgba(0, 243, 255, 0.25);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.dilemma-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dilemma-badge {
+    font-family: var(--font-pixel);
+    font-size: 0.7rem;
+    color: var(--accent-cyan);
+    letter-spacing: 1px;
+}
+
+.dilemma-asset-badge {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-bright);
+    padding: 2px 8px;
+    border-radius: 2px;
+    color: #e2e8f0;
+}
+
+.dilemma-title {
+    font-family: var(--font-pixel);
+    font-size: 1.05rem;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.dilemma-dossier {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+    margin-bottom: 14px;
+}
+
+.dilemma-choices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.dilemma-choice-btn {
+    background: rgba(8, 16, 28, 0.85);
+    border: 1px solid var(--border-bright);
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ink);
+}
+
+.dilemma-choice-btn:hover:not(:disabled) {
+    background: rgba(0, 243, 255, 0.12);
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.dilemma-choice-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: #475569;
+}
+
+.dilemma-choice-title {
+    font-family: var(--font-pixel);
+    font-size: 0.72rem;
+    color: var(--accent-cyan);
+}
+
+.dilemma-choice-desc {
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    line-height: 1.35;
+}
+
+.dilemma-choice-stakes {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fde047;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px 6px;
+    border-radius: 2px;
+    border-left: 2px solid #fde047;
+}
+
+/* Asset Registry Modal Grid */
+.asset-registry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.asset-card {
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.asset-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.asset-card-title {
+    font-family: var(--font-pixel);
+    font-size: 0.75rem;
+    color: var(--ink);
+}
+
+.asset-status-pill {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.status-nominal { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+.status-secured { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; }
+.status-endangered { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+.status-decaying { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; }
+.status-hazardous { background: rgba(217, 70, 239, 0.2); border: 1px solid #d946ef; color: #d946ef; }
+.status-salvaged { background: rgba(148, 163, 184, 0.2); border: 1px solid #94a3b8; color: #94a3b8; }
+.status-damaged { background: rgba(249, 115, 22, 0.2); border: 1px solid #f97316; color: #f97316; }
+
+.asset-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+}
+
+.asset-desc {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: #94a3b8;
+    line-height: 1.35;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 6px;
+}

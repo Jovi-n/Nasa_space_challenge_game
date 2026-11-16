@@ -351,6 +351,13 @@ class UIController {
                 return;
             }
 
+            const boardAssetsBtn = e.target.closest('#btn-board-assets');
+            if (boardAssetsBtn) {
+                e.preventDefault();
+                this.openAssetRegistryModal();
+                return;
+            }
+
             const resultsBoardBtn = e.target.closest('#btn-results-board');
             if (resultsBoardBtn) {
                 e.preventDefault();
@@ -1557,6 +1564,9 @@ class UIController {
             const creditsEl = document.getElementById('board-credits-val');
             if (creditsEl) creditsEl.innerText = `${(this.save.credits || 0).toLocaleString()} SCRAP`;
 
+            // 1b. Render Active Storylet Dilemma (Phase 8b)
+            this.renderStoryletDilemma();
+
             // 2. Render Contract Cards
             const grid = document.getElementById('contracts-card-grid');
             if (!grid) return;
@@ -1691,23 +1701,135 @@ class UIController {
     }
 
     /**
-     * Solicit / Refresh Mission Board contracts (-50 Scrap fee)
+     * Solicit / Refresh Mission Board contracts (-50 Scrap fee, discounted with Smithsonian endowment)
      */
     rerollContracts() {
         this.save = OrbitalStorage.load();
-        if ((this.save.credits || 0) < 50) {
+        const cost = (this.save.campaignFlags && this.save.campaignFlags.smithsonian_endowed) ? 25 : 50;
+        if ((this.save.credits || 0) < cost) {
             window.soundSystem?.playExplosion?.();
-            alert('INSUFFICIENT SCRAP FUNDS\n\nSoliciting a new roster of orbital contracts requires 50 Scrap.');
+            alert(`INSUFFICIENT SCRAP FUNDS\n\nSoliciting a new roster of orbital contracts requires ${cost} Scrap.`);
             return;
         }
 
-        this.save.credits -= 50;
+        this.save.credits -= cost;
         if (typeof CampaignManager !== 'undefined') {
             this.save.availableContracts = CampaignManager.generateContractPool(this.save);
         }
         OrbitalStorage.save(this.save);
         window.soundSystem?.playUiClick?.();
         this.renderMissionBoard();
+    }
+
+    /**
+     * Render Active Storylet Dilemma (Phase 8b)
+     */
+    renderStoryletDilemma() {
+        const container = document.getElementById('board-dilemma-container');
+        if (!container) return;
+
+        if (typeof StoryletManager === 'undefined') {
+            container.classList.add('hidden');
+            return;
+        }
+
+        const eligible = StoryletManager.getEligibleStorylet(this.save);
+        if (!eligible) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        const assets = StoryletManager.getAssetRegistry(this.save);
+        const asset = assets[eligible.assetId] || { name: 'Orbital Asset', status: 'nominal' };
+        const statusClass = `status-${(asset.status || 'nominal').toLowerCase()}`;
+
+        let choicesHtml = '';
+        eligible.choices.forEach(c => {
+            const canAfford = c.canAfford(this.save);
+            choicesHtml += `
+                <button type="button" class="dilemma-choice-btn" data-storylet="${eligible.id}" data-choice="${c.id}" ${canAfford ? '' : 'disabled'}>
+                    <div class="dilemma-choice-title">${c.label}</div>
+                    <div class="dilemma-choice-desc">${c.desc}</div>
+                    <div class="dilemma-choice-stakes">${c.stakes}</div>
+                </button>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="dilemma-header">
+                <span class="dilemma-badge">⚠️ [${eligible.tag}]</span>
+                <span class="dilemma-asset-badge">🛰️ ASSET: <strong>${asset.name}</strong> <span class="asset-status-pill ${statusClass}">[${asset.status}]</span></span>
+            </div>
+            <div class="dilemma-title">${eligible.title}</div>
+            <div class="dilemma-dossier">${eligible.dossier}</div>
+            <div class="dilemma-choices-grid">
+                ${choicesHtml}
+            </div>
+        `;
+        container.classList.remove('hidden');
+
+        // Wire choice buttons
+        container.querySelectorAll('.dilemma-choice-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sId = btn.getAttribute('data-storylet');
+                const cId = btn.getAttribute('data-choice');
+                this.resolveStoryletChoice(sId, cId);
+            });
+        });
+    }
+
+    /**
+     * Resolve a storylet dilemma choice
+     */
+    resolveStoryletChoice(storyletId, choiceId) {
+        if (typeof StoryletManager === 'undefined') return;
+        const res = StoryletManager.resolveStorylet(this.save, storyletId, choiceId);
+        if (!res.success) {
+            alert(res.error || 'Failed to resolve dilemma choice.');
+            return;
+        }
+
+        window.soundSystem?.playSuccess?.();
+        this.renderMissionBoard();
+    }
+
+    /**
+     * Render and Open Asset Registry Modal
+     */
+    openAssetRegistryModal() {
+        const modal = document.getElementById('modal-asset-registry');
+        const list = document.getElementById('asset-registry-list');
+        if (!modal || !list) return;
+
+        this.save = OrbitalStorage.load();
+        const registry = (typeof StoryletManager !== 'undefined') ? StoryletManager.getAssetRegistry(this.save) : (this.save.assetRegistry || {});
+
+        list.innerHTML = '';
+        Object.values(registry).forEach(asset => {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            const statusClass = `status-${(asset.status || 'nominal').toLowerCase()}`;
+            card.innerHTML = `
+                <div class="asset-card-header">
+                    <div>
+                        <div class="asset-card-title">${asset.name}</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--accent-cyan);">SECTOR 0${asset.sectorId} // ${(asset.type || 'SATELLITE').toUpperCase()}</div>
+                    </div>
+                    <span class="asset-status-pill ${statusClass}">${asset.status}</span>
+                </div>
+                <div class="asset-meta-row">
+                    <span>FACTION: <strong>${(asset.faction || 'CIVIL').toUpperCase()}</strong></span>
+                    <span>MASS: <strong>${(asset.massKg || 0).toLocaleString()} kg</strong></span>
+                    <span>WORTH: <strong>${asset.value || 0} SCRAP</strong></span>
+                </div>
+                <div class="asset-desc">${asset.desc}</div>
+            `;
+            list.appendChild(card);
+        });
+
+        modal.classList.remove('hidden');
     }
 
     /**

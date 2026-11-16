@@ -252,7 +252,8 @@
                         TACTICAL SECTOR CLEARANCE // PERSISTENT ORBITAL REPUTATION &amp; HEALTH
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-board-assets" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">🛰️ ASSET REGISTRY</button>
                     <button type="button" id="btn-reroll-contracts" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="if(window.uiController){window.uiController.rerollContracts();}else{window.renderMissionBoardFallback();}">🔄 SOLICIT CONTRACTS (-50 SCRAP)</button>
                     <button type="button" id="btn-board-return" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 12px;" onclick="window.returnToMainMenu();">RETURN TO MENU</button>
                 </div>
@@ -285,6 +286,9 @@
                     <span>FUNDS: <strong id="board-credits-val" style="color: var(--salvage);">200 SCRAP</strong></span>
                 </div>
             </div>
+
+            <!-- Phase 8b Active Storylet Dilemma Container -->
+            <div id="board-dilemma-container" class="board-dilemma-container hidden"></div>
 
             <!-- 3 Available Contracts Grid -->
             <div id="contracts-card-grid" class="contracts-card-grid">
@@ -1114,19 +1118,38 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         13. ORBITAL ASSET REGISTRY MODAL (PHASE 8b)
+         ==================================================================== -->
+    <div id="modal-asset-registry" class="modal-layer hidden">
+        <div class="results-box modal-content-box" style="max-width: 900px; max-height: 85vh; overflow-y: auto;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 class="panel-title" style="font-size: 1.25rem;">ORBITAL INFRASTRUCTURE &amp; ASSET REGISTRY</h2>
+                    <div style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.8rem;">
+                        TRACKED INFRASTRUCTURE, SCIENTIFIC SATELLITES &amp; HIGH-VALUE DERELICTS
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary btn-close-modal" id="btn-close-asset-modal" data-modal="modal-asset-registry" style="padding: 4px 10px;">✕ CLOSE</button>
+            </div>
+            <div id="asset-registry-list" class="asset-registry-grid"></div>
+        </div>
+    </div>
+
     <!-- F3 Flight Director & Tactical Telemetry Overlay (Global Top-Level Layer) -->
     <div id="hud-f3-debug" class="hud-f3-debug hidden"></div>
 
     <!-- Core Game Scripts (Cache-Busting Enabled) -->
-    <script src="data/parts.js?v=8a.8"></script>
-    <script src="data/missions.js?v=8a.8"></script>
-    <script src="data/donki-snapshot.js?v=8a.8"></script>
-    <script src="js/campaign.js?v=8a.8"></script>
-    <script src="js/audio.js?v=8a.8"></script>
-    <script src="js/data.js?v=8a.8"></script>
-    <script src="js/director.js?v=8a.8"></script>
-    <script src="js/graphics.js?v=8a.8"></script>
-    <script src="js/game.js?v=8a.8"></script>
-    <script src="js/ui.js?v=8a.8"></script>
+    <script src="data/parts.js?v=8b.1"></script>
+    <script src="data/missions.js?v=8b.1"></script>
+    <script src="data/donki-snapshot.js?v=8b.1"></script>
+    <script src="data/storylets.js?v=8b.1"></script>
+    <script src="js/campaign.js?v=8b.1"></script>
+    <script src="js/audio.js?v=8b.1"></script>
+    <script src="js/data.js?v=8b.1"></script>
+    <script src="js/director.js?v=8b.1"></script>
+    <script src="js/graphics.js?v=8b.1"></script>
+    <script src="js/game.js?v=8b.1"></script>
+    <script src="js/ui.js?v=8b.1"></script>
 </body>
 </html>

@@ -666,3 +666,54 @@
    - `storm_season` contracts now maintain continuous active space-weather storm conditions with uninterrupted solar drag and rapid coronal EMP surge cycles.
 6. **Automated Verification**:
    - Created `tests/test_storm_hazard.js` validating kinetic solar wind drag, open space surge damage, Aegis Depot Faraday haven grounding, Whipple shield mitigation, and storm season continuous retriggering. All 5/5 tests passing 100%. All existing suites (`test_phase6.js`, `test_phase7.js`, `test_phase8a.js`, `test_menu_and_f3.js`) pass with 100% success rate.
+
+---
+
+## [Phase 8b — Orbital Asset Registry, Meaningful Dilemmas & Storylets] - 2026-11-16
+### Status: Completed & Verified
+
+### Features & Narrative Systems Implemented:
+1. **Orbital Asset Registry (`data/storylets.js`)**:
+   - Cataloged 12 key satellites, derelicts, and infrastructure platforms across all 8 orbital sectors:
+     - `aegis_depot_alpha` (Sector 1, Aegis Depot LEO harbor, 45,000 kg)
+     - `iss_heritage_habitat` (Sector 1, Preserved ISS module, 28,000 kg)
+     - `vanguard_1_probe` (Sector 1, Oldest artificial satellite in orbit, 1.5 kg)
+     - `starlink_cluster_74` (Sector 2, Commercial polar broadband train, 6,400 kg)
+     - `tiangong_cargo_hulk` (Sector 2, Tumbling hypergolic cargo vessel, 13,500 kg)
+     - `envisat_derelict` (Sector 3, Sun-sync environmental leviathan, 8,211 kg)
+     - `starlink_38_debris_field` (Sector 4, Decaying debris cloud, 3,200 kg)
+     - `fengyun_1c_fragment_alpha` (Sector 5, Highly kinetic anti-satellite fragment, 180 kg)
+     - `cosmos_2251_hull_core` (Sector 6, High-inclination collision remnant, 900 kg)
+     - `classified_quantum_satellite` (Sector 7, Covert defense platform in GEO graveyard, 4,200 kg)
+     - `tdrss_relay_omega` (Sector 7, Geostationary space communications relay, 3,800 kg)
+     - `kessler_cascade_origin` (Sector 8, High-density cascade origin junction, 62,000 kg)
+   - Asset attributes include unique identifier, name, sector index, physical mass (kg), economic value (Scrap), dynamic integrity condition (0–100%), operational status (`nominal`, `secured`, `endangered`, `damaged`, `decaying`, `salvaged`), managing faction (`agency`, `commercial`, `public`), and historical mission dossier.
+2. **12 Meaningful Dilemmas & Storylets**:
+   - **8 Contract Storylets**:
+     - `STORYLET_01`: *Derelict Flight Recorder Dilemma* (AeroSat buy-out vs Open UN-OOSA science vs scrap salvage)
+     - `STORYLET_02`: *Envisat Collision Emergency* (Active grapple de-orbit burn vs commercial defensive shielding vs uncontrolled atmospheric reentry)
+     - `STORYLET_03`: *Mega-Constellation Orbital Squeeze* (Strict civil spacing vs private high-density toll corridor)
+     - `STORYLET_04`: *Historic Vanguard 1 Salvage Claim* (Smithsonian archival museum custody vs corporate private trophy auction)
+     - `STORYLET_05`: *Toxic Hydrazine Tank Rupture* (Controlled laser burn venting vs high-risk emergency coolant harvest)
+     - `STORYLET_06`: *Decaying RTG Nuclear Core* (Graveyard boosting vs deep ocean de-orbit vs enriched isotope scavenging)
+     - `STORYLET_07`: *Geomagnetic Storm Emergency Shelter* (Civilian satellite haven sheltering vs corporate priority power reserves)
+     - `STORYLET_08`: *Black Budget Derelict Cryptography* (UN space safety disclosure vs Defense Command return vs private auction)
+   - **4 Follow-up Storylets**:
+     - `STORYLET_09`: *Open Source Constellation Beacon* (Unlocked by Storylet 01 Choice B; permanent sensor warning range upgrade vs data monetisation)
+     - `STORYLET_10`: *ESA Deep Space Clean Grant* (Unlocked by Storylet 02 Choice A; ion thrusters workshop schematics vs permanent Sun-sync safety monitors)
+     - `STORYLET_11`: *Crowdfunded Clean-Up Fleet* (Unlocked by Storylet 03 Choice A; volunteer automated sweeper drones vs solar cell subsidies)
+     - `STORYLET_12`: *Smithsonian Heritage Endowment* (Unlocked by Storylet 04 Choice A; permanent 50% discount on contract solicitation rerolls vs research stipends)
+3. **Non-Repetition & Multi-Tier Progression Logic**:
+   - Storylets resolved are permanently logged in `save.resolvedStorylets` and `save.decisionHistory`.
+   - `StoryletManager.getEligibleStorylet()` evaluates reputation thresholds, unlocked sectors, campaign flags, and past choices, prioritizing follow-up storylines before offering general contract dilemmas. Resolved storylets are never repeated.
+4. **Persistent Consequences Across Saves**:
+   - Decisions alter Scrap/credits, metal/cells/chips inventory, 3-tier faction reputation (`agency`, `commercial`, `public`), dynamic sector health, persistent asset status in `save.assetRegistry`, and campaign narrative flags.
+   - Full backward-compatible non-destructive Save v2 migration preserves legacy progress while seeding the complete Asset Registry and decision history.
+5. **Mission Board Integration & Asset Registry Modal**:
+   - Interactive dilemma cards surfaced directly in the Mission Board (`#screen-mission-board`) between contract sorting options and available contracts.
+   - Added `[🛰️ ASSET REGISTRY]` button opening the full orbital infrastructure modal (`#modal-asset-registry`), displaying live condition meters, real-time statuses, masses, and sector locations.
+   - Immediate and delayed consequence feedback displayed directly after resolving choices.
+6. **Documentation & Automated Testing**:
+   - Published `docs/STORYLETS.md` documenting conditions, stakes, delayed mechanics, and asset details.
+   - Created `tests/test_phase8b.js` with 8 comprehensive automated test suites.
+   - All 6 project test suites pass with 100% success rate (35+ test assertions across physics, weather, UI, contracts, and storylets).
